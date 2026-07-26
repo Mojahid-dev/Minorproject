@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { ModeToggle } from "../ui/darkToggle";
 
 export default function Navbar() {
   return (
@@ -15,9 +16,9 @@ export default function Navbar() {
           rounded-2xl
 
           border
-          border-white/10
+          border-white/20
 
-          bg-zinc-900/80
+          bg-zinc-800/70
 
           px-7
           py-3
@@ -51,18 +52,19 @@ export default function Navbar() {
               transition
               duration-300
 
-              hover:bg-white/10
+              hover:bg-yellow-600
+              hover:text-white
             "
           >
             Z
           </div>
 
           <div>
-            <h1 className="text-lg font-semibold tracking-tight text-white">
+            <h1 className="text-lg font-semibold tracking-tight text-yellow-600">
               Zohra
             </h1>
 
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-zinc-700">
               AI Workspace
             </p>
           </div>
@@ -78,7 +80,7 @@ export default function Navbar() {
                 text-zinc-400
                 transition-colors
                 duration-200
-                hover:text-white
+                hover:text-yellow-600
               "
             >
               About
@@ -93,7 +95,7 @@ export default function Navbar() {
                 text-zinc-400
                 transition-colors
                 duration-200
-                hover:text-white
+                hover:text-yellow-600
               "
             >
               Pricing
@@ -160,7 +162,9 @@ export default function Navbar() {
 
             <ArrowRight size={16} />
           </Link>
+          <ModeToggle />
         </div>
+        
       </nav>
     </header>
   );
