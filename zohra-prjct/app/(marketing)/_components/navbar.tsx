@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ModeToggle } from "../../../components/ui/darkToggle";
+import Image from "next/image";
 
 export default function Navbar() {
   return (
@@ -15,10 +16,10 @@ export default function Navbar() {
           rounded-2xl
           border
           border-white/20
-          bg-zinc-800/70
+          bg-zinc-900/80
           px-6
           py-3
-          backdrop-blur-2xl
+          backdrop-blur-4xl
           shadow-[0_10px_60px_rgba(0,0,0,0.45)]
         "
       >
@@ -27,24 +28,19 @@ export default function Navbar() {
           <div
             className="
               flex
-              h-11
-              w-11
               items-center
               justify-center
-              rounded-xl
-              border
-              border-white/10
-              bg-white/5
               text-lg
               font-bold
               text-white
               transition
               duration-300
-              hover:bg-yellow-600
-              hover:text-white
+              hover:bg-black
+              rounded-xl
+              p-2
             "
           >
-            Z
+            <Image src="logo.svg" alt="Zohra logo" width={35} height={35} />
           </div>
           <div>
             <h1 className="text-lg font-semibold tracking-tight text-yellow-600">

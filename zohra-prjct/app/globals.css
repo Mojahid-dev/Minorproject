@@ -126,5 +126,68 @@
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@keyframes atlas-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes atlas-drift {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes atlas-reveal {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes atlas-preview-swap {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer utilities {
+  .animate-atlas-float {
+    animation: atlas-float 7s ease-in-out infinite;
+  }
+
+  .animate-atlas-drift {
+    animation: atlas-drift 8s ease-in-out infinite;
+  }
+
+  .animate-atlas-reveal {
+    animation: atlas-reveal 700ms ease-out both;
+  }
+
+  .animate-atlas-preview-swap {
+    animation: atlas-preview-swap 280ms ease-out both;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .motion-safe\:animate-atlas-float {
+    animation: atlas-float 7s ease-in-out infinite;
+  }
+
+  .motion-safe\:animate-atlas-drift {
+    animation: atlas-drift 8s ease-in-out infinite;
+  }
+
+  .motion-safe\:animate-atlas-reveal {
+    animation: atlas-reveal 700ms ease-out both;
+  }
+
+  .motion-safe\:animate-atlas-preview-swap {
+    animation: atlas-preview-swap 280ms ease-out both;
   }
 }
