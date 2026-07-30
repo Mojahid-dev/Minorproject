@@ -30,6 +30,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const {
     register,
     handleSubmit,
@@ -72,6 +73,22 @@ export default function LoginPage() {
     }
     router.push("/dashboard");
   };
+
+  const signInWithGoogle = async () => {
+    setErrorMessage(null);
+    setIsGoogleSubmitting(true);
+
+    const result = await authClient.signIn.social({
+      provider: "google",
+      callbackURL: "/dashboard",
+    });
+
+    if (result?.error) {
+      setErrorMessage(result.error.message ?? "Google sign in failed.");
+      setIsGoogleSubmitting(false);
+    }
+  };
+  
   return (
     <div className="flex min-h-screen flex-col items-center justify-center">
       <div className="absolute top-4 left-4 text-sm">
@@ -147,8 +164,15 @@ export default function LoginPage() {
               className={
                 buttonVariants({ variant: "secondary" }) + " w-full mt-3"
               }
+              onClick={signInWithGoogle}
+              disabled={isGoogleSubmitting}
             >
-              <FcGoogle /> Sign in with Google
+              {isGoogleSubmitting ? (
+                <Spinner className="animate-spin" />
+              ) : (
+                <FcGoogle />
+              )}
+              Sign in with Google
             </button>
           </form>
         </CardContent>

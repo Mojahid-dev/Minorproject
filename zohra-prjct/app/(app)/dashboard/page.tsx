@@ -37,9 +37,11 @@ export default function DashboardPage() {
       <button onClick={handleSignOut} className="mt-4 inline-flex items-center rounded-md bg-red-600 px-3 py-1 text-white hover:bg-red-700 cursor-pointer">
         Sign Out
       </button>
-      <button onClick={handleDeleteAccount} className="mt-4 ml-3 inline-flex items-center rounded-md bg-gray-800 px-3 py-1 text-white hover:bg-gray-900 cursor-pointer">
+      {/* <button onClick={handleDeleteAccount} className="mt-4 ml-3 inline-flex items-center rounded-md bg-gray-800 px-3 py-1 text-white hover:bg-gray-900 cursor-pointer">
         Delete Account
-      </button>
+      </button> */}
+
+      
     </main>
   );
 }
