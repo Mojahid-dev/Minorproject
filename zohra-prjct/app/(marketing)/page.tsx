@@ -1,3 +1,4 @@
+import DashboardPage from "@/app/(app)/dashboard/page";
 import HeroSection from "@/app/(marketing)/_components/hero";
 import CoreFeatures from "@/app/(marketing)/_components/core-features";
 import ExperienceAtlas from "@/app/(marketing)/_components/experience-atlas";
@@ -11,8 +12,18 @@ import PricingSection from "@/app/(marketing)/_components/pricing-section";
 import SocialProofSection from "@/app/(marketing)/_components/social-proof";
 import SolutionSection from "@/app/(marketing)/_components/solution-section";
 import WhyAtlas from "@/app/(marketing)/_components/why-atlas";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (session) {
+    return <DashboardPage />;
+  }
+
   return (
     <main className="flex flex-col min-h-screen ">
       <Navbar />

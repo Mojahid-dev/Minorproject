@@ -49,14 +49,14 @@ export default function LoginPage() {
     const result = await authClient.signIn.email({
       email: data.email,
       password: data.password,
-      callbackURL: "/dashboard",
+      callbackURL: "/",
       fetchOptions: {
         onSuccess: () => {
           toast.add({
             type: "success",
             description: "Login successful! Redirecting to dashboard...",
           });
-          router.push("/dashboard");
+          router.push("/");
         },
         onError: () => {
           toast.add({
@@ -71,7 +71,7 @@ export default function LoginPage() {
       setErrorMessage(result.error.message ?? "Sign in failed.");
       return;
     }
-    router.push("/dashboard");
+    router.push("/");
   };
 
   const signInWithGoogle = async () => {
@@ -80,7 +80,7 @@ export default function LoginPage() {
 
     const result = await authClient.signIn.social({
       provider: "google",
-      callbackURL: "/dashboard",
+      callbackURL: "/",
     });
 
     if (result?.error) {

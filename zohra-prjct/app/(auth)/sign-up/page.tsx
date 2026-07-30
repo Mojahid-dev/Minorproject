@@ -60,7 +60,7 @@ export default function SignUpPage() {
                   type: "success",
                   description: "Sign up successful! Redirecting to dashboard...",
                 });
-                router.push("/dashboard");
+                router.push("/");
               },
               onError: () => {
                 toast.add({
@@ -78,7 +78,7 @@ export default function SignUpPage() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push("/");
   };
 
   const signInWithGoogle = async () => {
@@ -87,7 +87,7 @@ export default function SignUpPage() {
 
     const result = await authClient.signIn.social({
       provider: "google",
-      callbackURL: "/dashboard",
+      callbackURL: "/",
     });
 
     if (result?.error) {
