@@ -40,7 +40,7 @@ export default function Navbar() {
               p-2
             "
           >
-            <Image src="logo.svg" alt="Zohra logo" width={35} height={35} />
+            <Image src="/logo.svg" alt="Zohra logo" width={35} height={35} />
           </div>
           <div>
             <h1 className="text-lg font-semibold tracking-tight text-yellow-600">
