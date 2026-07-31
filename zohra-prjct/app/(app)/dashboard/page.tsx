@@ -68,8 +68,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-100 p-3 text-neutral-900 sm:p-5">
-      <div className="mx-auto flex min-h-[calc(100vh-24px)] max-w-[1540px] overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-[0_25px_80px_rgba(0,0,0,0.12)] sm:min-h-[calc(100vh-40px)]">
+    <main className="min-h-screen bg-neutral-100 text-neutral-900">
+      <div className=" flex min-h-screen max-w-[1540px] overflow-hidden border border-neutral-200 bg-white shadow-[0_25px_80px_rgba(0,0,0,0.12)]">
         <aside className={`${collapsed ? "w-[86px]" : "w-[272px]"} hidden shrink-0 flex-col border-r border-neutral-200 bg-neutral-50 px-4 py-5 transition-[width] duration-300 md:flex`}>
           <div className="flex items-center justify-between px-2">
             <ZohraMark compact={collapsed} />
