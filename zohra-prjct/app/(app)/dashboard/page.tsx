@@ -25,7 +25,7 @@ import {
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { signOutAndClearCookies } from "@/lib/auth-client";
+import { signOutAndClearCookies, useSession } from "@/lib/auth-client";
 
 const navigation = [
   { label: "Overview", icon: Home },
@@ -49,6 +49,10 @@ export default function DashboardPage() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
+  const { data: session } = useSession();
+  const profileName = session?.user?.name || "Zohra Admin";
+  const profileImage = session?.user?.image || "";
+  const profileInitials = profileName.split(" ").filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "ZA";
 
   async function handleSignOut() {
     try {
@@ -97,8 +101,8 @@ export default function DashboardPage() {
             <button onClick={() => { setMobileMenuOpen(false); router.push("/settings"); }} title={collapsed ? "Settings" : undefined} className="flex h-10 w-full items-center rounded-xl px-3 text-sm text-neutral-500 transition hover:bg-white/10 hover:text-white"><Settings2 size={19} />{!collapsed && <span className="ml-3">Settings</span>}</button>
             <div className="my-3 h-px bg-zinc-800" />
             <div className={`${collapsed ? "justify-center" : ""} flex items-center px-2 py-1`}>
-              <div className="grid size-9 place-items-center rounded-full bg-black text-xs font-bold text-white">ZA</div>
-              {!collapsed && <div className="ml-2.5 min-w-0 flex-1"><p className="truncate text-sm font-semibold text-white">Zohra Admin</p><p className="truncate text-xs text-neutral-400">admin@zohra.app</p></div>}
+              <div className="grid size-9 place-items-center overflow-hidden rounded-full bg-white text-xs font-bold text-black">{profileImage ? <Image src={profileImage} alt="Profile photo" width={36} height={36} unoptimized className="size-full object-cover" /> : profileInitials}</div>
+              {!collapsed && <div className="ml-2.5 min-w-0 flex-1"><p className="truncate text-sm font-semibold text-white">{profileName}</p><p className="truncate text-xs text-neutral-400">{session?.user?.email || "admin@zohra.app"}</p></div>}
               {!collapsed && <ChevronDown size={16} className="text-neutral-400" />}
             </div>
             <button onClick={handleSignOut} title={collapsed ? "Sign out" : undefined} className="flex h-10 w-full items-center rounded-xl px-3 text-sm text-neutral-500 transition hover:bg-white/10 hover:text-white"><LogOut size={18} />{!collapsed && <span className="ml-3">Sign out</span>}</button>
