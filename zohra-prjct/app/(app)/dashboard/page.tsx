@@ -44,7 +44,7 @@ function ZohraMark({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-3">
       <div className="grid size-10 place-items-center overflow-hidden rounded-lg bg-black p-1 shadow-[0_6px_16px_rgba(0,0,0,0.2)]">
-        <Image src="/Logo.svg" alt="Zohra logo" width={40} height={44} priority className="h-full w-full object-contain" />
+        <Image src="/Logo.svg" alt="Zohra logo" width={35} height={35} priority className="h-full w-full object-contain" />
       </div>
       {!compact && <span className="text-[22px] font-bold tracking-[-0.06em] text-black">Zohra</span>}
     </div>
