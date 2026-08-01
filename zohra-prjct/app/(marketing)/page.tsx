@@ -25,7 +25,7 @@ export default async function LandingPage() {
   }
 
   return (
-    <main className="flex flex-col min-h-screen ">
+    <main className="flex min-h-screen flex-col overflow-x-hidden">
       <Navbar />
       <HeroSection />
       <ProblemSection />
