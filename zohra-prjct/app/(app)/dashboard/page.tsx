@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { signOutAndClearCookies } from "@/lib/auth-client";
 
 const navigation = [
@@ -42,12 +43,8 @@ const workspace = [
 function ZohraMark({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="relative grid size-10 place-items-center rounded-xl bg-black shadow-[0_8px_20px_rgba(0,0,0,0.2)]">
-        <span className="absolute size-3.5 -translate-x-[5px] -translate-y-[4px] rounded-full bg-white" />
-        <span className="absolute size-3.5 translate-x-[5px] -translate-y-[4px] rounded-full bg-neutral-300" />
-        <span className="absolute size-3.5 -translate-x-[5px] translate-y-[4px] rounded-full bg-neutral-500" />
-        <span className="absolute size-3.5 translate-x-[5px] translate-y-[4px] rounded-full bg-neutral-100" />
-        <span className="relative size-2 rounded-full bg-black" />
+      <div className="grid size-10 place-items-center overflow-hidden rounded-lg bg-black p-1 shadow-[0_6px_16px_rgba(0,0,0,0.2)]">
+        <Image src="/Logo.svg" alt="Zohra logo" width={40} height={44} priority className="h-full w-full object-contain" />
       </div>
       {!compact && <span className="text-[22px] font-bold tracking-[-0.06em] text-black">Zohra</span>}
     </div>
@@ -69,7 +66,7 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-neutral-100 text-neutral-900">
-      <div className=" flex min-h-screen max-w-full overflow-hidden border border-neutral-200 bg-white shadow-[0_25px_80px_rgba(0,0,0,0.12)]">
+      <div className="mx-auto flex min-h-screen max-w-full overflow-hidden border border-neutral-200 bg-white shadow-[0_25px_80px_rgba(0,0,0,0.12)]">
         <aside className={`${collapsed ? "w-[86px]" : "w-[272px]"} hidden shrink-0 flex-col border-r border-neutral-200 bg-neutral-50 px-4 py-5 transition-[width] duration-300 md:flex`}>
           <div className="flex items-center justify-between px-2">
             <ZohraMark compact={collapsed} />
