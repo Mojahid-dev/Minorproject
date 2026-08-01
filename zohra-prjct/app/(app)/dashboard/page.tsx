@@ -34,11 +34,6 @@ const navigation = [
   { label: "Calendar", icon: CalendarDays },
   { label: "Team", icon: UsersRound },
 ];
-const workspace = [
-  { label: "Design system", color: "bg-black" },
-  { label: "Website refresh", color: "bg-neutral-500" },
-  { label: "Marketing", color: "bg-neutral-300" },
-];
 function ZohraMark({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-3">
@@ -97,21 +92,6 @@ export default function DashboardPage() {
               })}
             </nav>
           </div>
-          {!collapsed && (
-            <div className="mt-8">
-              <div className="flex items-center justify-between px-3 pb-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">Spaces</p>
-                <button className="text-neutral-500 transition hover:text-white" aria-label="Add space"><Plus size={16} /></button>
-              </div>
-              <div className="space-y-1">
-                {workspace.map(({ label, color }) => (
-                  <button key={label} className="flex h-9 w-full items-center rounded-lg px-3 text-sm text-neutral-500 transition hover:bg-white/10 hover:text-white">
-                    <span className={`mr-3 size-2 rounded-full ${color}`} />{label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
           <div className="mt-auto space-y-1.5">
             <button title={collapsed ? "Help centre" : undefined} className="flex h-10 w-full items-center rounded-xl px-3 text-sm text-neutral-500 transition hover:bg-white/10 hover:text-white"><CircleHelp size={19} />{!collapsed && <span className="ml-3">Help centre</span>}</button>
             <button title={collapsed ? "Settings" : undefined} className="flex h-10 w-full items-center rounded-xl px-3 text-sm text-neutral-500 transition hover:bg-white/10 hover:text-white"><Settings2 size={19} />{!collapsed && <span className="ml-3">Settings</span>}</button>
