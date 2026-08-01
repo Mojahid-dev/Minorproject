@@ -26,32 +26,30 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { signOutAndClearCookies } from "@/lib/auth-client";
+import { ModeToggle } from "@/components/ui/darkToggle";
 
 const navigation = [
   { label: "Overview", icon: Home },
-  { label: "Projects", icon: FolderKanban, badge: "8" },
+  { label: "Projects", icon: FolderKanban, badge: "3"},
   { label: "My tasks", icon: LayoutGrid, badge: "12" },
   { label: "Calendar", icon: CalendarDays },
   { label: "Team", icon: UsersRound },
 ];
-
 const workspace = [
   { label: "Design system", color: "bg-black" },
   { label: "Website refresh", color: "bg-neutral-500" },
   { label: "Marketing", color: "bg-neutral-300" },
 ];
-
 function ZohraMark({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-3">
       <div className="grid size-10 place-items-center overflow-hidden rounded-lg bg-black p-1 shadow-[0_6px_16px_rgba(0,0,0,0.2)]">
         <Image src="/Logo.svg" alt="Zohra logo" width={30} height={30} priority className="h-full w-full object-contain" />
       </div>
-      {!compact && <span className="text-[22px] font-bold tracking-[-0.06em] text-black">Zohra</span>}
+      {!compact && <span className="text-[22px] font-bold tracking-[-0.06em] text-black dark:text-white">Zohra</span>}
     </div>
   );
 }
-
 export default function DashboardPage() {
   const [active, setActive] = useState("Overview");
   const [collapsed, setCollapsed] = useState(false);
@@ -65,11 +63,10 @@ export default function DashboardPage() {
       router.push("/login");
     }
   }
-
   return (
-    <main className="h-screen overflow-hidden bg-neutral-100 text-neutral-900">
-      <div className="mx-auto flex h-full max-w-full overflow-hidden border border-neutral-200 bg-white shadow-[0_25px_80px_rgba(0,0,0,0.12)]">
-        <aside className={`${collapsed ? "md:w-[86px]" : "md:w-[272px]"} fixed inset-y-0 left-0 z-40 flex w-[280px] shrink-0 flex-col border-r border-neutral-200 bg-neutral-50 px-4 py-5 shadow-xl transition-[transform,width] duration-300 ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"} md:static md:h-full md:translate-x-0 md:shadow-none`}>
+    <main className="h-screen overflow-hidden bg-neutral-100 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+      <div className="mx-auto flex h-full max-w-full overflow-hidden border border-neutral-200 bg-white shadow-[0_25px_80px_rgba(0,0,0,0.12)] dark:border-neutral-800 dark:bg-neutral-950">
+        <aside className={`${collapsed ? "md:w-[86px]" : "md:w-[272px]"} fixed inset-y-0 left-0 z-40 flex w-[280px] shrink-0 flex-col border-r border-neutral-200 bg-neutral-50 px-4 py-5 shadow-xl transition-[transform,width] duration-300 dark:border-neutral-800 dark:bg-neutral-900 ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"} md:static md:h-full md:translate-x-0 md:shadow-none`}>
           <div className="flex items-center justify-between px-2">
             <ZohraMark compact={collapsed} />
             <button onClick={() => setMobileMenuOpen(false)} aria-label="Close menu" className="grid size-8 place-items-center rounded-lg text-neutral-500 transition hover:bg-neutral-200 hover:text-black md:hidden">
@@ -92,7 +89,7 @@ export default function DashboardPage() {
               {navigation.map(({ label, icon: Icon, badge }) => {
                 const isActive = active === label;
                 return (
-                  <button key={label} onClick={() => { setActive(label); setMobileMenuOpen(false); }} title={collapsed ? label : undefined} className={`${isActive ? "bg-black text-white" : "text-neutral-500 hover:bg-neutral-200 hover:text-black"} flex h-11 w-full items-center rounded-xl px-3 text-sm font-medium transition`}>
+                  <button key={label} onClick={() => { setActive(label); setMobileMenuOpen(false); }} title={collapsed ? label : undefined} className={`${isActive ? "bg-black text-white dark:bg-white dark:text-black" : "text-neutral-500 hover:bg-neutral-200 hover:text-black dark:hover:bg-neutral-800 dark:hover:text-white"} flex h-11 w-full items-center rounded-xl px-3 text-sm font-medium transition`}>
                     <Icon size={19} strokeWidth={isActive ? 2.4 : 2} />
                     {!collapsed && <span className="ml-3 flex-1 text-left">{label}</span>}
                     {!collapsed && badge && <span className={`${isActive ? "bg-white text-black" : "bg-neutral-200 text-neutral-600"} rounded-md px-1.5 py-0.5 text-[11px] font-semibold`}>{badge}</span>}
@@ -129,11 +126,11 @@ export default function DashboardPage() {
           </div>
         </aside>
         {mobileMenuOpen && <button type="button" aria-label="Close menu overlay" onClick={() => setMobileMenuOpen(false)} className="fixed inset-0 z-30 bg-black/40 md:hidden" />}
-        <section className="min-w-0 flex-1 overflow-y-auto bg-white">
-          <header className="sticky top-0 z-10 flex h-[76px] items-center border-b border-neutral-200 bg-white px-5 sm:px-8">
+        <section className="min-w-0 flex-1 overflow-y-auto bg-white dark:bg-neutral-950">
+          <header className="sticky top-0 z-10 flex h-[76px] items-center border-b border-neutral-200 bg-white px-5 sm:px-8 dark:border-neutral-800 dark:bg-neutral-950">
             <button onClick={() => setMobileMenuOpen(true)} className="mr-3 grid size-10 place-items-center rounded-xl text-neutral-700 transition hover:bg-neutral-100 md:hidden" aria-label="Open menu"><Menu size={22} /></button>
             <div className="relative hidden w-full max-w-sm sm:block"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={18} /><input aria-label="Search" placeholder="Search anything..." className="h-10 w-full rounded-xl border border-neutral-200 bg-neutral-50 pl-10 pr-4 text-sm outline-none transition placeholder:text-neutral-400 focus:border-black focus:ring-4 focus:ring-neutral-200" /></div>
-            <div className="ml-auto flex items-center gap-2 sm:gap-3"><button aria-label="Messages" className="grid size-10 place-items-center rounded-xl text-neutral-600 transition hover:bg-neutral-100 hover:text-black"><MessageCircle size={20} /></button><button aria-label="Notifications" className="relative grid size-10 place-items-center rounded-xl text-neutral-600 transition hover:bg-neutral-100 hover:text-black"><Bell size={20} /><span className="absolute right-2.5 top-2.5 size-2 rounded-full border-2 border-white bg-black" /></button><button className="hidden items-center gap-2 rounded-xl bg-black px-3.5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(0,0,0,0.18)] transition hover:bg-neutral-800 sm:flex"><Plus size={17} />New project</button></div>
+            <div className="ml-auto flex items-center gap-2 sm:gap-3"><button aria-label="Messages" className="grid size-10 place-items-center rounded-xl text-neutral-600 transition hover:bg-neutral-100 hover:text-black dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"><MessageCircle size={20} /></button><button aria-label="Notifications" className="relative grid size-10 place-items-center rounded-xl text-neutral-600 transition hover:bg-neutral-100 hover:text-black dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"><Bell size={20} /><span className="absolute right-2.5 top-2.5 size-2 rounded-full border-2 border-white bg-black dark:border-neutral-950 dark:bg-white" /></button><ModeToggle /><button className="hidden items-center gap-2 rounded-xl bg-black px-3.5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(0,0,0,0.18)] transition hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 sm:flex"><Plus size={17} />New project</button></div>
           </header>
           <div className="p-5 sm:p-8">
             <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="mb-2 text-sm font-medium text-neutral-500">Thursday, July 31</p><h1 className="text-3xl font-bold tracking-[-0.045em] text-black">Good morning, Zohra <span aria-hidden="true">✦</span></h1><p className="mt-2 text-sm text-neutral-500">Here’s a focused view of what needs your attention today.</p></div><button className="flex items-center gap-2 rounded-xl border border-neutral-300 px-3.5 py-2.5 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100 hover:text-black"><Compass size={17} />Explore workspace</button></div>
