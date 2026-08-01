@@ -48,6 +48,8 @@ export default function DashboardPage() {
   const [active, setActive] = useState("Overview");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [focusMode, setFocusMode] = useState(false);
   const router = useRouter();
 
   async function handleSignOut() {
@@ -94,7 +96,7 @@ export default function DashboardPage() {
           </div>
           <div className="mt-auto space-y-1.5">
             <button title={collapsed ? "Help centre" : undefined} className="flex h-10 w-full items-center rounded-xl px-3 text-sm text-neutral-500 transition hover:bg-white/10 hover:text-white"><CircleHelp size={19} />{!collapsed && <span className="ml-3">Help centre</span>}</button>
-            <button title={collapsed ? "Settings" : undefined} className="flex h-10 w-full items-center rounded-xl px-3 text-sm text-neutral-500 transition hover:bg-white/10 hover:text-white"><Settings2 size={19} />{!collapsed && <span className="ml-3">Settings</span>}</button>
+            <button onClick={() => { setActive("Settings"); setMobileMenuOpen(false); }} title={collapsed ? "Settings" : undefined} className={`${active === "Settings" ? "bg-white text-black" : "text-neutral-500 hover:bg-white/10 hover:text-white"} flex h-10 w-full items-center rounded-xl px-3 text-sm transition`}><Settings2 size={19} />{!collapsed && <span className="ml-3">Settings</span>}</button>
             <div className="my-3 h-px bg-zinc-800" />
             <div className={`${collapsed ? "justify-center" : ""} flex items-center px-2 py-1`}>
               <div className="grid size-9 place-items-center rounded-full bg-black text-xs font-bold text-white">ZA</div>
@@ -112,8 +114,24 @@ export default function DashboardPage() {
             <div className="ml-auto flex items-center gap-2 sm:gap-3"><button aria-label="Messages" className="grid size-10 place-items-center rounded-xl text-neutral-300 transition hover:bg-white/10 hover:text-white"><MessageCircle size={20} /></button><button aria-label="Notifications" className="relative grid size-10 place-items-center rounded-xl text-neutral-300 transition hover:bg-white/10 hover:text-white"><Bell size={20} /><span className="absolute right-2.5 top-2.5 size-2 rounded-full border-2 border-zinc-950 bg-white" /></button><button className="hidden items-center gap-2 rounded-xl bg-white px-3.5 py-2.5 text-sm font-semibold text-black shadow-[0_8px_18px_rgba(0,0,0,0.18)] transition hover:bg-neutral-200 sm:flex"><Plus size={17} />New project</button></div>
           </header>
           <div className="p-5 sm:p-8">
-            <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="mb-2 text-sm font-medium text-neutral-500">Thursday, July 31</p><h1 className="text-3xl font-bold tracking-[-0.045em] text-white">Good morning, Zohra <span aria-hidden="true">✦</span></h1><p className="mt-2 text-sm text-neutral-500">Here’s a focused view of what needs your attention today.</p></div><button className="flex items-center gap-2 rounded-xl border border-zinc-700 px-3.5 py-2.5 text-sm font-semibold text-neutral-300 transition hover:bg-white/10 hover:text-white"><Compass size={17} />Explore workspace</button></div>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3"><div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5"><Sparkles size={20} className="text-white" /><p className="mt-7 text-sm text-neutral-500">Your workspace is ready</p><p className="mt-1 text-xl font-semibold tracking-[-0.03em] text-white">Navigation complete</p></div><div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 p-5"><BookOpen size={20} className="text-neutral-300" /><p className="mt-7 text-sm text-neutral-500">Next up</p><p className="mt-1 text-xl font-semibold tracking-[-0.03em] text-white">Build your dashboard</p></div></div>
+            {active === "Settings" ? (
+              <div className="mx-auto max-w-3xl">
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                  <div><p className="mb-2 text-sm font-medium text-neutral-500">Workspace preferences</p><h1 className="text-3xl font-bold tracking-[-0.045em] text-white">Settings</h1><p className="mt-2 text-sm text-neutral-500">Manage how Zohra works for you.</p></div>
+                  <button onClick={() => setActive("Overview")} className="rounded-xl border border-zinc-700 px-3.5 py-2.5 text-sm font-semibold text-neutral-300 transition hover:bg-white/10 hover:text-white">Back to overview</button>
+                </div>
+                <div className="mt-8 space-y-4">
+                  <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 sm:p-6"><h2 className="text-base font-semibold text-white">Profile</h2><p className="mt-1 text-sm text-neutral-500">Your account details for this workspace.</p><div className="mt-5 flex items-center gap-3"><div className="grid size-11 place-items-center rounded-full bg-white text-sm font-bold text-black">ZA</div><div><p className="font-medium text-white">Zohra Admin</p><p className="text-sm text-neutral-500">admin@zohra.app</p></div></div></section>
+                  <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 sm:p-6"><h2 className="text-base font-semibold text-white">Notifications</h2><p className="mt-1 text-sm text-neutral-500">Choose when Zohra should keep you informed.</p><label className="mt-5 flex cursor-pointer items-center justify-between gap-4"><span><span className="block text-sm font-medium text-white">Email notifications</span><span className="mt-1 block text-sm text-neutral-500">Receive project and task updates by email.</span></span><input checked={emailNotifications} onChange={(event) => setEmailNotifications(event.target.checked)} type="checkbox" className="size-5 accent-white" /></label></section>
+                  <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 sm:p-6"><h2 className="text-base font-semibold text-white">Focus mode</h2><p className="mt-1 text-sm text-neutral-500">Reduce visual interruptions while you work.</p><label className="mt-5 flex cursor-pointer items-center justify-between gap-4"><span><span className="block text-sm font-medium text-white">Enable focus mode</span><span className="mt-1 block text-sm text-neutral-500">Mute non-essential dashboard alerts.</span></span><input checked={focusMode} onChange={(event) => setFocusMode(event.target.checked)} type="checkbox" className="size-5 accent-white" /></label></section>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="mb-2 text-sm font-medium text-neutral-500">Thursday, July 31</p><h1 className="text-3xl font-bold tracking-[-0.045em] text-white">Good morning, Zohra <span aria-hidden="true">✦</span></h1><p className="mt-2 text-sm text-neutral-500">Here’s a focused view of what needs your attention today.</p></div><button className="flex items-center gap-2 rounded-xl border border-zinc-700 px-3.5 py-2.5 text-sm font-semibold text-neutral-300 transition hover:bg-white/10 hover:text-white"><Compass size={17} />Explore workspace</button></div>
+                <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3"><div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5"><Sparkles size={20} className="text-white" /><p className="mt-7 text-sm text-neutral-500">Your workspace is ready</p><p className="mt-1 text-xl font-semibold tracking-[-0.03em] text-white">Navigation complete</p></div><div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 p-5"><BookOpen size={20} className="text-neutral-300" /><p className="mt-7 text-sm text-neutral-500">Next up</p><p className="mt-1 text-xl font-semibold tracking-[-0.03em] text-white">Build your dashboard</p></div></div>
+              </>
+            )}
           </div>
         </section>
       </div>
