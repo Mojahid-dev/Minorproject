@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowLeft,
   CheckCircle2,
   FileText,
   FileUp,
@@ -13,7 +12,6 @@ import {
   UploadCloud,
   X,
 } from "lucide-react";
-import Link from "next/link";
 import { useRef, useState } from "react";
 
 type UploadItem = {
@@ -65,12 +63,9 @@ export default function UploadPage() {
   const readyCount = items.filter((item) => item.status === "ready").length;
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-4 py-6 text-white sm:px-8 sm:py-10">
-      <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-5xl text-white">
         <header className="flex items-center justify-between gap-4">
-          <Link href="/dashboard" className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-neutral-400 transition hover:bg-white/10 hover:text-white">
-            <ArrowLeft size={17} /> Dashboard
-          </Link>
+          <div className="text-sm font-medium text-neutral-400">Resource library</div>
           <div className="flex items-center gap-2 text-sm text-neutral-500"><FolderOpen size={17} /> Personal library</div>
         </header>
 
@@ -124,7 +119,6 @@ export default function UploadPage() {
         )}
 
         <p className="mt-5 flex items-center gap-2 text-xs text-neutral-600"><X size={13} /> Files stay in this upload queue until you choose Upload.</p>
-      </div>
-    </main>
+    </div>
   );
 }

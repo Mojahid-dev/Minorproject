@@ -1,8 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { ArrowLeft, Bell, Camera, ShieldCheck, UserRound } from "lucide-react";
+import { Bell, Camera, ShieldCheck, UserRound } from "lucide-react";
 import { useState } from "react";
 import { authClient, useSession } from "@/lib/auth-client";
 
@@ -81,13 +80,8 @@ export default function SettingsPage() {
   const [focusMode, setFocusMode] = useState(false);
 
   return (
-    <main className="min-h-screen bg-zinc-950 px-4 py-6 text-neutral-100 sm:px-8 sm:py-10">
-      <div className="mx-auto max-w-3xl">
-        <Link href="/dashboard" className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-neutral-400 transition hover:bg-white/10 hover:text-white">
-          <ArrowLeft size={17} /> Back to dashboard
-        </Link>
-
-        <header className="mt-8 border-b border-zinc-800 pb-7">
+    <div className="mx-auto max-w-3xl">
+        <header className="border-b border-zinc-800 pb-7">
           <p className="text-sm font-medium text-neutral-500">Account & workspace</p>
           <h1 className="mt-2 text-3xl font-bold tracking-[-0.045em] text-white">Settings</h1>
           <p className="mt-2 text-sm text-neutral-500">Manage your Zohra account and workspace preferences.</p>
@@ -106,7 +100,6 @@ export default function SettingsPage() {
             <label className="mt-5 flex cursor-pointer items-center justify-between gap-4 border-t border-zinc-800 pt-5"><span><span className="block text-sm font-medium text-white">Enable focus mode</span><span className="mt-1 block text-sm text-neutral-500">Mute non-essential dashboard alerts.</span></span><input checked={focusMode} onChange={(event) => setFocusMode(event.target.checked)} type="checkbox" className="size-5 accent-white" /></label>
           </section>
         </div>
-      </div>
-    </main>
+    </div>
   );
 }
