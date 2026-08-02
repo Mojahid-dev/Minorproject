@@ -33,6 +33,8 @@ const navigation = [
   { label: "My tasks", icon: LayoutGrid, badge: "12" },
   { label: "Calendar", icon: CalendarDays },
   { label: "Team", icon: UsersRound },
+  
+  
 ];
 function ZohraMark({ compact = false }: { compact?: boolean }) {
   return (
