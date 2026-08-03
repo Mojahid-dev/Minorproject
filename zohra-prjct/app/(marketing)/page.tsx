@@ -1,4 +1,3 @@
-import DashboardPage from "@/app/(app)/dashboard/page";
 import HeroSection from "@/app/(marketing)/_components/hero";
 import CoreFeatures from "@/app/(marketing)/_components/core-features";
 import ExperienceAtlas from "@/app/(marketing)/_components/experience-atlas";
@@ -14,6 +13,7 @@ import SolutionSection from "@/app/(marketing)/_components/solution-section";
 import WhyAtlas from "@/app/(marketing)/_components/why-atlas";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 export default async function LandingPage() {
   const session = await auth.api.getSession({
@@ -21,7 +21,7 @@ export default async function LandingPage() {
   });
 
   if (session) {
-    return <DashboardPage />;
+    redirect("/dashboard");
   }
 
   return (
