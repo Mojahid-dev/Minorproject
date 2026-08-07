@@ -28,7 +28,7 @@ import { signOutAndClearCookies, useSession } from "@/lib/auth-client";
 
 const navigation = [
   { label: "Overview", href: "/dashboard", icon: Home },
-  { label: "Resources", href: "/dashboard", icon: FolderKanban, badge: "3" },
+  { label: "Resources", href: "/resources", icon: FolderKanban, badge: "3" },
   { label: "Tasks", href: "/dashboard", icon: LayoutGrid, badge: "12" },
   { label: "Calendar", href: "/dashboard", icon: CalendarDays },
   { label: "Team", href: "/dashboard", icon: UsersRound },
