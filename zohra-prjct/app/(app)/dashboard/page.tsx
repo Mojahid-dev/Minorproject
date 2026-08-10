@@ -39,7 +39,6 @@ export default function DashboardPage() {
           </p>
         </div>
       </div>
-
       <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 sm:p-6">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -54,7 +53,6 @@ export default function DashboardPage() {
             Coming soon
           </span>
         </div>
-
         <div className="mt-6 space-y-3" aria-label="Recent items loading">
           {[0, 1, 2].map((item) => (
             <div
@@ -77,3 +75,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+

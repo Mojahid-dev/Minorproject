@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 
-export async function POST(req: Request) {
+export async function POST() {
   // Authenticate the request using better-auth
   const session = await auth.api.getSession({ headers: await headers() });
 
