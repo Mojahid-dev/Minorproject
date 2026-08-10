@@ -1,4 +1,4 @@
-import { BookOpen, Compass, Sparkles } from "lucide-react";
+import { BookOpen, Clock3, Compass, Sparkles } from "lucide-react";
 
 export default function DashboardPage() {
   return (
@@ -38,6 +38,41 @@ export default function DashboardPage() {
           </p>
         </div>
       </div>
+
+      <section className="mt-8 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 sm:p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-medium text-neutral-400">
+              <Clock3 size={17} /> Recently opened
+            </div>
+            <h2 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-white">
+              Recent
+            </h2>
+          </div>
+          <span className="rounded-lg border border-zinc-800 px-2.5 py-1 text-xs font-medium text-neutral-500">
+            Coming soon
+          </span>
+        </div>
+
+        <div className="mt-6 space-y-3" aria-label="Recent items loading">
+          {[0, 1, 2].map((item) => (
+            <div
+              key={item}
+              className="flex items-center gap-4 rounded-xl border border-zinc-800/80 bg-zinc-950/40 p-3.5"
+            >
+              <div className="size-10 shrink-0 animate-pulse rounded-xl bg-zinc-800" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="h-3.5 w-2/5 animate-pulse rounded bg-zinc-800" />
+                <div className="h-3 w-1/4 animate-pulse rounded bg-zinc-800/70" />
+              </div>
+              <div className="hidden h-3 w-16 animate-pulse rounded bg-zinc-800/70 sm:block" />
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 text-sm text-neutral-500">
+          Your recently opened resources and projects will appear here.
+        </p>
+      </section>
     </>
   );
 }
