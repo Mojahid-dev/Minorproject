@@ -1,4 +1,5 @@
 import { BookOpen, Clock3, Compass, Sparkles } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
   return (
@@ -60,12 +61,12 @@ export default function DashboardPage() {
               key={item}
               className="flex items-center gap-4 rounded-xl border border-zinc-800/80 bg-zinc-950/40 p-3.5"
             >
-              <div className="size-10 shrink-0 animate-pulse rounded-xl bg-zinc-800" />
+              <Skeleton className="size-10 shrink-0 rounded-xl bg-zinc-800" />
               <div className="min-w-0 flex-1 space-y-2">
-                <div className="h-3.5 w-2/5 animate-pulse rounded bg-zinc-800" />
-                <div className="h-3 w-1/4 animate-pulse rounded bg-zinc-800/70" />
+                <Skeleton className="h-3.5 w-2/5 rounded bg-zinc-800" />
+                <Skeleton className="h-3 w-1/4 rounded bg-zinc-800/70" />
               </div>
-              <div className="hidden h-3 w-16 animate-pulse rounded bg-zinc-800/70 sm:block" />
+              <Skeleton className="hidden h-3 w-16 rounded bg-zinc-800/70 sm:block" />
             </div>
           ))}
         </div>
