@@ -78,7 +78,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     try {
       await signOutAndClearCookies();
     } finally {
-      router.push("/login");
+      router.push("/");
     }
   }
 
