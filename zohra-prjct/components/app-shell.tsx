@@ -21,6 +21,7 @@ import {
   Search,
   Settings2,
   Upload,
+  UserRound,
   UsersRound,
   X,
 } from "lucide-react";
@@ -160,6 +161,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <CircleHelp size={19} />
               {!collapsed && <span className="ml-3">Help centre</span>}
             </button>
+            <Link
+              href="/profile"
+              onClick={() => setMobileMenuOpen(false)}
+              title={collapsed ? "Profile" : undefined}
+              className={`${pathname === "/profile" ? "bg-white text-black" : "text-neutral-500 hover:bg-white/10 hover:text-white"} flex h-10 w-full items-center rounded-xl px-3 text-sm transition`}
+            >
+              <UserRound size={19} />
+              {!collapsed && <span className="ml-3">Profile</span>}
+            </Link>
             <Link
               href="/settings"
               onClick={() => setMobileMenuOpen(false)}
