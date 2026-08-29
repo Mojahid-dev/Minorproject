@@ -35,9 +35,33 @@ function fileKind(file: File) {
   return "Note";
 }
 
+function getYouTubeEmbedUrl(value: string) {
+  try {
+    const url = new URL(value.trim());
+    const hostname = url.hostname.replace(/^www\./, "");
+    let videoId = "";
+
+    if (hostname === "youtu.be") {
+      videoId = url.pathname.slice(1);
+    } else if (hostname === "youtube.com" || hostname === "m.youtube.com") {
+      if (url.pathname === "/watch") videoId = url.searchParams.get("v") ?? "";
+      if (url.pathname.startsWith("/shorts/") || url.pathname.startsWith("/embed/")) {
+        videoId = url.pathname.split("/")[2] ?? "";
+      }
+    }
+
+    return /^[a-zA-Z0-9_-]{11}$/.test(videoId)
+      ? `https://www.youtube.com/embed/${videoId}`
+      : "";
+  } catch {
+    return "";
+  }
+}
+
 export default function UploadPage() {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   function addFiles(files: FileList | File[]) {
@@ -61,6 +85,7 @@ export default function UploadPage() {
   }
 
   const readyCount = items.filter((item) => item.status === "ready").length;
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(youtubeUrl);
 
   return (
     <div className="mx-auto max-w-5xl text-white">
@@ -87,6 +112,43 @@ export default function UploadPage() {
               <p className="mt-1 text-sm text-neutral-500">{detail}</p>
             </div>
           ))}
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 sm:p-6">
+          <div className="flex items-start gap-3">
+            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-red-500/15 text-red-400">
+              <Film size={19} />
+            </div>
+            <div>
+              <h2 className="font-semibold">Add a YouTube lesson</h2>
+              <p className="mt-1 text-sm text-neutral-500">Paste a YouTube link to preview it in your resource library.</p>
+            </div>
+          </div>
+          <label htmlFor="youtube-url" className="mt-5 block text-sm font-medium text-neutral-300">YouTube URL</label>
+          <input
+            id="youtube-url"
+            type="url"
+            value={youtubeUrl}
+            onChange={(event) => setYoutubeUrl(event.target.value)}
+            placeholder="https://www.youtube.com/watch?v=..."
+            className="mt-2 h-11 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 text-sm outline-none transition placeholder:text-neutral-600 focus:border-zinc-600"
+          />
+          {youtubeUrl.trim() && !youtubeEmbedUrl && (
+            <p className="mt-2 text-sm text-red-400">Enter a valid YouTube video link.</p>
+          )}
+          {youtubeEmbedUrl && (
+            <div className="mt-5 overflow-hidden rounded-xl border border-zinc-800 bg-black">
+              <div className="aspect-video">
+                <iframe
+                  src={youtubeEmbedUrl}
+                  title="YouTube video preview"
+                  className="size-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          )}
         </section>
 
         <section
