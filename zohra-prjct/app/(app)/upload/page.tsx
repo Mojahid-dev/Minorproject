@@ -20,7 +20,7 @@ type UploadItem = {
   status: "ready" | "uploading" | "complete";
 };
 
-const acceptedTypes = ".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.mp4,.mov,.webm";
+const acceptedTypes = ".pdf,.doc,.docx,.ppt,.pptx,.txt,.md";
 
 function formatSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;

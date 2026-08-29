@@ -252,21 +252,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
               <button
                 aria-label="Messages"
-                className="grid size-10 place-items-center rounded-xl text-neutral-300 transition hover:bg-white/10 hover:text-white"
+                className="hidden size-10 place-items-center rounded-xl text-neutral-300 transition hover:bg-white/10 hover:text-white sm:grid"
               >
                 <MessageCircle size={20} />
               </button>
               <button
                 aria-label="Notifications"
-                className="relative grid size-10 place-items-center rounded-xl text-neutral-300 transition hover:bg-white/10 hover:text-white"
+                className="relative hidden size-10 place-items-center rounded-xl text-neutral-300 transition hover:bg-white/10 hover:text-white sm:grid"
               >
                 <Bell size={20} />
                 <span className="absolute right-2.5 top-2.5 size-2 rounded-full border-2 border-zinc-950 bg-white" />
               </button>
-              <button className="hidden items-center gap-2 rounded-xl bg-white px-3.5 py-2.5 text-sm font-semibold text-black shadow-[0_8px_18px_rgba(0,0,0,0.18)] transition hover:bg-neutral-200 sm:flex">
+              <Link
+                href="/upload"
+                aria-label="Add new project and upload documents"
+                className="flex items-center gap-2 rounded-xl bg-white px-3 py-2.5 text-sm font-semibold text-black shadow-[0_8px_18px_rgba(0,0,0,0.18)] transition hover:bg-neutral-200 sm:px-3.5"
+              >
                 <Plus size={17} />
-                New project
-              </button>
+                <span className="sm:hidden">Add</span>
+                <span className="hidden sm:inline">Add new project</span>
+              </Link>
             </div>
           </header>
           <div className="p-5 sm:p-8">{children}</div>
