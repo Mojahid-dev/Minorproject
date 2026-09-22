@@ -72,21 +72,36 @@ const phaseOrder = Object.fromEntries(uploadSteps.map((step, index) => [step.id,
 
 function UploadFlow({ item }: { item: UploadItem }) {
   const currentStep = item.phase === "complete" ? uploadSteps.length : phaseOrder[item.phase ?? "validating"] ?? 0;
+  const nodePositions = [
+    "left-1/2 top-0 -translate-x-1/2",
+    "left-0 top-1/2 -translate-y-1/2",
+    "right-0 top-1/2 -translate-y-1/2",
+    "bottom-0 left-1/2 -translate-x-1/2",
+  ];
 
   return (
-    <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/50 px-3 py-3 sm:px-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+    <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/50 px-5 py-5 sm:px-8">
+      <div className="relative mx-auto h-[238px] max-w-[460px]">
+        <svg viewBox="0 0 460 238" aria-hidden="true" className="absolute inset-0 size-full overflow-visible">
+          {[
+            [230, 31, 56, 119],
+            [56, 119, 404, 119],
+            [404, 119, 230, 207],
+          ].map(([x1, y1, x2, y2], index) => (
+            <line key={index} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 5" className={`${currentStep > index ? "text-emerald-400" : "text-zinc-700"} transition-colors duration-500`} />
+          ))}
+        </svg>
         {uploadSteps.map((step, index) => {
           const Icon = step.icon;
           const isComplete = currentStep > index;
           const isActive = currentStep === index && item.status === "uploading";
           return (
-            <div key={step.id} className="flex min-w-0 flex-1 items-center gap-2">
-              <div className={`${isComplete ? "bg-emerald-500/15 text-emerald-400" : isActive ? "bg-white text-black" : "bg-zinc-800 text-neutral-500"} grid size-7 shrink-0 place-items-center rounded-full transition-colors`}>
-                {isComplete ? <CheckCircle2 size={16} /> : isActive ? <LoaderCircle size={15} className="animate-spin" /> : <Icon size={15} />}
+            <div key={step.id} className={`absolute ${nodePositions[index]} flex w-28 flex-col items-center text-center`}>
+              <div className={`${isComplete ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-400" : isActive ? "border-white bg-white text-black shadow-[0_0_0_5px_rgba(255,255,255,0.08)]" : "border-zinc-700 bg-zinc-900 text-neutral-500"} grid size-[62px] place-items-center rounded-2xl border transition-all duration-500 ${isActive ? "scale-110" : ""}`}>
+                {isComplete ? <CheckCircle2 size={24} /> : isActive ? <LoaderCircle size={23} className="animate-spin" /> : <Icon size={22} />}
               </div>
-              <div className="min-w-0"><p className={`${isActive || isComplete ? "text-neutral-200" : "text-neutral-500"} truncate text-xs font-medium transition-colors`}>{step.label}</p>{isActive && step.id === "uploading-to-blob" && <p className="mt-0.5 text-[11px] text-neutral-500">{item.progress ?? 0}% complete</p>}</div>
-              {index < uploadSteps.length - 1 && <div className={`${isComplete ? "bg-emerald-500/40" : "bg-zinc-800"} ml-auto hidden h-px w-5 shrink-0 transition-colors sm:block`} />}
+              <p className={`${isActive || isComplete ? "text-neutral-200" : "text-neutral-500"} mt-2 text-[11px] font-medium leading-tight transition-colors`}>{step.label}</p>
+              {isActive && step.id === "uploading-to-blob" && <p className="mt-1 text-[10px] text-neutral-500">{item.progress ?? 0}% complete</p>}
             </div>
           );
         })}
