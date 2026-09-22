@@ -182,9 +182,9 @@ export default function ResourcesPage() {
         </div>
         <Link
           href="/upload"
-          className="inline-flex h-14 items-center gap-3 rounded-xl bg-white px-6 text-sm font-semibold text-black shadow-sm transition hover:bg-neutral-200"
+          className="inline-flex h-10 items-center gap-3 rounded-xl bg-white px-4 text-sm font-semibold text-black shadow-sm transition hover:bg-neutral-200"
         >
-          <Upload size={20} />
+          <Upload size={15} />
           Add resources
         </Link>
       </header>
