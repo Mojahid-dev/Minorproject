@@ -4,6 +4,26 @@ import { getFileExtension, validateResourceFile } from "@/lib/resource-validatio
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
+export async function GET() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const resources = await prisma.resource.findMany({
+    where: { userId: session.user.id },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      originalName: true,
+      mimeType: true,
+      sizeBytes: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+
+  return NextResponse.json({ resources });
+}
+
 export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

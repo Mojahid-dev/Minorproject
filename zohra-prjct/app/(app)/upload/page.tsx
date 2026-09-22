@@ -11,7 +11,7 @@ import {
   UploadCloud,
   X,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { validateResourceFile } from "@/lib/resource-validation";
@@ -27,6 +27,15 @@ type UploadItem = {
   phase?: "validating" | "creating-resource" | "authorizing-upload" | "uploading-to-blob" | "complete" | "error";
   error?: string;
   progress?: number;
+};
+
+type SavedResource = {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  status: "PENDING" | "PROCESSING" | "READY" | "FAILED";
+  createdAt: string;
 };
 
 const acceptedTypes = ".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.jpg,.jpeg,.png,.mp4,.mov,.webm";
@@ -91,11 +100,36 @@ function delay(milliseconds: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
+function resourceStatus(resource: SavedResource) {
+  if (resource.status === "READY") return { label: "Added to library", complete: true };
+  if (resource.status === "FAILED") return { label: "Upload failed", complete: false };
+  return { label: resource.status === "PROCESSING" ? "Processing..." : "Finalizing upload...", complete: false };
+}
+
 export default function UploadPage() {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [dragging, setDragging] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [savedResources, setSavedResources] = useState<SavedResource[]>([]);
+  const [isLoadingResources, setIsLoadingResources] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadResources() {
+      try {
+        const response = await fetch("/api/resources");
+        const payload = await response.json();
+        if (response.ok && active) setSavedResources(payload.resources);
+      } finally {
+        if (active) setIsLoadingResources(false);
+      }
+    }
+
+    void loadResources();
+    return () => { active = false; };
+  }, []);
 
   function addFiles(files: FileList | File[]) {
     const rejected: string[] = [];
@@ -155,6 +189,14 @@ export default function UploadPage() {
           phase: "complete",
           progress: 100,
         } : currentItem));
+        setSavedResources((current) => [{
+          id: payload.resource.id,
+          originalName: payload.resource.originalName,
+          mimeType: payload.resource.mimeType,
+          sizeBytes: payload.resource.sizeBytes,
+          status: "READY",
+          createdAt: payload.resource.createdAt,
+        }, ...current]);
       } catch (error) {
         setItems((current) => current.map((currentItem) => currentItem.id === item.id ? {
           ...currentItem,
@@ -211,11 +253,10 @@ export default function UploadPage() {
         </section>
       )}
 
-      {items.length === 0 && (
-        <section className="mt-7 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5">
-          <h2 className="font-semibold">Recently added</h2>
-          <ul className="mt-3 divide-y divide-zinc-800 border-t border-zinc-800">
-            {Array.from({ length: 3 }).map((_, index) => (
+      <section className="mt-7 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5">
+        <h2 className="font-semibold">Recently added</h2>
+        <ul className="mt-3 divide-y divide-zinc-800 border-t border-zinc-800">
+          {isLoadingResources && Array.from({ length: 3 }).map((_, index) => (
               <li key={index} className="flex items-center gap-3 py-3.5">
                 <Skeleton className="size-11 shrink-0 rounded-xl bg-zinc-800" />
                 <div className="flex-1 space-y-2">
@@ -226,9 +267,13 @@ export default function UploadPage() {
                 <Skeleton className="size-9 rounded-lg bg-zinc-800/70" />
               </li>
             ))}
-          </ul>
-        </section>
-      )}
+          {!isLoadingResources && savedResources.map((resource) => {
+            const status = resourceStatus(resource);
+            return <li key={resource.id} className="flex items-center gap-3 py-3.5"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={21} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{resource.originalName}</p><p className="mt-1 text-xs text-neutral-400">{formatSize(resource.sizeBytes)} · {formatModifiedDate(new Date(resource.createdAt).getTime())}</p></div><span className={`${status.complete ? "text-neutral-300" : resource.status === "FAILED" ? "text-red-300" : "text-neutral-400"} hidden items-center gap-2 text-sm sm:flex`}>{status.complete ? <CheckCircle2 size={19} /> : <LoaderCircle size={17} className={resource.status === "FAILED" ? "" : "animate-spin"} />}{status.label}</span></li>;
+          })}
+          {!isLoadingResources && savedResources.length === 0 && <li className="py-8 text-center text-sm text-neutral-500">Your uploaded learning materials will appear here.</li>}
+        </ul>
+      </section>
     </div>
   );
 }
