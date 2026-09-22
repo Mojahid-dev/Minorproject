@@ -108,22 +108,24 @@ export default function UploadPage() {
         </section>
       )}
 
-      <section className="mt-7 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5">
-        <h2 className="font-semibold">Recently added</h2>
-        <ul className="mt-3 divide-y divide-zinc-800 border-t border-zinc-800">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <li key={index} className="flex items-center gap-3 py-3.5">
-              <Skeleton className="size-11 shrink-0 rounded-xl bg-zinc-800" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-3.5 w-2/5 rounded bg-zinc-800" />
-                <Skeleton className="h-3 w-1/4 rounded bg-zinc-800/70" />
-              </div>
-              <Skeleton className="hidden h-3 w-24 rounded bg-zinc-800/70 sm:block" />
-              <Skeleton className="size-9 rounded-lg bg-zinc-800/70" />
-            </li>
-          ))}
-        </ul>
-      </section>
+      {items.length === 0 && (
+        <section className="mt-7 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5">
+          <h2 className="font-semibold">Recently added</h2>
+          <ul className="mt-3 divide-y divide-zinc-800 border-t border-zinc-800">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <li key={index} className="flex items-center gap-3 py-3.5">
+                <Skeleton className="size-11 shrink-0 rounded-xl bg-zinc-800" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-3.5 w-2/5 rounded bg-zinc-800" />
+                  <Skeleton className="h-3 w-1/4 rounded bg-zinc-800/70" />
+                </div>
+                <Skeleton className="hidden h-3 w-24 rounded bg-zinc-800/70 sm:block" />
+                <Skeleton className="size-9 rounded-lg bg-zinc-800/70" />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
