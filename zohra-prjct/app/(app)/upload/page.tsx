@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useSession } from "@/lib/auth-client";
+import { validateResourceFile } from "@/lib/resource-validation";
 
 type UploadItem = {
   id: string;
@@ -20,11 +20,11 @@ type UploadItem = {
   storageKey: string;
   uploadedAt: string | null;
   file: File;
-  status: "ready" | "uploading" | "complete";
+  status: "ready" | "uploading" | "complete" | "error";
+  error?: string;
 };
 
 const acceptedTypes = ".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.jpg,.jpeg,.png,.mp4,.mov,.webm";
-const maxFileSize = 100 * 1024 * 1024;
 
 function formatSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -50,35 +50,59 @@ function formatModifiedDate(timestamp: number) {
 export default function UploadPage() {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { data: session } = useSession();
 
   function addFiles(files: FileList | File[]) {
-    const userId = session?.user?.id ?? `local-user-${crypto.randomUUID()}`;
-    const incoming = Array.from(files)
-      .filter((file) => file.size <= maxFileSize)
-      .map((file) => {
-        const resourceId = crypto.randomUUID();
-        const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-        return {
-          id: resourceId,
-          resourceId,
-          userId,
-          storageKey: `resources/${userId}/${resourceId}/${safeFileName}`,
-          uploadedAt: null,
-          file,
-          status: "ready" as const,
-        };
-      });
+    const rejected: string[] = [];
+    const incoming = Array.from(files).flatMap((file) => {
+      const error = validateResourceFile(file);
+      if (error) {
+        rejected.push(`${file.name}: ${error}`);
+        return [];
+      }
+      return [{
+        id: crypto.randomUUID(),
+        resourceId: "",
+        userId: "",
+        storageKey: "",
+        uploadedAt: null,
+        file,
+        status: "ready" as const,
+      }];
+    });
+    setValidationErrors(rejected);
     setItems((current) => [...incoming, ...current]);
   }
 
-  function uploadFiles() {
-    const uploadedAt = new Date().toISOString();
-    setItems((current) => current.map((item) => item.status === "ready" ? { ...item, status: "uploading", uploadedAt } : item));
-    window.setTimeout(() => {
-      setItems((current) => current.map((item) => item.status === "uploading" ? { ...item, status: "complete" } : item));
-    }, 900);
+  async function uploadFiles() {
+    const readyItems = items.filter((item) => item.status === "ready");
+    setItems((current) => current.map((item) => item.status === "ready" ? { ...item, status: "uploading" } : item));
+    await Promise.all(readyItems.map(async (item) => {
+      try {
+        const response = await fetch("/api/resources", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: item.file.name, type: item.file.type, size: item.file.size }),
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Unable to save resource metadata.");
+        setItems((current) => current.map((currentItem) => currentItem.id === item.id ? {
+          ...currentItem,
+          resourceId: payload.resource.id,
+          userId: payload.resource.userId,
+          storageKey: payload.resource.storageKey,
+          uploadedAt: payload.resource.createdAt,
+          status: "complete",
+        } : currentItem));
+      } catch (error) {
+        setItems((current) => current.map((currentItem) => currentItem.id === item.id ? {
+          ...currentItem,
+          status: "error",
+          error: error instanceof Error ? error.message : "Unable to save resource metadata.",
+        } : currentItem));
+      }
+    }));
   }
 
   function removeFile(id: string) {
@@ -94,6 +118,8 @@ export default function UploadPage() {
         <h1 className="mt-3 text-3xl font-bold tracking-[-0.045em] sm:text-4xl">Upload your learning materials</h1>
         <p className="mt-3 text-base text-neutral-400">Add notes, PDFs, documents, presentations, or videos to keep everything together.</p>
       </section>
+
+      {validationErrors.length > 0 && <div role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-left text-sm text-red-200"><p className="font-medium">Some files were not added</p><ul className="mt-1 list-disc space-y-1 pl-5 text-red-200/80">{validationErrors.map((error) => <li key={error}>{error}</li>)}</ul></div>}
 
       <section
         onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
@@ -119,7 +145,7 @@ export default function UploadPage() {
         <section className="mt-7 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-4"><h2 className="font-semibold">Upload queue</h2>{readyCount > 0 && <button onClick={uploadFiles} className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-neutral-200">Upload {readyCount} file{readyCount === 1 ? "" : "s"}</button>}</div>
           <ul className="divide-y divide-zinc-800">
-            {items.map((item) => <li key={item.id} className="py-4"><div className="flex items-center gap-3"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={21} /></div><div className="min-w-0 flex-1 text-left"><p className="truncate text-sm font-medium">{item.file.name}</p><p className="mt-1 text-xs text-neutral-400">{formatSize(item.file.size)}</p></div>{item.status === "uploading" && <span className="flex items-center gap-2 text-sm text-neutral-400"><LoaderCircle size={17} className="animate-spin" />Uploading...</span>}{item.status === "complete" && <span className="flex items-center gap-2 text-sm text-neutral-300"><CheckCircle2 size={19} />Added to library</span>}{item.status === "ready" && <button onClick={() => removeFile(item.id)} aria-label={`Remove ${item.file.name}`} className="grid size-9 place-items-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"><X size={18} /></button>}</div><div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-zinc-800 bg-zinc-800 sm:grid-cols-4">{[{ label: "File name", value: item.file.name }, { label: "Size", value: formatSize(item.file.size) }, { label: "Type", value: fileType(item.file) }, { label: "Modified", value: formatModifiedDate(item.file.lastModified) }].map((metadata) => <div key={metadata.label} className="min-w-0 bg-zinc-950/60 px-3 py-3"><p className="text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-500">{metadata.label}</p><p title={metadata.value} className="mt-1.5 truncate text-xs text-neutral-300">{metadata.value}</p></div>)}</div></li>)}
+            {items.map((item) => <li key={item.id} className="py-4"><div className="flex items-center gap-3"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={21} /></div><div className="min-w-0 flex-1 text-left"><p className="truncate text-sm font-medium">{item.file.name}</p><p className="mt-1 text-xs text-neutral-400">{formatSize(item.file.size)}</p></div>{item.status === "uploading" && <span className="flex items-center gap-2 text-sm text-neutral-400"><LoaderCircle size={17} className="animate-spin" />Saving...</span>}{item.status === "complete" && <span className="flex items-center gap-2 text-sm text-neutral-300"><CheckCircle2 size={19} />Added to library</span>}{item.status === "error" && <span className="max-w-48 truncate text-sm text-red-300" title={item.error}>{item.error}</span>}{item.status === "ready" && <button onClick={() => removeFile(item.id)} aria-label={`Remove ${item.file.name}`} className="grid size-9 place-items-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"><X size={18} /></button>}</div><div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-zinc-800 bg-zinc-800 sm:grid-cols-4">{[{ label: "File name", value: item.file.name }, { label: "Size", value: formatSize(item.file.size) }, { label: "Type", value: fileType(item.file) }, { label: "Modified", value: formatModifiedDate(item.file.lastModified) }].map((metadata) => <div key={metadata.label} className="min-w-0 bg-zinc-950/60 px-3 py-3"><p className="text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-500">{metadata.label}</p><p title={metadata.value} className="mt-1.5 truncate text-xs text-neutral-300">{metadata.value}</p></div>)}</div></li>)}
           </ul>
         </section>
       )}

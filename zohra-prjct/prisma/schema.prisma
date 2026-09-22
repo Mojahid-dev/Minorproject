@@ -22,9 +22,35 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  resources     Resource[]
 
   @@unique([email])
   @@map("user")
+}
+
+enum ResourceStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+model Resource {
+  id           String         @id @default(cuid())
+  userId       String
+  originalName String
+  mimeType     String
+  extension    String
+  sizeBytes    Int
+  storageKey   String         @unique
+  status       ResourceStatus @default(PENDING)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, status])
+  @@map("resource")
 }
 
 model Session {
