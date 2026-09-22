@@ -29,12 +29,24 @@ export async function POST(request: Request) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json().catch(() => null);
-  if (!body || typeof body.name !== "string" || typeof body.size !== "number" || typeof body.type !== "string") {
+  if (!body || typeof body.name !== "string" || typeof body.size !== "number" || typeof body.type !== "string" || typeof body.checksum !== "string") {
     return NextResponse.json({ error: "Invalid resource metadata." }, { status: 400 });
+  }
+
+  if (!/^[a-f0-9]{64}$/i.test(body.checksum)) {
+    return NextResponse.json({ error: "Invalid file checksum." }, { status: 400 });
   }
 
   const validationError = validateResourceFile(body);
   if (validationError) return NextResponse.json({ error: validationError }, { status: 400 });
+
+  const existingResource = await prisma.resource.findUnique({
+    where: { userId_checksum: { userId: session.user.id, checksum: body.checksum } },
+    select: { id: true },
+  });
+  if (existingResource) {
+    return NextResponse.json({ error: "This exact file is already in your library." }, { status: 409 });
+  }
 
   const extension = getFileExtension(body.name);
   const safeFileName = body.name.replace(/[^a-zA-Z0-9._-]/g, "-");
@@ -49,6 +61,7 @@ export async function POST(request: Request) {
       mimeType: body.type || "application/octet-stream",
       extension,
       sizeBytes: body.size,
+      checksum: body.checksum,
       storageKey,
       status: "PENDING",
     },

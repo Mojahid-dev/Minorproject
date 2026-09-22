@@ -8,6 +8,7 @@ import {
   Paperclip,
   ShieldCheck,
   Sparkles,
+  Trash2,
   UploadCloud,
   X,
 } from "lucide-react";
@@ -23,6 +24,7 @@ type UploadItem = {
   storageKey: string;
   uploadedAt: string | null;
   file: File;
+  checksum: string;
   status: "ready" | "uploading" | "complete" | "error";
   phase?: "validating" | "creating-resource" | "authorizing-upload" | "uploading-to-blob" | "complete" | "error";
   error?: string;
@@ -115,6 +117,11 @@ function delay(milliseconds: number) {
   return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
+async function fileChecksum(file: File) {
+  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 function resourceStatus(resource: SavedResource) {
   if (resource.status === "READY") return { label: "Added to library", complete: true };
   if (resource.status === "FAILED") return { label: "Upload failed", complete: false };
@@ -127,6 +134,7 @@ export default function UploadPage() {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [savedResources, setSavedResources] = useState<SavedResource[]>([]);
   const [isLoadingResources, setIsLoadingResources] = useState(true);
+  const [deletingResourceId, setDeletingResourceId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -146,24 +154,33 @@ export default function UploadPage() {
     return () => { active = false; };
   }, []);
 
-  function addFiles(files: FileList | File[]) {
+  async function addFiles(files: FileList | File[]) {
     const rejected: string[] = [];
-    const incoming = Array.from(files).flatMap((file) => {
+    const knownChecksums = new Set(items.map((item) => item.checksum));
+    const incoming: UploadItem[] = [];
+    for (const file of Array.from(files)) {
       const error = validateResourceFile(file);
       if (error) {
         rejected.push(`${file.name}: ${error}`);
-        return [];
+        continue;
       }
-      return [{
+      const checksum = await fileChecksum(file);
+      if (knownChecksums.has(checksum)) {
+        rejected.push(`${file.name}: This file is already in your upload queue.`);
+        continue;
+      }
+      knownChecksums.add(checksum);
+      incoming.push({
         id: crypto.randomUUID(),
         resourceId: "",
         userId: "",
         storageKey: "",
         uploadedAt: null,
         file,
+        checksum,
         status: "ready" as const,
-      }];
-    });
+      });
+    }
     setValidationErrors(rejected);
     setItems((current) => [...incoming, ...current]);
   }
@@ -178,7 +195,7 @@ export default function UploadPage() {
         const response = await fetch("/api/resources", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: item.file.name, type: item.file.type, size: item.file.size }),
+          body: JSON.stringify({ name: item.file.name, type: item.file.type, size: item.file.size, checksum: item.checksum }),
         });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "Unable to save resource metadata.");
@@ -225,6 +242,20 @@ export default function UploadPage() {
 
   function removeFile(id: string) {
     setItems((current) => current.filter((item) => item.id !== id));
+  }
+
+  async function deleteResource(resourceId: string) {
+    setDeletingResourceId(resourceId);
+    try {
+      const response = await fetch(`/api/resources/${resourceId}`, { method: "DELETE" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to remove this resource.");
+      setSavedResources((current) => current.filter((resource) => resource.id !== resourceId));
+    } catch (error) {
+      setValidationErrors([error instanceof Error ? error.message : "Unable to remove this resource."]);
+    } finally {
+      setDeletingResourceId(null);
+    }
   }
 
   const readyCount = items.filter((item) => item.status === "ready").length;
@@ -284,7 +315,7 @@ export default function UploadPage() {
             ))}
           {!isLoadingResources && savedResources.map((resource) => {
             const status = resourceStatus(resource);
-            return <li key={resource.id} className="flex items-center gap-3 py-3.5"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={21} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{resource.originalName}</p><p className="mt-1 text-xs text-neutral-400">{formatSize(resource.sizeBytes)} · {formatModifiedDate(new Date(resource.createdAt).getTime())}</p></div><span className={`${status.complete ? "text-neutral-300" : resource.status === "FAILED" ? "text-red-300" : "text-neutral-400"} hidden items-center gap-2 text-sm sm:flex`}>{status.complete ? <CheckCircle2 size={19} /> : <LoaderCircle size={17} className={resource.status === "FAILED" ? "" : "animate-spin"} />}{status.label}</span></li>;
+            return <li key={resource.id} className="flex items-center gap-3 py-3.5"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={21} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{resource.originalName}</p><p className="mt-1 text-xs text-neutral-400">{formatSize(resource.sizeBytes)} · {formatModifiedDate(new Date(resource.createdAt).getTime())}</p></div><span className={`${status.complete ? "text-neutral-300" : resource.status === "FAILED" ? "text-red-300" : "text-neutral-400"} hidden items-center gap-2 text-sm sm:flex`}>{status.complete ? <CheckCircle2 size={19} /> : <LoaderCircle size={17} className={resource.status === "FAILED" ? "" : "animate-spin"} />}{status.label}</span><button onClick={() => deleteResource(resource.id)} disabled={deletingResourceId === resource.id} aria-label={`Remove ${resource.originalName}`} className="grid size-9 shrink-0 place-items-center rounded-lg text-neutral-400 transition hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50">{deletingResourceId === resource.id ? <LoaderCircle size={17} className="animate-spin" /> : <Trash2 size={17} />}</button></li>;
           })}
           {!isLoadingResources && savedResources.length === 0 && <li className="py-8 text-center text-sm text-neutral-500">Your uploaded learning materials will appear here.</li>}
         </ul>

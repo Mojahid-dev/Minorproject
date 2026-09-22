@@ -42,6 +42,7 @@ model Resource {
   mimeType     String
   extension    String
   sizeBytes    Int
+  checksum     String?
   storageKey   String         @unique
   status       ResourceStatus @default(PENDING)
   createdAt    DateTime       @default(now())
@@ -50,6 +51,7 @@ model Resource {
 
   @@index([userId])
   @@index([userId, status])
+  @@unique([userId, checksum])
   @@map("resource")
 }
 
