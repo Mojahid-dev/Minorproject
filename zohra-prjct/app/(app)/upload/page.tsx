@@ -26,6 +26,22 @@ function formatSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function fileType(file: File) {
+  if (file.type) return file.type;
+  const extension = file.name.split(".").pop()?.toUpperCase();
+  return extension ? `${extension} file` : "Unknown file type";
+}
+
+function formatModifiedDate(timestamp: number) {
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(timestamp));
+}
+
 export default function UploadPage() {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -87,7 +103,7 @@ export default function UploadPage() {
         <section className="mt-7 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-4"><h2 className="font-semibold">Upload queue</h2>{readyCount > 0 && <button onClick={uploadFiles} className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-neutral-200">Upload {readyCount} file{readyCount === 1 ? "" : "s"}</button>}</div>
           <ul className="divide-y divide-zinc-800">
-            {items.map((item) => <li key={item.id} className="flex items-center gap-3 py-4"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={21} /></div><div className="min-w-0 flex-1 text-left"><p className="truncate text-sm font-medium">{item.file.name}</p><p className="mt-1 text-xs text-neutral-400">{formatSize(item.file.size)}</p></div>{item.status === "uploading" && <span className="flex items-center gap-2 text-sm text-neutral-400"><LoaderCircle size={17} className="animate-spin" />Uploading...</span>}{item.status === "complete" && <span className="flex items-center gap-2 text-sm text-neutral-300"><CheckCircle2 size={19} />Added to library</span>}{item.status === "ready" && <button onClick={() => removeFile(item.id)} aria-label={`Remove ${item.file.name}`} className="grid size-9 place-items-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"><X size={18} /></button>}</li>)}
+            {items.map((item) => <li key={item.id} className="py-4"><div className="flex items-center gap-3"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={21} /></div><div className="min-w-0 flex-1 text-left"><p className="truncate text-sm font-medium">{item.file.name}</p><p className="mt-1 text-xs text-neutral-400">{formatSize(item.file.size)}</p></div>{item.status === "uploading" && <span className="flex items-center gap-2 text-sm text-neutral-400"><LoaderCircle size={17} className="animate-spin" />Uploading...</span>}{item.status === "complete" && <span className="flex items-center gap-2 text-sm text-neutral-300"><CheckCircle2 size={19} />Added to library</span>}{item.status === "ready" && <button onClick={() => removeFile(item.id)} aria-label={`Remove ${item.file.name}`} className="grid size-9 place-items-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"><X size={18} /></button>}</div><div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-zinc-800 bg-zinc-800 sm:grid-cols-4">{[{ label: "File name", value: item.file.name }, { label: "Size", value: formatSize(item.file.size) }, { label: "Type", value: fileType(item.file) }, { label: "Modified", value: formatModifiedDate(item.file.lastModified) }].map((metadata) => <div key={metadata.label} className="min-w-0 bg-zinc-950/60 px-3 py-3"><p className="text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-500">{metadata.label}</p><p title={metadata.value} className="mt-1.5 truncate text-xs text-neutral-300">{metadata.value}</p></div>)}</div></li>)}
           </ul>
         </section>
       )}
