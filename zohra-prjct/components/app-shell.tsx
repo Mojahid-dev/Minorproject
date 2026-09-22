@@ -135,15 +135,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     href={href}
                     onClick={() => setMobileMenuOpen(false)}
                     title={collapsed ? label : undefined}
-                    className={`${isActive ? "bg-white text-black" : "text-neutral-500 hover:bg-white/10 hover:text-white"} flex h-11 w-full items-center rounded-xl px-3 text-sm font-medium transition`}
+                    className={`${isActive ? "relative isolate overflow-hidden border border-white/15 bg-white/[0.09] text-white shadow-[0_8px_24px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md before:absolute before:inset-y-2.5 before:left-0 before:w-0.5 before:rounded-r-full before:bg-white before:shadow-[0_0_14px_rgba(255,255,255,0.9)]" : "text-neutral-500 hover:bg-white/[0.06] hover:text-white"} flex h-11 w-full items-center rounded-xl px-3 text-sm font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-200 hover:-translate-y-px`}
                   >
-                    <Icon size={19} strokeWidth={isActive ? 2.4 : 2} />
+                    <Icon size={19} strokeWidth={isActive ? 2.4 : 2} className="relative z-10" />
                     {!collapsed && (
-                      <span className="ml-3 flex-1 text-left">{label}</span>
+                      <span className="relative z-10 ml-3 flex-1 text-left">{label}</span>
                     )}
                     {!collapsed && badge && (
                       <span
-                        className={`${isActive ? "bg-black text-white" : "bg-zinc-800 text-neutral-300"} rounded-md px-1.5 py-0.5 text-[11px] font-semibold`}
+                        className={`${isActive ? "border border-white/15 bg-white/10 text-white" : "bg-zinc-800 text-neutral-300"} relative z-10 rounded-md px-1.5 py-0.5 text-[11px] font-semibold`}
                       >
                         {badge}
                       </span>
@@ -165,19 +165,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               href="/profile"
               onClick={() => setMobileMenuOpen(false)}
               title={collapsed ? "Profile" : undefined}
-              className={`${pathname === "/profile" ? "bg-white text-black" : "text-neutral-500 hover:bg-white/10 hover:text-white"} flex h-10 w-full items-center rounded-xl px-3 text-sm transition`}
+              className={`${pathname === "/profile" ? "relative isolate overflow-hidden border border-white/15 bg-white/[0.09] text-white shadow-[0_8px_24px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md before:absolute before:inset-y-2.5 before:left-0 before:w-0.5 before:rounded-r-full before:bg-white before:shadow-[0_0_14px_rgba(255,255,255,0.9)]" : "text-neutral-500 hover:bg-white/[0.06] hover:text-white"} flex h-10 w-full items-center rounded-xl px-3 text-sm transition-[background-color,border-color,color,box-shadow,transform] duration-200 hover:-translate-y-px`}
             >
-              <UserRound size={19} />
-              {!collapsed && <span className="ml-3">Profile</span>}
+              <UserRound size={19} className="relative z-10" />
+              {!collapsed && <span className="relative z-10 ml-3">Profile</span>}
             </Link>
             <Link
               href="/settings"
               onClick={() => setMobileMenuOpen(false)}
               title={collapsed ? "Settings" : undefined}
-              className={`${pathname.startsWith("/settings") ? "bg-white text-black" : "text-neutral-500 hover:bg-white/10 hover:text-white"} flex h-10 w-full items-center rounded-xl px-3 text-sm transition`}
+              className={`${pathname.startsWith("/settings") ? "relative isolate overflow-hidden border border-white/15 bg-white/[0.09] text-white shadow-[0_8px_24px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md before:absolute before:inset-y-2.5 before:left-0 before:w-0.5 before:rounded-r-full before:bg-white before:shadow-[0_0_14px_rgba(255,255,255,0.9)]" : "text-neutral-500 hover:bg-white/[0.06] hover:text-white"} flex h-10 w-full items-center rounded-xl px-3 text-sm transition-[background-color,border-color,color,box-shadow,transform] duration-200 hover:-translate-y-px`}
             >
-              <Settings2 size={19} />
-              {!collapsed && <span className="ml-3">Settings</span>}
+              <Settings2 size={19} className="relative z-10" />
+              {!collapsed && <span className="relative z-10 ml-3">Settings</span>}
             </Link>
             <div className="my-3 h-px bg-zinc-800" />
             <div
