@@ -9,11 +9,20 @@ type UploadPayload = { resourceId: string };
 
 export async function POST(request: Request) {
   const body = (await request.json()) as HandleUploadBody;
+  const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+
+  if (!blobToken) {
+    return NextResponse.json(
+      { error: "Vercel Blob is not configured. Set BLOB_READ_WRITE_TOKEN and restart the development server." },
+      { status: 503 },
+    );
+  }
 
   try {
     const jsonResponse = await handleUpload({
       body,
       request,
+      token: blobToken,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         const session = await auth.api.getSession({ headers: await headers() });
         if (!session?.user) throw new Error("Unauthorized");
@@ -46,6 +55,9 @@ export async function POST(request: Request) {
     return NextResponse.json(jsonResponse);
   } catch (error) {
     console.error("Vercel Blob upload token error:", error);
-    return NextResponse.json({ error: "Unable to authorize file upload." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Unable to authorize file upload. Check that BLOB_READ_WRITE_TOKEN is a valid token for this Vercel Blob store." },
+      { status: 400 },
+    );
   }
 }

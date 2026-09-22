@@ -2,9 +2,11 @@
 
 import {
   CheckCircle2,
+  Database,
   FileText,
   LoaderCircle,
   Paperclip,
+  ShieldCheck,
   Sparkles,
   UploadCloud,
   X,
@@ -22,6 +24,7 @@ type UploadItem = {
   uploadedAt: string | null;
   file: File;
   status: "ready" | "uploading" | "complete" | "error";
+  phase?: "validating" | "creating-resource" | "authorizing-upload" | "uploading-to-blob" | "complete" | "error";
   error?: string;
   progress?: number;
 };
@@ -47,6 +50,45 @@ function formatModifiedDate(timestamp: number) {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(timestamp));
+}
+
+const uploadSteps = [
+  { id: "validating", label: "Validating file", icon: ShieldCheck },
+  { id: "creating-resource", label: "Creating resource record", icon: Database },
+  { id: "authorizing-upload", label: "Securing upload", icon: ShieldCheck },
+  { id: "uploading-to-blob", label: "Uploading to Blob", icon: UploadCloud },
+] as const;
+
+const phaseOrder = Object.fromEntries(uploadSteps.map((step, index) => [step.id, index]));
+
+function UploadFlow({ item }: { item: UploadItem }) {
+  const currentStep = item.phase === "complete" ? uploadSteps.length : phaseOrder[item.phase ?? "validating"] ?? 0;
+
+  return (
+    <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/50 px-3 py-3 sm:px-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+        {uploadSteps.map((step, index) => {
+          const Icon = step.icon;
+          const isComplete = currentStep > index;
+          const isActive = currentStep === index && item.status === "uploading";
+          return (
+            <div key={step.id} className="flex min-w-0 flex-1 items-center gap-2">
+              <div className={`${isComplete ? "bg-emerald-500/15 text-emerald-400" : isActive ? "bg-white text-black" : "bg-zinc-800 text-neutral-500"} grid size-7 shrink-0 place-items-center rounded-full transition-colors`}>
+                {isComplete ? <CheckCircle2 size={16} /> : isActive ? <LoaderCircle size={15} className="animate-spin" /> : <Icon size={15} />}
+              </div>
+              <div className="min-w-0"><p className={`${isActive || isComplete ? "text-neutral-200" : "text-neutral-500"} truncate text-xs font-medium transition-colors`}>{step.label}</p>{isActive && step.id === "uploading-to-blob" && <p className="mt-0.5 text-[11px] text-neutral-500">{item.progress ?? 0}% complete</p>}</div>
+              {index < uploadSteps.length - 1 && <div className={`${isComplete ? "bg-emerald-500/40" : "bg-zinc-800"} ml-auto hidden h-px w-5 shrink-0 transition-colors sm:block`} />}
+            </div>
+          );
+        })}
+      </div>
+      {item.status === "complete" && <p className="mt-3 border-t border-zinc-800 pt-3 text-xs text-emerald-400">File uploaded securely and added to your resource library.</p>}
+    </div>
+  );
+}
+
+function delay(milliseconds: number) {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
 export default function UploadPage() {
@@ -79,9 +121,11 @@ export default function UploadPage() {
 
   async function uploadFiles() {
     const readyItems = items.filter((item) => item.status === "ready");
-    setItems((current) => current.map((item) => item.status === "ready" ? { ...item, status: "uploading" } : item));
+    setItems((current) => current.map((item) => item.status === "ready" ? { ...item, status: "uploading", phase: "validating", progress: 0 } : item));
     await Promise.all(readyItems.map(async (item) => {
       try {
+        await delay(450);
+        setItems((current) => current.map((currentItem) => currentItem.id === item.id ? { ...currentItem, phase: "creating-resource" } : currentItem));
         const response = await fetch("/api/resources", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -89,6 +133,9 @@ export default function UploadPage() {
         });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "Unable to save resource metadata.");
+        setItems((current) => current.map((currentItem) => currentItem.id === item.id ? { ...currentItem, phase: "authorizing-upload" } : currentItem));
+        await delay(350);
+        setItems((current) => current.map((currentItem) => currentItem.id === item.id ? { ...currentItem, phase: "uploading-to-blob" } : currentItem));
         const blob = await upload(payload.resource.storageKey, item.file, {
           access: "private",
           handleUploadUrl: "/api/resources/upload",
@@ -105,12 +152,14 @@ export default function UploadPage() {
           storageKey: blob.pathname,
           uploadedAt: payload.resource.createdAt,
           status: "complete",
+          phase: "complete",
           progress: 100,
         } : currentItem));
       } catch (error) {
         setItems((current) => current.map((currentItem) => currentItem.id === item.id ? {
           ...currentItem,
           status: "error",
+          phase: "error",
           error: error instanceof Error ? error.message : "Unable to save resource metadata.",
         } : currentItem));
       }
@@ -157,7 +206,7 @@ export default function UploadPage() {
         <section className="mt-7 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-4"><h2 className="font-semibold">Upload queue</h2>{readyCount > 0 && <button onClick={uploadFiles} className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-neutral-200">Upload {readyCount} file{readyCount === 1 ? "" : "s"}</button>}</div>
           <ul className="divide-y divide-zinc-800">
-            {items.map((item) => <li key={item.id} className="py-4"><div className="flex items-center gap-3"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={21} /></div><div className="min-w-0 flex-1 text-left"><p className="truncate text-sm font-medium">{item.file.name}</p><p className="mt-1 text-xs text-neutral-400">{formatSize(item.file.size)}</p></div>{item.status === "uploading" && <span className="flex items-center gap-2 text-sm text-neutral-400"><LoaderCircle size={17} className="animate-spin" />Uploading {item.progress ?? 0}%</span>}{item.status === "complete" && <span className="flex items-center gap-2 text-sm text-neutral-300"><CheckCircle2 size={19} />Added to library</span>}{item.status === "error" && <span className="max-w-48 truncate text-sm text-red-300" title={item.error}>{item.error}</span>}{item.status === "ready" && <button onClick={() => removeFile(item.id)} aria-label={`Remove ${item.file.name}`} className="grid size-9 place-items-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"><X size={18} /></button>}</div><div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-zinc-800 bg-zinc-800 sm:grid-cols-4">{[{ label: "File name", value: item.file.name }, { label: "Size", value: formatSize(item.file.size) }, { label: "Type", value: fileType(item.file) }, { label: "Modified", value: formatModifiedDate(item.file.lastModified) }].map((metadata) => <div key={metadata.label} className="min-w-0 bg-zinc-950/60 px-3 py-3"><p className="text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-500">{metadata.label}</p><p title={metadata.value} className="mt-1.5 truncate text-xs text-neutral-300">{metadata.value}</p></div>)}</div></li>)}
+            {items.map((item) => <li key={item.id} className="py-4"><div className="flex items-center gap-3"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={21} /></div><div className="min-w-0 flex-1 text-left"><p className="truncate text-sm font-medium">{item.file.name}</p><p className="mt-1 text-xs text-neutral-400">{formatSize(item.file.size)}</p></div>{item.status === "uploading" && <span className="flex items-center gap-2 text-sm text-neutral-400"><LoaderCircle size={17} className="animate-spin" />Processing</span>}{item.status === "complete" && <span className="flex items-center gap-2 text-sm text-neutral-300"><CheckCircle2 size={19} />Added to library</span>}{item.status === "error" && <span className="max-w-48 truncate text-sm text-red-300" title={item.error}>{item.error}</span>}{item.status === "ready" && <button onClick={() => removeFile(item.id)} aria-label={`Remove ${item.file.name}`} className="grid size-9 place-items-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"><X size={18} /></button>}</div>{item.phase && <UploadFlow item={item} />}<div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-zinc-800 bg-zinc-800 sm:grid-cols-4">{[{ label: "File name", value: item.file.name }, { label: "Size", value: formatSize(item.file.size) }, { label: "Type", value: fileType(item.file) }, { label: "Modified", value: formatModifiedDate(item.file.lastModified) }].map((metadata) => <div key={metadata.label} className="min-w-0 bg-zinc-950/60 px-3 py-3"><p className="text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-500">{metadata.label}</p><p title={metadata.value} className="mt-1.5 truncate text-xs text-neutral-300">{metadata.value}</p></div>)}</div></li>)}
           </ul>
         </section>
       )}
