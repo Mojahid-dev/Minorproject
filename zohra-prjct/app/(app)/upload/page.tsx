@@ -4,13 +4,13 @@ import {
   CheckCircle2,
   FileText,
   LoaderCircle,
-  MoreHorizontal,
   Paperclip,
   Sparkles,
   UploadCloud,
   X,
 } from "lucide-react";
 import { useRef, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type UploadItem = {
   id: string;
@@ -20,12 +20,6 @@ type UploadItem = {
 
 const acceptedTypes = ".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.jpg,.jpeg,.png,.mp4,.mov,.webm";
 const maxFileSize = 100 * 1024 * 1024;
-
-const recentMaterials = [
-  { name: "DBMS_Unit_3_Notes.pdf", detail: "2.4 MB  ·  Just now", processing: true },
-  { name: "Java_OOP_Slides.pptx", detail: "6.1 MB  ·  2 minutes ago", processing: false },
-  { name: "OS_Important_Questions.pdf", detail: "1.8 MB  ·  1 hour ago", processing: false },
-];
 
 function formatSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -101,7 +95,17 @@ export default function UploadPage() {
       <section className="mt-7 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5">
         <h2 className="font-semibold">Recently added</h2>
         <ul className="mt-3 divide-y divide-zinc-800 border-t border-zinc-800">
-          {recentMaterials.map((material) => <li key={material.name} className="flex items-center gap-3 py-3.5"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={21} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{material.name}</p><p className="mt-1 text-xs text-neutral-400">{material.detail}</p></div>{material.processing ? <span className="hidden items-center gap-2 text-sm text-neutral-400 sm:flex"><Sparkles size={17} fill="currentColor" />Understanding...</span> : <span className="hidden items-center gap-2 text-sm text-neutral-400 sm:flex"><CheckCircle2 size={19} />Added to library</span>}<button aria-label={`More options for ${material.name}`} className="grid size-9 place-items-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"><MoreHorizontal size={20} /></button></li>)}
+          {Array.from({ length: 3 }).map((_, index) => (
+            <li key={index} className="flex items-center gap-3 py-3.5">
+              <Skeleton className="size-11 shrink-0 rounded-xl bg-zinc-800" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-3.5 w-2/5 rounded bg-zinc-800" />
+                <Skeleton className="h-3 w-1/4 rounded bg-zinc-800/70" />
+              </div>
+              <Skeleton className="hidden h-3 w-24 rounded bg-zinc-800/70 sm:block" />
+              <Skeleton className="size-9 rounded-lg bg-zinc-800/70" />
+            </li>
+          ))}
         </ul>
       </section>
     </div>
