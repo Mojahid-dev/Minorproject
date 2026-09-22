@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { get } from "@vercel/blob";
+// Load the Node fake-worker implementation statically. This avoids PDF.js's
+// runtime dynamic worker import, which Vercel cannot trace reliably with pnpm.
+import "pdfjs-dist/legacy/build/pdf.worker.mjs";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const MAX_STORED_TEXT_CHARS = 500_000;
