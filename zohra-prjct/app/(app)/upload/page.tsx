@@ -11,9 +11,14 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSession } from "@/lib/auth-client";
 
 type UploadItem = {
   id: string;
+  resourceId: string;
+  userId: string;
+  storageKey: string;
+  uploadedAt: string | null;
   file: File;
   status: "ready" | "uploading" | "complete";
 };
@@ -46,20 +51,31 @@ export default function UploadPage() {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { data: session } = useSession();
 
   function addFiles(files: FileList | File[]) {
+    const userId = session?.user?.id ?? `local-user-${crypto.randomUUID()}`;
     const incoming = Array.from(files)
       .filter((file) => file.size <= maxFileSize)
-      .map((file) => ({
-        id: `${file.name}-${file.size}-${crypto.randomUUID()}`,
-        file,
-        status: "ready" as const,
-      }));
+      .map((file) => {
+        const resourceId = crypto.randomUUID();
+        const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+        return {
+          id: resourceId,
+          resourceId,
+          userId,
+          storageKey: `resources/${userId}/${resourceId}/${safeFileName}`,
+          uploadedAt: null,
+          file,
+          status: "ready" as const,
+        };
+      });
     setItems((current) => [...incoming, ...current]);
   }
 
   function uploadFiles() {
-    setItems((current) => current.map((item) => item.status === "ready" ? { ...item, status: "uploading" } : item));
+    const uploadedAt = new Date().toISOString();
+    setItems((current) => current.map((item) => item.status === "ready" ? { ...item, status: "uploading", uploadedAt } : item));
     window.setTimeout(() => {
       setItems((current) => current.map((item) => item.status === "uploading" ? { ...item, status: "complete" } : item));
     }, 900);
