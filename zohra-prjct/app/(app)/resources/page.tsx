@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {
-  CheckCircle2,
+  BookOpenText,
   Clock3,
   FileText,
   Filter,
@@ -17,6 +17,7 @@ import {
   Trash2,
   Upload,
   Video,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,7 +28,15 @@ type Resource = {
   mimeType: string;
   sizeBytes: number;
   status: "PENDING" | "PROCESSING" | "READY" | "FAILED";
+  textExtractionStatus: "NOT_STARTED" | "EXTRACTING" | "EXTRACTED" | "NO_TEXT" | "FAILED" | "NOT_APPLICABLE";
+  pageCount: number | null;
   createdAt: string;
+};
+
+type ExtractedText = Pick<Resource, "id" | "originalName" | "textExtractionStatus" | "pageCount"> & {
+  extractedText: string | null;
+  extractedTextLength: number | null;
+  extractionError: string | null;
 };
 
 type ResourceTab = "subjects" | "all" | "recent" | "review";
@@ -96,6 +105,10 @@ export default function ResourcesPage() {
   const [deletingResourceId, setDeletingResourceId] = useState<string | null>(
     null,
   );
+  const [isTextViewerOpen, setIsTextViewerOpen] = useState(false);
+  const [isLoadingText, setIsLoadingText] = useState(false);
+  const [isExtractingText, setIsExtractingText] = useState(false);
+  const [extractedText, setExtractedText] = useState<ExtractedText | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -158,6 +171,33 @@ export default function ResourcesPage() {
       );
     } finally {
       setDeletingResourceId(null);
+    }
+  }
+
+  async function viewExtractedText(resourceId: string) {
+    setIsTextViewerOpen(true);
+    setIsLoadingText(true);
+    setExtractedText(null);
+    try {
+      const response = await fetch(`/api/resources/${resourceId}/text`);
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to load extracted text.");
+      setExtractedText(payload.resource);
+    } finally {
+      setIsLoadingText(false);
+    }
+  }
+
+  async function extractText(resourceId: string) {
+    setIsExtractingText(true);
+    try {
+      const response = await fetch(`/api/resources/${resourceId}/extract`, { method: "POST" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to extract PDF text.");
+      await viewExtractedText(resourceId);
+      setResources((current) => current.map((resource) => resource.id === resourceId ? { ...resource, textExtractionStatus: "EXTRACTED" } : resource));
+    } finally {
+      setIsExtractingText(false);
     }
   }
 
@@ -335,9 +375,11 @@ export default function ResourcesPage() {
           resources={activeTab === "review" ? filteredResources : resources}
           isLoading={isLoading}
           onDelete={deleteResource}
+          onViewText={viewExtractedText}
           deletingResourceId={deletingResourceId}
         />
       </section>
+      {isTextViewerOpen && <ExtractedTextViewer resource={extractedText} isLoading={isLoadingText} isExtracting={isExtractingText} onExtract={extractText} onClose={() => setIsTextViewerOpen(false)} />}
     </div>
   );
 }
@@ -406,11 +448,13 @@ function ResourceTable({
   resources,
   isLoading,
   onDelete,
+  onViewText,
   deletingResourceId,
 }: {
   resources: Resource[];
   isLoading: boolean;
   onDelete: (id: string) => void;
+  onViewText: (id: string) => void;
   deletingResourceId: string | null;
 }) {
   if (isLoading)
@@ -434,7 +478,7 @@ function ResourceTable({
             <th className="px-6 py-3 font-medium">Collection</th>
             <th className="px-6 py-3 font-medium">Type</th>
             <th className="px-6 py-3 font-medium">Added</th>
-            <th className="w-14 px-3 py-3" />
+            <th className="w-24 px-3 py-3" />
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-800">
@@ -462,18 +506,21 @@ function ResourceTable({
                 {formatAdded(resource.createdAt)}
               </td>
               <td className="px-3 py-3">
-                <button
-                  onClick={() => onDelete(resource.id)}
-                  disabled={deletingResourceId === resource.id}
-                  aria-label={`Remove ${resource.originalName}`}
-                  className="grid size-9 place-items-center rounded-lg text-neutral-500 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
-                >
-                  {deletingResourceId === resource.id ? (
-                    <LoaderCircle size={17} className="animate-spin" />
-                  ) : (
-                    <Trash2 size={17} />
-                  )}
-                </button>
+                <div className="flex items-center justify-end gap-1">
+                  {resource.mimeType === "application/pdf" && <button onClick={() => onViewText(resource.id)} aria-label={`View extracted text for ${resource.originalName}`} className="grid size-9 place-items-center rounded-lg text-neutral-500 transition hover:bg-white/10 hover:text-white"><BookOpenText size={17} /></button>}
+                  <button
+                    onClick={() => onDelete(resource.id)}
+                    disabled={deletingResourceId === resource.id}
+                    aria-label={`Remove ${resource.originalName}`}
+                    className="grid size-9 place-items-center rounded-lg text-neutral-500 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
+                  >
+                    {deletingResourceId === resource.id ? (
+                      <LoaderCircle size={17} className="animate-spin" />
+                    ) : (
+                      <Trash2 size={17} />
+                    )}
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
@@ -481,6 +528,11 @@ function ResourceTable({
       </table>
     </div>
   );
+}
+
+function ExtractedTextViewer({ resource, isLoading, isExtracting, onExtract, onClose }: { resource: ExtractedText | null; isLoading: boolean; isExtracting: boolean; onExtract: (id: string) => void; onClose: () => void }) {
+  const message = resource?.textExtractionStatus === "NO_TEXT" ? "No machine-readable text was found in this PDF. OCR has not been enabled yet." : resource?.textExtractionStatus === "EXTRACTING" ? "Zohra is extracting text from this PDF." : resource?.textExtractionStatus === "FAILED" ? resource.extractionError || "Text extraction failed." : "Text has not been extracted yet.";
+  return <div role="dialog" aria-modal="true" aria-label="Extracted PDF text" className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4 backdrop-blur-sm"><section className="flex max-h-[80vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-950 shadow-2xl"><header className="flex items-start justify-between border-b border-zinc-800 px-5 py-4"><div><p className="text-sm font-semibold">Extracted text</p><p className="mt-1 text-xs text-neutral-500">{resource?.originalName || "Loading resource..."}{resource?.pageCount ? ` · ${resource.pageCount} pages` : ""}</p></div><button onClick={onClose} aria-label="Close extracted text" className="grid size-9 place-items-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"><X size={19} /></button></header><div className="min-h-48 overflow-y-auto p-5">{isLoading ? <div className="space-y-3"><Skeleton className="h-4 w-full bg-zinc-800" /><Skeleton className="h-4 w-11/12 bg-zinc-800" /><Skeleton className="h-4 w-4/5 bg-zinc-800" /></div> : resource?.textExtractionStatus === "EXTRACTED" && resource.extractedText ? <pre className="whitespace-pre-wrap font-sans text-sm leading-7 text-neutral-300">{resource.extractedText}</pre> : <div><p className="text-sm leading-6 text-neutral-400">{message}</p>{resource?.textExtractionStatus === "NOT_STARTED" && <button onClick={() => onExtract(resource.id)} disabled={isExtracting} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-neutral-200 disabled:opacity-60">{isExtracting && <LoaderCircle size={16} className="animate-spin" />}{isExtracting ? "Extracting text..." : "Extract text"}</button>}</div>}</div></section></div>;
 }
 
 function EmptyResources() {

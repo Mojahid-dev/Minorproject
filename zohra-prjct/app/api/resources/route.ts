@@ -17,6 +17,8 @@ export async function GET() {
       mimeType: true,
       sizeBytes: true,
       status: true,
+      textExtractionStatus: true,
+      pageCount: true,
       createdAt: true,
     },
   });
