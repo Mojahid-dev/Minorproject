@@ -3,12 +3,10 @@
 import {
   CheckCircle2,
   FileText,
-  FileUp,
-  Film,
-  FolderOpen,
   LoaderCircle,
+  MoreHorizontal,
   Paperclip,
-  Trash2,
+  Sparkles,
   UploadCloud,
   X,
 } from "lucide-react";
@@ -20,19 +18,18 @@ type UploadItem = {
   status: "ready" | "uploading" | "complete";
 };
 
-const acceptedTypes = ".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.mp4,.mov,.webm";
+const acceptedTypes = ".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.jpg,.jpeg,.png,.mp4,.mov,.webm";
+const maxFileSize = 100 * 1024 * 1024;
+
+const recentMaterials = [
+  { name: "DBMS_Unit_3_Notes.pdf", detail: "2.4 MB  ·  Just now", processing: true },
+  { name: "Java_OOP_Slides.pptx", detail: "6.1 MB  ·  2 minutes ago", processing: false },
+  { name: "OS_Important_Questions.pdf", detail: "1.8 MB  ·  1 hour ago", processing: false },
+];
 
 function formatSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function fileKind(file: File) {
-  if (file.type.startsWith("video/")) return "Video";
-  if (file.type === "application/pdf") return "PDF";
-  if (file.name.match(/\.(doc|docx)$/i)) return "Document";
-  if (file.name.match(/\.(ppt|pptx)$/i)) return "Presentation";
-  return "Note";
 }
 
 export default function UploadPage() {
@@ -41,18 +38,20 @@ export default function UploadPage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   function addFiles(files: FileList | File[]) {
-    const incoming = Array.from(files).map((file) => ({
-      id: `${file.name}-${file.size}-${crypto.randomUUID()}`,
-      file,
-      status: "ready" as const,
-    }));
-    setItems((current) => [...current, ...incoming]);
+    const incoming = Array.from(files)
+      .filter((file) => file.size <= maxFileSize)
+      .map((file) => ({
+        id: `${file.name}-${file.size}-${crypto.randomUUID()}`,
+        file,
+        status: "ready" as const,
+      }));
+    setItems((current) => [...incoming, ...current]);
   }
 
   function uploadFiles() {
-    setItems((current) => current.map((item) => ({ ...item, status: "uploading" })));
+    setItems((current) => current.map((item) => item.status === "ready" ? { ...item, status: "uploading" } : item));
     window.setTimeout(() => {
-      setItems((current) => current.map((item) => ({ ...item, status: "complete" })));
+      setItems((current) => current.map((item) => item.status === "uploading" ? { ...item, status: "complete" } : item));
     }, 900);
   }
 
@@ -63,62 +62,48 @@ export default function UploadPage() {
   const readyCount = items.filter((item) => item.status === "ready").length;
 
   return (
-    <div className="mx-auto max-w-5xl text-white">
-        <header className="flex items-center justify-between gap-4">
-          <div className="text-sm font-medium text-neutral-400">Resource library</div>
-          <div className="flex items-center gap-2 text-sm text-neutral-500"><FolderOpen size={17} /> Personal library</div>
-        </header>
+    <div className="mx-auto max-w-6xl pb-8 text-white">
+      <section>
+        <p className="text-sm font-medium text-neutral-400">Resource library</p>
+        <h1 className="mt-3 text-3xl font-bold tracking-[-0.045em] sm:text-4xl">Upload your learning materials</h1>
+        <p className="mt-3 text-base text-neutral-400">Add notes, PDFs, documents, presentations, or videos to keep everything together.</p>
+      </section>
 
-        <section className="mt-10">
-          <p className="text-sm font-medium text-neutral-400">Resource library</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-[-0.045em] sm:text-4xl">Upload your learning materials</h1>
-          <p className="mt-3 max-w-2xl text-neutral-400">Add notes, PDFs, documents, presentations, or videos to keep everything together.</p>
+      <section
+        onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event) => { event.preventDefault(); setDragging(false); addFiles(event.dataTransfer.files); }}
+        className={`mt-8 grid min-h-[374px] place-items-center rounded-2xl border border-dashed px-6 py-12 text-center transition sm:px-10 ${dragging ? "border-white bg-white/[0.07]" : "border-zinc-600 bg-zinc-900/20 hover:border-zinc-400"}`}
+      >
+        <div>
+          <div className="mx-auto grid size-24 place-items-center rounded-full bg-zinc-800/80 text-white shadow-[inset_0_1px_rgba(255,255,255,0.06)]"><UploadCloud size={35} strokeWidth={1.8} /></div>
+          <h2 className="mt-5 text-xl font-semibold tracking-tight">Drop your files here</h2>
+          <p className="mt-2 text-sm text-neutral-400">or choose files from your device</p>
+          <input ref={inputRef} onChange={(event) => { if (event.target.files) addFiles(event.target.files); event.target.value = ""; }} type="file" accept={acceptedTypes} multiple className="hidden" />
+          <button onClick={() => inputRef.current?.click()} className="mt-6 inline-flex h-12 items-center gap-3 rounded-xl bg-white px-7 text-sm font-semibold text-black shadow-sm transition hover:bg-neutral-200"><Paperclip size={19} strokeWidth={2.2} />Browse files</button>
+          <p className="mt-6 text-xs leading-6 text-neutral-400">Supported: PDF, DOCX, PPTX, TXT, MD, JPG, PNG, MP4, MOV, WEBM<br />(Max size: 100 MB per file)</p>
+        </div>
+      </section>
+
+      <div className="mt-9 flex items-center gap-5 text-center before:h-px before:flex-1 before:bg-zinc-800 after:h-px after:flex-1 after:bg-zinc-800">
+        <div className="shrink-0"><p className="flex items-center justify-center gap-2 text-sm font-medium"><Sparkles size={17} fill="currentColor" />Zohra handles the rest</p><p className="mt-1 text-sm text-neutral-400">Your files will be organized automatically.</p></div>
+      </div>
+
+      {items.length > 0 && (
+        <section className="mt-7 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-4"><h2 className="font-semibold">Upload queue</h2>{readyCount > 0 && <button onClick={uploadFiles} className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-neutral-200">Upload {readyCount} file{readyCount === 1 ? "" : "s"}</button>}</div>
+          <ul className="divide-y divide-zinc-800">
+            {items.map((item) => <li key={item.id} className="flex items-center gap-3 py-4"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={21} /></div><div className="min-w-0 flex-1 text-left"><p className="truncate text-sm font-medium">{item.file.name}</p><p className="mt-1 text-xs text-neutral-400">{formatSize(item.file.size)}</p></div>{item.status === "uploading" && <span className="flex items-center gap-2 text-sm text-neutral-400"><LoaderCircle size={17} className="animate-spin" />Uploading...</span>}{item.status === "complete" && <span className="flex items-center gap-2 text-sm text-neutral-300"><CheckCircle2 size={19} />Added to library</span>}{item.status === "ready" && <button onClick={() => removeFile(item.id)} aria-label={`Remove ${item.file.name}`} className="grid size-9 place-items-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"><X size={18} /></button>}</li>)}
+          </ul>
         </section>
+      )}
 
-        <section className="mt-8 grid gap-4 sm:grid-cols-3">
-          {[
-            { icon: FileText, label: "Notes & documents", detail: "TXT, DOC, DOCX, MD" },
-            { icon: FileUp, label: "PDFs & slides", detail: "PDF, PPT, PPTX" },
-            { icon: Film, label: "Video lessons", detail: "MP4, MOV, WEBM" },
-          ].map(({ icon: Icon, label, detail }) => (
-            <div key={label} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
-              <Icon size={20} className="text-neutral-200" />
-              <p className="mt-4 font-semibold">{label}</p>
-              <p className="mt-1 text-sm text-neutral-500">{detail}</p>
-            </div>
-          ))}
-        </section>
-
-        <section
-          onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(event) => { event.preventDefault(); setDragging(false); addFiles(event.dataTransfer.files); }}
-          className={`mt-6 rounded-3xl border border-dashed p-8 text-center transition sm:p-14 ${dragging ? "border-white bg-white/10" : "border-zinc-700 bg-zinc-900/40 hover:border-zinc-500"}`}
-        >
-          <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-white text-black"><UploadCloud size={26} /></div>
-          <h2 className="mt-5 text-lg font-semibold">Drop files here to upload</h2>
-          <p className="mt-2 text-sm text-neutral-500">or choose files from your device</p>
-          <input ref={inputRef} onChange={(event) => event.target.files && addFiles(event.target.files)} type="file" accept={acceptedTypes} multiple className="hidden" />
-          <button onClick={() => inputRef.current?.click()} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-neutral-200"><Paperclip size={16} />Browse files</button>
-          <p className="mt-4 text-xs text-neutral-600">Supported: PDF, Word, PowerPoint, notes, and video files</p>
-        </section>
-
-        {items.length > 0 && (
-          <section className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/60">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 p-5">
-              <div><h2 className="font-semibold">Upload queue</h2><p className="mt-1 text-sm text-neutral-500">{items.length} file{items.length === 1 ? "" : "s"} selected</p></div>
-              {readyCount > 0 && <button onClick={uploadFiles} className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-neutral-200">Upload {readyCount} file{readyCount === 1 ? "" : "s"}</button>}
-            </div>
-            <ul className="divide-y divide-zinc-800">
-              {items.map((item) => {
-                const Icon = item.file.type.startsWith("video/") ? Film : FileText;
-                return <li key={item.id} className="flex items-center gap-3 p-4 sm:p-5"><div className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-300"><Icon size={19} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{item.file.name}</p><p className="mt-1 text-xs text-neutral-500">{fileKind(item.file)} · {formatSize(item.file.size)}</p></div>{item.status === "uploading" && <LoaderCircle size={18} className="animate-spin text-neutral-400" />}{item.status === "complete" && <span className="flex items-center gap-1.5 text-sm text-emerald-400"><CheckCircle2 size={17} />Uploaded</span>}{item.status === "ready" && <button onClick={() => removeFile(item.id)} aria-label={`Remove ${item.file.name}`} className="grid size-9 place-items-center rounded-lg text-neutral-500 transition hover:bg-red-500/10 hover:text-red-400"><Trash2 size={17} /></button>}</li>;
-              })}
-            </ul>
-          </section>
-        )}
-
-        <p className="mt-5 flex items-center gap-2 text-xs text-neutral-600"><X size={13} /> Files stay in this upload queue until you choose Upload.</p>
+      <section className="mt-7 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5">
+        <h2 className="font-semibold">Recently added</h2>
+        <ul className="mt-3 divide-y divide-zinc-800 border-t border-zinc-800">
+          {recentMaterials.map((material) => <li key={material.name} className="flex items-center gap-3 py-3.5"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={21} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{material.name}</p><p className="mt-1 text-xs text-neutral-400">{material.detail}</p></div>{material.processing ? <span className="hidden items-center gap-2 text-sm text-neutral-400 sm:flex"><Sparkles size={17} fill="currentColor" />Understanding...</span> : <span className="hidden items-center gap-2 text-sm text-neutral-400 sm:flex"><CheckCircle2 size={19} />Added to library</span>}<button aria-label={`More options for ${material.name}`} className="grid size-9 place-items-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"><MoreHorizontal size={20} /></button></li>)}
+        </ul>
+      </section>
     </div>
   );
 }
