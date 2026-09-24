@@ -5,11 +5,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
+  ArrowRight,
   Bell,
+  BookOpen,
   CalendarDays,
+  Check,
+  ChevronRight,
   ChevronDown,
   ChevronLeft,
-  ChevronRight,
   CircleHelp,
   FolderKanban,
   Home,
@@ -61,6 +64,7 @@ function ZohraMark({ compact = false }: { compact?: boolean }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
@@ -154,6 +158,38 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
           <div className="mt-auto space-y-1.5">
+            {!collapsed && (
+              <section className="mb-3 rounded-2xl border border-white/[0.07] bg-gradient-to-br from-[#191a1d] to-[#111214] p-3" aria-label="Today tasks">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-neutral-200">
+                    <CalendarDays size={17} /> Today
+                  </div>
+                  <ChevronRight size={16} className="text-neutral-500" />
+                </div>
+                <p className="mt-3 text-lg font-semibold tracking-tight text-white">{2 - completedTasks.length} tasks due</p>
+                <p className="mt-1 text-xs text-neutral-500">Keep going — you&apos;re on track.</p>
+                <div className="mt-3 flex items-center gap-2.5" aria-label={`${completedTasks.length} of 2 tasks complete`}>
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
+                    <div className="h-full rounded-full bg-gradient-to-r from-white to-neutral-300 transition-all" style={{ width: `${Math.max(1, completedTasks.length) * 50}%` }} />
+                  </div>
+                  <span className="text-[11px] font-medium text-neutral-300">{completedTasks.length}/2</span>
+                </div>
+                <div className="mt-3 space-y-1">
+                  {["Design System Notes", "Math Assignment"].map((task) => {
+                    const done = completedTasks.includes(task);
+                    return (
+                      <button key={task} onClick={() => setCompletedTasks((current) => done ? current.filter((item) => item !== task) : [...current, task])} className="flex w-full items-center gap-2 rounded-lg py-1 text-left text-xs text-neutral-300 transition hover:text-white">
+                        <span className={`grid size-4 shrink-0 place-items-center rounded-full border ${done ? "border-white bg-white text-zinc-900" : "border-zinc-600"}`}>{done && <Check size={11} strokeWidth={3} />}</span>
+                        <span className={done ? "text-neutral-500 line-through" : ""}>{task}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <Link href="/resources" className="mt-2 flex h-9 items-center gap-2 rounded-xl bg-white/[0.08] px-2.5 text-xs font-medium text-neutral-200 transition hover:bg-white/[0.13]">
+                  <BookOpen size={15} /> Continue studying <ArrowRight size={15} className="ml-auto" />
+                </Link>
+              </section>
+            )}
             <button
               title={collapsed ? "Help centre" : undefined}
               className="flex h-10 w-full items-center rounded-xl px-3 text-sm text-neutral-500 transition hover:bg-white/10 hover:text-white"
@@ -246,8 +282,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <input
                 aria-label="Search"
                 placeholder="Search anything..."
-                className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-900 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-neutral-500 focus:ring-4 focus:ring-zinc-800"
+                className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-900 pl-10 pr-[76px] text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-neutral-500 focus:ring-4 focus:ring-zinc-800"
               />
+              <span className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1 text-[10px] font-medium text-neutral-300">
+                <kbd className="rounded border border-white/10 bg-white/[0.06] px-1.5 py-1">⌘</kbd>
+                <kbd className="rounded border border-white/10 bg-white/[0.06] px-1.5 py-1">K</kbd>
+              </span>
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
               <button
@@ -267,6 +307,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Plus size={17} />
                 New project
               </button>
+              <div className="mx-1 hidden h-8 w-px bg-white/10 sm:block" />
+              <Link
+                href="/profile"
+                aria-label={`Open ${profileName} profile`}
+                title={profileName}
+                className="group flex shrink-0 items-center gap-1 rounded-xl px-1.5 py-1 text-neutral-300 transition hover:bg-white/[0.06] hover:text-white"
+              >
+                <span className="grid size-9 place-items-center overflow-hidden rounded-full border border-white/35 bg-gradient-to-br from-zinc-100 to-zinc-400 text-xs font-bold text-zinc-900 shadow-[0_0_0_3px_rgba(255,255,255,0.08)]">
+                  {profileImage ? (
+                    <Image
+                      src={profileImage}
+                      alt=""
+                      width={36}
+                      height={36}
+                      unoptimized
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    profileInitials
+                  )}
+                </span>
+                <ChevronDown size={14} className="hidden sm:block" />
+              </Link>
             </div>
           </header>
           <div className="p-5 sm:p-8">{children}</div>
