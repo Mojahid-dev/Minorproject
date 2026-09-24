@@ -4,7 +4,6 @@ import AtlasConstellation from "@/app/(marketing)/_components/atlas-constellatio
 
 // Replace these placeholder values when your final messaging is ready.
 const heroContent = {
-  eyebrow: "YOUR PRODUCT CATEGORY",
   title: "A clear promise your visitors will remember.",
   highlight: "Make it unmistakable.",
   description: "Use this short space to explain the problem your project solves and why it matters. Keep it focused, helpful, and true to your voice.",
@@ -21,7 +20,7 @@ export default function HeroSection() {
       <AtlasConstellation />
 
       <div className="mx-auto flex w-full max-w-7xl flex-col items-center">
-        <div className="flex items-center gap-2 rounded-full border border-yellow-500/25 bg-yellow-500/10 px-3 py-1.5 text-xs font-medium tracking-[0.16em] text-yellow-400"><Sparkles size={14} aria-hidden="true" />{heroContent.eyebrow}</div>
+        
         <div className="mt-7 max-w-4xl text-center">
           <h2 className="text-balance text-4xl font-semibold tracking-[-0.055em] text-white sm:text-6xl lg:text-7xl">{heroContent.title}<span className="block bg-gradient-to-r from-yellow-200 via-yellow-500 to-amber-600 bg-clip-text text-transparent">{heroContent.highlight}</span></h2>
           <p className="mx-auto mt-6 max-w-2xl text-pretty text-base leading-7 text-zinc-400 sm:text-lg">{heroContent.description}</p>
