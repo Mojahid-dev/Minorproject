@@ -21,7 +21,6 @@ import {
   MessageCircle,
   Plus,
   Search,
-  Settings2,
   Upload,
   UsersRound,
   X,
@@ -188,47 +187,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </Link>
               </section>
             )}
-            <Link
-              href="/settings"
-              onClick={() => setMobileMenuOpen(false)}
-              title={collapsed ? "Settings" : undefined}
-              className={`${pathname.startsWith("/settings") ? "relative isolate overflow-hidden border border-white/15 bg-white/[0.09] text-white shadow-[0_8px_24px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md before:absolute before:inset-y-2.5 before:left-0 before:w-0.5 before:rounded-r-full before:bg-white before:shadow-[0_0_14px_rgba(255,255,255,0.9)]" : "text-neutral-500 hover:bg-white/[0.06] hover:text-white"} flex h-10 w-full items-center rounded-xl px-3 text-sm transition-[background-color,border-color,color,box-shadow,transform] duration-200 hover:-translate-y-px`}
-            >
-              <Settings2 size={19} className="relative z-10" />
-              {!collapsed && <span className="relative z-10 ml-3">Settings</span>}
-            </Link>
-            <div className="my-3 h-px bg-zinc-800" />
-            <div
-              className={`${collapsed ? "justify-center" : ""} flex items-center px-2 py-1`}
-            >
-              <div className="grid size-9 place-items-center overflow-hidden rounded-full bg-white text-xs font-bold text-black">
-                {profileImage ? (
-                  <Image
-                    src={profileImage}
-                    alt="Profile photo"
-                    width={36}
-                    height={36}
-                    unoptimized
-                    className="size-full object-cover"
-                  />
-                ) : (
-                  profileInitials
-                )}
-              </div>
-              {!collapsed && (
-                <div className="ml-2.5 min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-white">
-                    {profileName}
-                  </p>
-                  <p className="truncate text-xs text-neutral-400">
-                    {session?.user?.email || "admin@zohra.app"}
-                  </p>
-                </div>
-              )}
-              {!collapsed && (
-                <ChevronDown size={16} className="text-neutral-400" />
-              )}
-            </div>
             <button
               onClick={handleSignOut}
               title={collapsed ? "Sign out" : undefined}
