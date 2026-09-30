@@ -117,3 +117,7 @@ model Verification {
   @@index([identifier])
   @@map("verification")
 }
+
+// model SubjectRenaming {
+  
+// }

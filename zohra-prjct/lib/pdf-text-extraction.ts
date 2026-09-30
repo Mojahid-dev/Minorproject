@@ -13,7 +13,7 @@ export function isPdfResource(mimeType: string) {
 
 async function extractPdfText(storageKey: string) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) throw new Error("Vercel Blob is not configured.");
+  if (!token) throw new Error("Theres some server misconfiguration. Please contact support.");
 
   const blob = await get(storageKey, { access: "private", token, useCache: false });
   if (!blob?.stream) throw new Error("The uploaded PDF could not be found in storage.");
