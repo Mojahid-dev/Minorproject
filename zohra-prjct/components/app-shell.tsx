@@ -249,9 +249,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 className="flex items-center gap-2 rounded-xl bg-white px-3 py-2.5 text-sm font-semibold text-black shadow-[0_8px_18px_rgba(0,0,0,0.18)] transition hover:bg-neutral-200 sm:px-3.5"
               >
                 <Plus size={17} />
-                <span className="sm:hidden">Add a project</span>
-                <span className="hidden sm:inline">Add new project</span>
-              </Link>
+                New project
+              </button>
               <div className="mx-1 hidden h-8 w-px bg-white/10 sm:block" />
               <Link
                 href="/profile"
