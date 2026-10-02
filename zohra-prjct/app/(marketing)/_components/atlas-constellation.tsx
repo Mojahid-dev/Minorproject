@@ -16,8 +16,13 @@ export default function AtlasConstellation() {
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
     camera.position.set(0, 0, 5.5);
 
-    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: "high-performance" });
-    renderer.setClearColor(0x000000, 0);
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      alpha: true,
+      antialias: true,
+      powerPreference: "high-performance",
+    });
+    renderer.setClearColor(0x00000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     const constellation = new THREE.Group();
@@ -37,11 +42,18 @@ export default function AtlasConstellation() {
     for (let index = 0; index < pointCount; index += 1) {
       const angle = index * 2.39996;
       const radius = 0.22 + (index % 8) * 0.16;
-      nodePositions.push(Math.cos(angle) * radius, Math.sin(angle) * radius, ((index % 5) - 2) * 0.16);
+      nodePositions.push(
+        Math.cos(angle) * radius,
+        Math.sin(angle) * radius,
+        ((index % 5) - 2) * 0.16,
+      );
     }
 
     const pointsGeometry = new THREE.BufferGeometry();
-    pointsGeometry.setAttribute("position", new THREE.Float32BufferAttribute(nodePositions, 3));
+    pointsGeometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(nodePositions, 3),
+    );
     const pointsMaterial = new THREE.PointsMaterial({
       color: 0xfacc15,
       size: 0.038,
@@ -57,16 +69,37 @@ export default function AtlasConstellation() {
     for (let index = 0; index < pointCount - 1; index += 1) {
       const source = index * 3;
       const target = ((index + 3) % pointCount) * 3;
-      linePositions.push(nodePositions[source], nodePositions[source + 1], nodePositions[source + 2], nodePositions[target], nodePositions[target + 1], nodePositions[target + 2]);
+      linePositions.push(
+        nodePositions[source],
+        nodePositions[source + 1],
+        nodePositions[source + 2],
+        nodePositions[target],
+        nodePositions[target + 1],
+        nodePositions[target + 2],
+      );
     }
     const linesGeometry = new THREE.BufferGeometry();
-    linesGeometry.setAttribute("position", new THREE.Float32BufferAttribute(linePositions, 3));
-    const lines = new THREE.LineSegments(linesGeometry, new THREE.LineBasicMaterial({ color: 0xeab308, transparent: true, opacity: 0.2 }));
+    linesGeometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(linePositions, 3),
+    );
+    const lines = new THREE.LineSegments(
+      linesGeometry,
+      new THREE.LineBasicMaterial({
+        color: 0xeab308,
+        transparent: true,
+        opacity: 0.2,
+      }),
+    );
     constellation.add(lines);
 
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(1.15, 0.0065, 8, 128),
-      new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.24 }),
+      new THREE.MeshBasicMaterial({
+        color: 0xf59e0b,
+        transparent: true,
+        opacity: 0.24,
+      }),
     );
     ring.rotation.x = 0.8;
     constellation.add(ring);
@@ -90,7 +123,13 @@ export default function AtlasConstellation() {
 
     const core = new THREE.Mesh(
       new THREE.SphereGeometry(0.08, 24, 24),
-      new THREE.MeshStandardMaterial({ color: 0xfff7cc, emissive: 0x664400, emissiveIntensity: 0.75, roughness: 0.2, metalness: 0.1 }),
+      new THREE.MeshStandardMaterial({
+        color: 0xfff7cc,
+        emissive: 0x664400,
+        emissiveIntensity: 0.75,
+        roughness: 0.2,
+        metalness: 0.1,
+      }),
     );
     constellation.add(core);
 
@@ -102,7 +141,9 @@ export default function AtlasConstellation() {
       camera.updateProjectionMatrix();
     };
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     let frameId = 0;
     const start = performance.now();
     const render = (time: number) => {
@@ -140,5 +181,11 @@ export default function AtlasConstellation() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 size-full opacity-70 [mask-image:linear-gradient(to_bottom,black,transparent_78%)]" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 -z-10 size-full opacity-70 [mask-image:linear-gradient(to_bottom,black,transparent_78%)]"
+    />
+  );
 }

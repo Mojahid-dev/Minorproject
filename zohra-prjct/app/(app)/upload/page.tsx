@@ -128,6 +128,82 @@ function resourceStatus(resource: SavedResource) {
   return { label: resource.status === "PROCESSING" ? "Processing..." : "Finalizing upload...", complete: false };
 }
 
+function formatModifiedDate(timestamp: number) {
+  return new Intl.DateTimeFormat("en", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(timestamp));
+}
+
+const uploadSteps = [
+  { id: "validating", label: "Validating file", icon: ShieldCheck },
+  { id: "creating-resource", label: "Creating resource record", icon: Database },
+  { id: "authorizing-upload", label: "Securing upload", icon: ShieldCheck },
+  { id: "uploading-to-blob", label: "Uploading to Database", icon: UploadCloud },
+] as const;
+
+const phaseOrder = Object.fromEntries(uploadSteps.map((step, index) => [step.id, index]));
+
+function UploadFlow({ item }: { item: UploadItem }) {
+  const currentStep = item.phase === "complete" ? uploadSteps.length : phaseOrder[item.phase ?? "validating"] ?? 0;
+  const nodePositions = [
+    "left-1/2 top-0 -translate-x-1/2",
+    "left-0 top-1/2 -translate-y-1/2",
+    "right-0 top-1/2 -translate-y-1/2",
+    "bottom-0 left-1/2 -translate-x-1/2",
+  ];
+
+  return (
+    <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/50 px-5 py-5 sm:px-8">
+      <div className="relative mx-auto h-[238px] max-w-[460px]">
+        <svg viewBox="0 0 460 238" aria-hidden="true" className="absolute inset-0 size-full overflow-visible">
+          {[
+            [230, 31, 56, 119],
+            [56, 119, 404, 119],
+            [404, 119, 230, 207],
+          ].map(([x1, y1, x2, y2], index) => (
+            <line key={index} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 5" className={`${currentStep > index ? "text-emerald-400" : "text-zinc-700"} transition-colors duration-500`} />
+          ))}
+        </svg>
+        {uploadSteps.map((step, index) => {
+          const Icon = step.icon;
+          const isComplete = currentStep > index;
+          const isActive = currentStep === index && item.status === "uploading";
+          return (
+            <div key={step.id} className={`absolute ${nodePositions[index]} flex w-28 flex-col items-center text-center`}>
+              <div className={`${isComplete ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-400" : isActive ? "border-white bg-white text-black shadow-[0_0_0_5px_rgba(255,255,255,0.08)]" : "border-zinc-700 bg-zinc-900 text-neutral-500"} grid size-[62px] place-items-center rounded-2xl border transition-all duration-500 ${isActive ? "scale-110" : ""}`}>
+                {isComplete ? <CheckCircle2 size={24} /> : isActive ? <LoaderCircle size={23} className="animate-spin" /> : <Icon size={22} />}
+              </div>
+              <p className={`${isActive || isComplete ? "text-neutral-200" : "text-neutral-500"} mt-2 text-[11px] font-medium leading-tight transition-colors`}>{step.label}</p>
+              {isActive && step.id === "uploading-to-blob" && <p className="mt-1 text-[10px] text-neutral-500">{item.progress ?? 0}% complete</p>}
+            </div>
+          );
+        })}
+      </div>
+      {item.status === "complete" && <p className="mt-3 border-t border-zinc-800 pt-3 text-xs text-emerald-400">File uploaded securely and added to your resource library.</p>}
+    </div>
+  );
+}
+
+function delay(milliseconds: number) {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+async function fileChecksum(file: File) {
+  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function resourceStatus(resource: SavedResource) {
+  if (resource.status === "READY") return { label: "Added to library", complete: true };
+  if (resource.status === "FAILED") return { label: "Upload failed", complete: false };
+  return { label: resource.status === "PROCESSING" ? "Processing..." : "Finalizing upload...", complete: false };
+}
+
+
 export default function UploadPage() {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [dragging, setDragging] = useState(false);
