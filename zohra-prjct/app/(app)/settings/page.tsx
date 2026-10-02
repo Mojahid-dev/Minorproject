@@ -4,7 +4,11 @@ import Image from "next/image";
 import { Bell, Camera, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { authClient, signOutAndClearCookies, useSession } from "@/lib/auth-client";
+import {
+  authClient,
+  signOutAndClearCookies,
+  useSession,
+} from "@/lib/auth-client";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 
@@ -175,7 +179,7 @@ export default function SettingsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
+  const [deleteError, setDeleteError] = useState(""); 
 
   async function deleteAccount() {
     if (deleteConfirmation !== "DELETE") return;
@@ -192,12 +196,17 @@ export default function SettingsPage() {
       }
 
       await signOutAndClearCookies();
-      toast.add({ type: "success", description: "Your account has been deleted." });
+      toast.add({
+        type: "success",
+        description: "Your account has been deleted.",
+      });
       router.replace("/login");
       router.refresh();
     } catch (error) {
       setDeleteError(
-        error instanceof Error ? error.message : "Could not delete your account.",
+        error instanceof Error
+          ? error.message
+          : "Could not delete your account.",
       );
       setIsDeleting(false);
     }
@@ -220,7 +229,7 @@ export default function SettingsPage() {
       <div className="mt-6 space-y-4">
         {isPending ? (
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-sm text-neutral-500">
-          <Spinner /> Loading your profile…
+            <Spinner /> Loading your profile…
           </section>
         ) : session?.user ? (
           <ProfileForm user={session.user} />
@@ -324,11 +333,15 @@ export default function SettingsPage() {
           <div className="w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 id="delete-account-title" className="text-lg font-semibold text-white">
+                <h2
+                  id="delete-account-title"
+                  className="text-lg font-semibold text-white"
+                >
                   Delete your account?
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-neutral-400">
-                  This cannot be undone. All of your account data and active sessions will be permanently removed.
+                  This cannot be undone. All of your account data and active
+                  sessions will be permanently removed.
                 </p>
               </div>
               <button
@@ -342,7 +355,8 @@ export default function SettingsPage() {
               </button>
             </div>
             <label className="mt-5 block text-sm font-medium text-neutral-200">
-              Type <span className="font-bold text-white">DELETE</span> to confirm
+              Type <span className="font-bold text-white">DELETE</span> to
+              confirm
               <input
                 value={deleteConfirmation}
                 onChange={(event) => setDeleteConfirmation(event.target.value)}
@@ -351,7 +365,11 @@ export default function SettingsPage() {
                 className="mt-2 h-11 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-white outline-none transition focus:border-neutral-400 focus:ring-4 focus:ring-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </label>
-            {deleteError && <p role="alert" className="mt-3 text-sm text-red-300">{deleteError}</p>}
+            {deleteError && (
+              <p role="alert" className="mt-3 text-sm text-red-300">
+                {deleteError}
+              </p>
+            )}
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"

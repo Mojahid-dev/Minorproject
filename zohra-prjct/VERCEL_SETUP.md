@@ -1,4 +1,4 @@
-Vercel deployment checklist for Atlas
+Vercel deployment checklist for Zohra
 
 1) Build command
 
