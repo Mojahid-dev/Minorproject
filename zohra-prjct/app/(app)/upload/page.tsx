@@ -90,7 +90,7 @@ function UploadFlow({ item }: { item: UploadItem }) {
             [56, 119, 404, 119],
             [404, 119, 230, 207],
           ].map(([x1, y1, x2, y2], index) => (
-            <line key={index} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 5" className={`${currentStep > index ? "text-emerald-400" : "text-zinc-700"} transition-colors duration-500`} />
+            <line key={index} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 5" className={`${currentStep > index ? "text-emerald-400" : "text-zinc-700"}`} />
           ))}
         </svg>
         {uploadSteps.map((step, index) => {
@@ -99,84 +99,7 @@ function UploadFlow({ item }: { item: UploadItem }) {
           const isActive = currentStep === index && item.status === "uploading";
           return (
             <div key={step.id} className={`absolute ${nodePositions[index]} flex w-28 flex-col items-center text-center`}>
-              <div className={`${isComplete ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-400" : isActive ? "border-white bg-white text-black shadow-[0_0_0_5px_rgba(255,255,255,0.08)]" : "border-zinc-700 bg-zinc-900 text-neutral-500"} grid size-[62px] place-items-center rounded-2xl border transition-all duration-500 ${isActive ? "scale-110" : ""}`}>
-                {isComplete ? <CheckCircle2 size={24} /> : isActive ? <LoaderCircle size={23} className="animate-spin" /> : <Icon size={22} />}
-              </div>
-              <p className={`${isActive || isComplete ? "text-neutral-200" : "text-neutral-500"} mt-2 text-[11px] font-medium leading-tight transition-colors`}>{step.label}</p>
-              {isActive && step.id === "uploading-to-blob" && <p className="mt-1 text-[10px] text-neutral-500">{item.progress ?? 0}% complete</p>}
-            </div>
-          );
-        })}
-      </div>
-      {item.status === "complete" && <p className="mt-3 border-t border-zinc-800 pt-3 text-xs text-emerald-400">File uploaded securely and added to your resource library.</p>}
-    </div>
-  );
-}
-
-function delay(milliseconds: number) {
-  return new Promise<void>((resolve) => window.setTimeout(resolve, milliseconds));
-}
-
-async function fileChecksum(file: File) {
-  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-function resourceStatus(resource: SavedResource) {
-  if (resource.status === "READY") return { label: "Added to library", complete: true };
-  if (resource.status === "FAILED") return { label: "Upload failed", complete: false };
-  return { label: resource.status === "PROCESSING" ? "Processing..." : "Finalizing upload...", complete: false };
-}
-
-function formatModifiedDate(timestamp: number) {
-  return new Intl.DateTimeFormat("en", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(timestamp));
-}
-
-const uploadSteps = [
-  { id: "validating", label: "Validating file", icon: ShieldCheck },
-  { id: "creating-resource", label: "Creating resource record", icon: Database },
-  { id: "authorizing-upload", label: "Securing upload", icon: ShieldCheck },
-  { id: "uploading-to-blob", label: "Uploading to Database", icon: UploadCloud },
-] as const;
-
-const phaseOrder = Object.fromEntries(uploadSteps.map((step, index) => [step.id, index]));
-
-function UploadFlow({ item }: { item: UploadItem }) {
-  const currentStep = item.phase === "complete" ? uploadSteps.length : phaseOrder[item.phase ?? "validating"] ?? 0;
-  const nodePositions = [
-    "left-1/2 top-0 -translate-x-1/2",
-    "left-0 top-1/2 -translate-y-1/2",
-    "right-0 top-1/2 -translate-y-1/2",
-    "bottom-0 left-1/2 -translate-x-1/2",
-  ];
-
-  return (
-    <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/50 px-5 py-5 sm:px-8">
-      <div className="relative mx-auto h-[238px] max-w-[460px]">
-        <svg viewBox="0 0 460 238" aria-hidden="true" className="absolute inset-0 size-full overflow-visible">
-          {[
-            [230, 31, 56, 119],
-            [56, 119, 404, 119],
-            [404, 119, 230, 207],
-          ].map(([x1, y1, x2, y2], index) => (
-            <line key={index} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 5" className={`${currentStep > index ? "text-emerald-400" : "text-zinc-700"} transition-colors duration-500`} />
-          ))}
-        </svg>
-        {uploadSteps.map((step, index) => {
-          const Icon = step.icon;
-          const isComplete = currentStep > index;
-          const isActive = currentStep === index && item.status === "uploading";
-          return (
-            <div key={step.id} className={`absolute ${nodePositions[index]} flex w-28 flex-col items-center text-center`}>
-              <div className={`${isComplete ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-400" : isActive ? "border-white bg-white text-black shadow-[0_0_0_5px_rgba(255,255,255,0.08)]" : "border-zinc-700 bg-zinc-900 text-neutral-500"} grid size-[62px] place-items-center rounded-2xl border transition-all duration-500 ${isActive ? "scale-110" : ""}`}>
-                {isComplete ? <CheckCircle2 size={24} /> : isActive ? <LoaderCircle size={23} className="animate-spin" /> : <Icon size={22} />}
-              </div>
+              <div className={`${isComplete ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-400" : isActive ? "border-white bg-white text-black shadow-[0_0_0_5px_rgba(255,255,255,0.08)]" : "border-zinc-700 bg-zinc-900 text-neutral-500"} grid size-10 place-items-center rounded-full border p-2`}>{isComplete ? <CheckCircle2 size={24} /> : isActive ? <LoaderCircle size={23} className="animate-spin" /> : <Icon size={22} />}</div>
               <p className={`${isActive || isComplete ? "text-neutral-200" : "text-neutral-500"} mt-2 text-[11px] font-medium leading-tight transition-colors`}>{step.label}</p>
               {isActive && step.id === "uploading-to-blob" && <p className="mt-1 text-[10px] text-neutral-500">{item.progress ?? 0}% complete</p>}
             </div>
@@ -344,33 +267,33 @@ export default function UploadPage() {
         <p className="mt-3 text-base text-neutral-400">Add notes, PDFs, documents, presentations, or videos to keep everything together.</p>
       </section>
 
-      {validationErrors.length > 0 && <div role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-left text-sm text-red-200"><p className="font-medium">Some files were not added</p><ul className="mt-1 list-disc space-y-1 pl-5 text-red-200/80">{validationErrors.map((error) => <li key={error}>{error}</li>)}</ul></div>}
+      {validationErrors.length > 0 && <div role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-left text-sm text-red-200"><p className="font-medium">Some files were not accepted</p><ul className="mt-2 text-xs"><li>{validationErrors.join("\n")}</li></ul></div>}
 
       <section
         onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={(event) => { event.preventDefault(); setDragging(false); addFiles(event.dataTransfer.files); }}
-        className={`mt-8 grid min-h-[374px] place-items-center rounded-2xl border border-dashed px-6 py-12 text-center transition sm:px-10 ${dragging ? "border-white bg-white/[0.07]" : "border-zinc-600 bg-zinc-900/20 hover:border-zinc-400"}`}
+        className={`mt-8 grid min-h-[374px] place-items-center rounded-2xl border border-dashed px-6 py-12 text-center transition sm:px-10 ${dragging ? "border-white bg-white/[0.07]" : "border-zinc-800 bg-zinc-900/10"}`}
       >
         <div>
           <div className="mx-auto grid size-24 place-items-center rounded-full bg-zinc-800/80 text-white shadow-[inset_0_1px_rgba(255,255,255,0.06)]"><UploadCloud size={35} strokeWidth={1.8} /></div>
           <h2 className="mt-5 text-xl font-semibold tracking-tight">Drop your files here</h2>
           <p className="mt-2 text-sm text-neutral-400">or choose files from your device</p>
           <input ref={inputRef} onChange={(event) => { if (event.target.files) addFiles(event.target.files); event.target.value = ""; }} type="file" accept={acceptedTypes} multiple className="hidden" />
-          <button onClick={() => inputRef.current?.click()} className="mt-6 inline-flex h-12 items-center gap-3 rounded-xl bg-white px-7 text-sm font-semibold text-black shadow-sm transition hover:bg-neutral-200"><Paperclip size={19} strokeWidth={2.2} />Browse files</button>
+          <button onClick={() => inputRef.current?.click()} className="mt-6 inline-flex h-12 items-center gap-3 rounded-xl bg-white px-7 text-sm font-semibold text-black shadow-sm transition hover:bg-neutral-200">Choose files</button>
           <p className="mt-6 text-xs leading-6 text-neutral-400">Supported: PDF, DOCX, PPTX, TXT, MD, JPG, PNG, MP4, MOV, WEBM<br />(Max size: 100 MB per file)</p>
         </div>
       </section>
 
       <div className="mt-9 flex items-center gap-5 text-center before:h-px before:flex-1 before:bg-zinc-800 after:h-px after:flex-1 after:bg-zinc-800">
-        <div className="shrink-0"><p className="flex items-center justify-center gap-2 text-sm font-medium"><Sparkles size={17} fill="currentColor" />Zohra handles the rest</p><p className="mt-1 text-sm text-neutral-400">Your files will be organized automatically.</p></div>
+        <div className="shrink-0"><p className="flex items-center justify-center gap-2 text-sm font-medium"><Sparkles size={17} fill="currentColor" />Zohra handles the rest</p><p className="mt-1 text-xs text-neutral-500">We process uploads so they're searchable and ready to study.</p></div>
       </div>
 
       {items.length > 0 && (
         <section className="mt-7 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-4"><h2 className="font-semibold">Upload queue</h2>{readyCount > 0 && <button onClick={uploadFiles} className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-neutral-200">Upload {readyCount} file{readyCount === 1 ? "" : "s"}</button>}</div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-4"><h2 className="font-semibold">Upload queue</h2>{readyCount > 0 && <button onClick={uploadFiles} className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-black">Upload {readyCount} file{readyCount > 1 ? 's' : ''}</button>}</div>
           <ul className="divide-y divide-zinc-800">
-            {items.map((item) => <li key={item.id} className="py-4"><div className="flex items-center gap-3"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={21} /></div><div className="min-w-0 flex-1 text-left"><p className="truncate text-sm font-medium">{item.file.name}</p><p className="mt-1 text-xs text-neutral-400">{formatSize(item.file.size)}</p></div>{item.status === "uploading" && <span className="flex items-center gap-2 text-sm text-neutral-400"><LoaderCircle size={17} className="animate-spin" />Processing</span>}{item.status === "complete" && <span className="flex items-center gap-2 text-sm text-neutral-300"><CheckCircle2 size={19} />Added to library</span>}{item.status === "error" && <span className="max-w-48 truncate text-sm text-red-300" title={item.error}>{item.error}</span>}{item.status === "ready" && <button onClick={() => removeFile(item.id)} aria-label={`Remove ${item.file.name}`} className="grid size-9 place-items-center rounded-lg text-neutral-400 transition hover:bg-white/10 hover:text-white"><X size={18} /></button>}</div>{item.phase && <UploadFlow item={item} />}<div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-zinc-800 bg-zinc-800 sm:grid-cols-4">{[{ label: "File name", value: item.file.name }, { label: "Size", value: formatSize(item.file.size) }, { label: "Type", value: fileType(item.file) }, { label: "Modified", value: formatModifiedDate(item.file.lastModified) }].map((metadata) => <div key={metadata.label} className="min-w-0 bg-zinc-950/60 px-3 py-3"><p className="text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-500">{metadata.label}</p><p title={metadata.value} className="mt-1.5 truncate text-xs text-neutral-300">{metadata.value}</p></div>)}</div></li>)}
+            {items.map((item) => <li key={item.id} className="py-4"><div className="flex items-center gap-3"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={20} /></div><div className="flex-1"><div className="flex items-center justify-between"><div><div className="text-sm font-medium">{item.file.name}</div><div className="text-xs text-neutral-400">{fileType(item.file)} • {formatSize(item.file.size)}</div></div><div className="text-right text-xs text-neutral-400">{item.uploadedAt ? formatModifiedDate(new Date(item.uploadedAt).valueOf()) : formatModifiedDate(item.file.lastModified)}</div></div>{item.status !== 'ready' && <UploadFlow item={item} />}</div><div className="ml-3 flex shrink-0 items-center gap-2"><button onClick={() => removeFile(item.id)} className="grid size-9 place-items-center rounded-md bg-zinc-800 p-2 text-neutral-300 hover:bg-white/5"><X size={14} /></button></div></div></li>) }
           </ul>
         </section>
       )}
@@ -391,7 +314,7 @@ export default function UploadPage() {
             ))}
           {!isLoadingResources && savedResources.map((resource) => {
             const status = resourceStatus(resource);
-            return <li key={resource.id} className="flex items-center gap-3 py-3.5"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={21} /></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{resource.originalName}</p><p className="mt-1 text-xs text-neutral-400">{formatSize(resource.sizeBytes)} · {formatModifiedDate(new Date(resource.createdAt).getTime())}</p></div><span className={`${status.complete ? "text-neutral-300" : resource.status === "FAILED" ? "text-red-300" : "text-neutral-400"} hidden items-center gap-2 text-sm sm:flex`}>{status.complete ? <CheckCircle2 size={19} /> : <LoaderCircle size={17} className={resource.status === "FAILED" ? "" : "animate-spin"} />}{status.label}</span><button onClick={() => deleteResource(resource.id)} disabled={deletingResourceId === resource.id} aria-label={`Remove ${resource.originalName}`} className="grid size-9 shrink-0 place-items-center rounded-lg text-neutral-400 transition hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50">{deletingResourceId === resource.id ? <LoaderCircle size={17} className="animate-spin" /> : <Trash2 size={17} />}</button></li>;
+            return <li key={resource.id} className="flex items-center gap-3 py-3.5"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={20} /></div><div className="flex-1"><div className="text-sm font-medium">{resource.originalName}</div><div className="text-xs text-neutral-400">{resource.mimeType} • {formatSize(resource.sizeBytes)}</div></div><div className="ml-3 flex shrink-0 items-center gap-2"><div className={`text-xs rounded-md px-2 py-1 ${status.complete ? 'bg-emerald-500 text-black' : 'bg-zinc-800 text-neutral-300'}`}>{status.label}</div><button onClick={() => deleteResource(resource.id)} className="ml-2 grid size-9 place-items-center rounded-md bg-zinc-800 p-2 text-neutral-300 hover:bg-white/5">{deletingResourceId === resource.id ? <LoaderCircle size={16} className="animate-spin" /> : <Trash2 size={16} />}</button></div></li>
           })}
           {!isLoadingResources && savedResources.length === 0 && <li className="py-8 text-center text-sm text-neutral-500">Your uploaded learning materials will appear here.</li>}
         </ul>

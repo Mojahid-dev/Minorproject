@@ -88,7 +88,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <main className="h-screen overflow-hidden bg-zinc-950 text-neutral-100">
       <div className="flex h-full max-w-full overflow-hidden border border-zinc-800 bg-zinc-950 shadow-[0_25px_80px_rgba(0,0,0,0.4)]">
         <aside
-          className={`${collapsed ? "md:w-[86px]" : "md:w-[272px]"} fixed inset-y-0 left-0 z-40 flex w-[280px] shrink-0 flex-col border-r border-zinc-800 bg-black px-4 py-5 shadow-xl transition-[transform,width] duration-300 ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"} md:static md:h-full md:translate-x-0 md:shadow-none`}
+          className={`${collapsed ? "md:w-[86px]" : "md:w-[272px]"} fixed inset-y-0 left-0 z-40 flex w-[280px] shrink-0 flex-col border-r border-zinc-800 bg-black px-4 py-5 shadow-xl transition-[t[...]
         >
           <div className="flex items-center justify-between px-2">
             <ZohraMark compact={collapsed} />
@@ -136,7 +136,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     href={href}
                     onClick={() => setMobileMenuOpen(false)}
                     title={collapsed ? label : undefined}
-                    className={`${isActive ? "relative isolate overflow-hidden border border-white/15 bg-white/[0.09] text-white shadow-[0_8px_24px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md before:absolute before:inset-y-2.5 before:left-0 before:w-0.5 before:rounded-r-full before:bg-white before:shadow-[0_0_14px_rgba(255,255,255,0.9)]" : "text-neutral-500 hover:bg-white/[0.06] hover:text-white"} flex h-11 w-full items-center rounded-xl px-3 text-sm font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-200 hover:-translate-y-px`}
+                    className={`${isActive ? "relative isolate overflow-hidden border border-white/15 bg-white/[0.09] text-white shadow-[0_8px_24px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255[...]
                   >
                     <Icon size={19} strokeWidth={isActive ? 2.4 : 2} className="relative z-10" />
                     {!collapsed && (
@@ -144,7 +144,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     )}
                     {!collapsed && badge && (
                       <span
-                        className={`${isActive ? "border border-white/15 bg-white/10 text-white" : "bg-zinc-800 text-neutral-300"} relative z-10 rounded-md px-1.5 py-0.5 text-[11px] font-semibold`}
+                        className={`${isActive ? "border border-white/15 bg-white/10 text-white" : "bg-zinc-800 text-neutral-300"} relative z-10 rounded-md px-1.5 py-0.5 text-[11px] font-semibold[...]
                       >
                         {badge}
                       </span>
@@ -175,8 +175,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {["Design System Notes", "Math Assignment"].map((task) => {
                     const done = completedTasks.includes(task);
                     return (
-                      <button key={task} onClick={() => setCompletedTasks((current) => done ? current.filter((item) => item !== task) : [...current, task])} className="flex w-full items-center gap-2 rounded-lg py-1 text-left text-xs text-neutral-300 transition hover:text-white">
-                        <span className={`grid size-4 shrink-0 place-items-center rounded-full border ${done ? "border-white bg-white text-zinc-900" : "border-zinc-600"}`}>{done && <Check size={11} strokeWidth={3} />}</span>
+                      <button key={task} onClick={() => setCompletedTasks((current) => done ? current.filter((item) => item !== task) : [...current, task])} className="flex w-full items-center ga[...]
+                        <span className={`grid size-4 shrink-0 place-items-center rounded-full border ${done ? "border-white bg-white text-zinc-900" : "border-zinc-600"}`}>{done && <Check size={1[...]
                         <span className={done ? "text-neutral-500 line-through" : ""}>{task}</span>
                       </button>
                     );
@@ -222,7 +222,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <input
                 aria-label="Search"
                 placeholder="Search anything..."
-                className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-900 pl-10 pr-[76px] text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-neutral-500 focus:ring-4 focus:ring-zinc-800"
+                className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-900 pl-10 pr-[76px] text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-neutral-5[...]
               />
               <span className="pointer-events-none absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1 text-[10px] font-medium text-neutral-300">
                 <kbd className="rounded border border-white/10 bg-white/[0.06] px-1.5 py-1">⌘</kbd>
@@ -250,7 +250,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <Plus size={17} />
                 New project
-              </button>
+              </Link>
               <div className="mx-1 hidden h-8 w-px bg-white/10 sm:block" />
               <Link
                 href="/profile"
@@ -258,7 +258,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 title={profileName}
                 className="group flex shrink-0 items-center gap-1 rounded-xl px-1.5 py-1 text-neutral-300 transition hover:bg-white/[0.06] hover:text-white"
               >
-                <span className="grid size-9 place-items-center overflow-hidden rounded-full border border-white/35 bg-gradient-to-br from-zinc-100 to-zinc-400 text-xs font-bold text-zinc-900 shadow-[0_0_0_3px_rgba(255,255,255,0.08)]">
+                <span className="grid size-9 place-items-center overflow-hidden rounded-full border border-white/35 bg-gradient-to-br from-zinc-100 to-zinc-400 text-xs font-bold text-zinc-900 sha[...]
                   {profileImage ? (
                     <Image
                       src={profileImage}
