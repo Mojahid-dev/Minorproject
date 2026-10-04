@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Play, Sparkles } from "lucide-react";
+import { ArrowRight, Play } from "lucide-react";
 import AtlasConstellation from "@/app/(marketing)/_components/atlas-constellation";
 
 // Replace these placeholder values when your final messaging is ready.
@@ -65,20 +65,19 @@ export default function HeroSection() {
               </span>
               <span className="w-10" />
             </div>
-            {/* Replace this placeholder frame with an Image, video, or interactive product UI. */}
-            <div className="mt-4 grid min-h-[260px] place-items-center rounded-lg border border-dashed border-yellow-500/25 bg-[radial-gradient(circle_at_center,rgba(234,179,8,0.10),transparent_55%)] p-6 sm:min-h-[340px]">
-              <div className="max-w-sm text-center">
-                <div className="mx-auto grid size-12 place-items-center rounded-xl border border-yellow-500/25 bg-yellow-500/10 text-yellow-400">
-                  <Sparkles size={22} aria-hidden="true" />
-                </div>
-                <p className="mt-4 text-sm font-semibold text-zinc-200">
-                  Drop in your showcase
-                </p>
-                <p className="mt-2 text-sm leading-6 text-zinc-500">
-                  Add a screenshot, dashboard, video, or custom visual here to
-                  introduce your product.
-                </p>
-              </div>
+            <div className="mt-4 overflow-hidden rounded-lg border border-white/10 bg-black shadow-[0_18px_55px_rgba(0,0,0,0.45)] ring-1 ring-yellow-500/10">
+              <video
+                className="aspect-video w-full bg-black object-contain"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                aria-label="Zohra product showcase"
+              >
+                <source src="/zohra-showcase.mp4" type="video/mp4" />
+                Your browser does not support embedded videos.
+              </video>
             </div>
           </div>
         </div>
