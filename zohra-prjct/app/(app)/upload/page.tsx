@@ -12,6 +12,7 @@ import {
   UploadCloud,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +29,7 @@ type UploadItem = {
   status: "ready" | "uploading" | "complete" | "error";
   phase?: "validating" | "creating-resource" | "authorizing-upload" | "uploading-to-blob" | "complete" | "error";
   error?: string;
+  existingResourceId?: string;
   progress?: number;
 };
 
@@ -40,7 +42,7 @@ type SavedResource = {
   createdAt: string;
 };
 
-const acceptedTypes = ".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.jpg,.jpeg,.png,.mp4,.mov,.webm";
+const acceptedTypes = ".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.jpg,.jpeg,.png";
 
 function formatSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -188,6 +190,8 @@ export default function UploadPage() {
     const readyItems = items.filter((item) => item.status === "ready");
     setItems((current) => current.map((item) => item.status === "ready" ? { ...item, status: "uploading", phase: "validating", progress: 0 } : item));
     await Promise.all(readyItems.map(async (item) => {
+      let createdResourceId = "";
+      let existingResourceId = "";
       try {
         await delay(450);
         setItems((current) => current.map((currentItem) => currentItem.id === item.id ? { ...currentItem, phase: "creating-resource" } : currentItem));
@@ -197,7 +201,12 @@ export default function UploadPage() {
           body: JSON.stringify({ name: item.file.name, type: item.file.type, size: item.file.size, checksum: item.checksum }),
         });
         const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error || "Unable to save resource metadata.");
+        if (!response.ok) {
+          existingResourceId = payload.existingResourceId || "";
+          throw new Error(payload.error || "Unable to save resource metadata.");
+        }
+        createdResourceId = payload.resource.id;
+        setItems((current) => current.map((currentItem) => currentItem.id === item.id ? { ...currentItem, resourceId: createdResourceId } : currentItem));
         setItems((current) => current.map((currentItem) => currentItem.id === item.id ? { ...currentItem, phase: "authorizing-upload" } : currentItem));
         await delay(350);
         setItems((current) => current.map((currentItem) => currentItem.id === item.id ? { ...currentItem, phase: "uploading-to-blob" } : currentItem));
@@ -210,6 +219,9 @@ export default function UploadPage() {
             setItems((current) => current.map((currentItem) => currentItem.id === item.id ? { ...currentItem, progress: percentage } : currentItem));
           },
         });
+        const refreshResponse = await fetch("/api/resources");
+        const refreshPayload = await refreshResponse.json();
+        const saved = refreshPayload.resources?.find((resource: SavedResource) => resource.id === payload.resource.id) as SavedResource | undefined;
         setItems((current) => current.map((currentItem) => currentItem.id === item.id ? {
           ...currentItem,
           resourceId: payload.resource.id,
@@ -225,15 +237,32 @@ export default function UploadPage() {
           originalName: payload.resource.originalName,
           mimeType: payload.resource.mimeType,
           sizeBytes: payload.resource.sizeBytes,
-          status: "READY",
+          status: saved?.status ?? "PENDING",
           createdAt: payload.resource.createdAt,
         }, ...current]);
       } catch (error) {
+        let resourceIdToRetry = "";
+        let message = error instanceof Error ? error.message : "Unable to save resource metadata.";
+        if (createdResourceId) {
+          try {
+            const cleanup = await fetch(`/api/resources/${createdResourceId}`, { method: "DELETE" });
+            if (!cleanup.ok) {
+              resourceIdToRetry = createdResourceId;
+              const cleanupPayload = await cleanup.json().catch(() => ({}));
+              message += ` Cleanup also failed: ${cleanupPayload.error || "retry cleanup before uploading again."}`;
+            }
+          } catch {
+            resourceIdToRetry = createdResourceId;
+            message += " Cleanup failed; retry cleanup before uploading again.";
+          }
+        }
         setItems((current) => current.map((currentItem) => currentItem.id === item.id ? {
           ...currentItem,
+          resourceId: resourceIdToRetry,
+          existingResourceId,
           status: "error",
           phase: "error",
-          error: error instanceof Error ? error.message : "Unable to save resource metadata.",
+          error: message,
         } : currentItem));
       }
     }));
@@ -243,7 +272,21 @@ export default function UploadPage() {
     setItems((current) => current.filter((item) => item.id !== id));
   }
 
+  async function retryFile(item: UploadItem) {
+    if (item.resourceId) {
+      const cleanup = await fetch(`/api/resources/${item.resourceId}`, { method: "DELETE" });
+      if (!cleanup.ok) {
+        const payload = await cleanup.json().catch(() => ({}));
+        setItems((current) => current.map((currentItem) => currentItem.id === item.id ? { ...currentItem, error: `${item.error} ${payload.error || "Cleanup failed; try again."}` } : currentItem));
+        return;
+      }
+    }
+    setItems((current) => current.map((currentItem) => currentItem.id === item.id ? { ...currentItem, resourceId: "", status: "ready", phase: "validating", error: undefined, progress: 0 } : currentItem));
+  }
+
   async function deleteResource(resourceId: string) {
+    const resource = savedResources.find((item) => item.id === resourceId);
+    if (resource && !window.confirm(`Remove “${resource.originalName}” from your library?`)) return;
     setDeletingResourceId(resourceId);
     try {
       const response = await fetch(`/api/resources/${resourceId}`, { method: "DELETE" });
@@ -263,8 +306,8 @@ export default function UploadPage() {
     <div className="mx-auto max-w-6xl pb-8 text-white">
       <section>
         <p className="text-sm font-medium text-neutral-400">Resource library</p>
-        <h1 className="mt-3 text-3xl font-bold tracking-[-0.045em] sm:text-4xl">Upload your learning materials</h1>
-        <p className="mt-3 text-base text-neutral-400">Add notes, PDFs, documents, presentations, or videos to keep everything together.</p>
+        <h1 className="mt-3 text-3xl font-bold tracking-[-0.045em] sm:text-4xl">Upload project resources</h1>
+        <p className="mt-3 text-base text-neutral-400">Add PDFs, documents, presentations, text files, or images to keep everything together.</p>
       </section>
 
       {validationErrors.length > 0 && <div role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-left text-sm text-red-200"><p className="font-medium">Some files were not accepted</p><ul className="mt-2 text-xs"><li>{validationErrors.join("\n")}</li></ul></div>}
@@ -281,19 +324,19 @@ export default function UploadPage() {
           <p className="mt-2 text-sm text-neutral-400">or choose files from your device</p>
           <input ref={inputRef} onChange={(event) => { if (event.target.files) addFiles(event.target.files); event.target.value = ""; }} type="file" accept={acceptedTypes} multiple className="hidden" />
           <button onClick={() => inputRef.current?.click()} className="mt-6 inline-flex h-12 items-center gap-3 rounded-xl bg-white px-7 text-sm font-semibold text-black shadow-sm transition hover:bg-neutral-200">Choose files</button>
-          <p className="mt-6 text-xs leading-6 text-neutral-400">Supported: PDF, DOCX, PPTX, TXT, MD, JPG, PNG, MP4, MOV, WEBM<br />(Max size: 100 MB per file)</p>
+          <p className="mt-6 text-xs leading-6 text-neutral-400">Supported: PDF, DOC, DOCX, PPT, PPTX, TXT, MD, JPG, PNG<br />(Max size: 100 MB per file)</p>
         </div>
       </section>
 
       <div className="mt-9 flex items-center gap-5 text-center before:h-px before:flex-1 before:bg-zinc-800 after:h-px after:flex-1 after:bg-zinc-800">
-        <div className="shrink-0"><p className="flex items-center justify-center gap-2 text-sm font-medium"><Sparkles size={17} fill="currentColor" />Zohra handles the rest</p><p className="mt-1 text-xs text-neutral-500">We process uploads so they're searchable and ready to study.</p></div>
+        <div className="shrink-0"><p className="flex items-center justify-center gap-2 text-sm font-medium"><Sparkles size={17} fill="currentColor" />Files are stored in your library</p><p className="mt-1 text-xs text-neutral-500">Selectable text is extracted from PDFs. Other formats are stored for later access.</p></div>
       </div>
 
       {items.length > 0 && (
         <section className="mt-7 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 pb-4"><h2 className="font-semibold">Upload queue</h2>{readyCount > 0 && <button onClick={uploadFiles} className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-black">Upload {readyCount} file{readyCount > 1 ? 's' : ''}</button>}</div>
           <ul className="divide-y divide-zinc-800">
-            {items.map((item) => <li key={item.id} className="py-4"><div className="flex items-center gap-3"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={20} /></div><div className="flex-1"><div className="flex items-center justify-between"><div><div className="text-sm font-medium">{item.file.name}</div><div className="text-xs text-neutral-400">{fileType(item.file)} • {formatSize(item.file.size)}</div></div><div className="text-right text-xs text-neutral-400">{item.uploadedAt ? formatModifiedDate(new Date(item.uploadedAt).valueOf()) : formatModifiedDate(item.file.lastModified)}</div></div>{item.status !== 'ready' && <UploadFlow item={item} />}</div><div className="ml-3 flex shrink-0 items-center gap-2"><button onClick={() => removeFile(item.id)} className="grid size-9 place-items-center rounded-md bg-zinc-800 p-2 text-neutral-300 hover:bg-white/5"><X size={14} /></button></div></div></li>) }
+            {items.map((item) => <li key={item.id} className="py-4"><div className="flex items-center gap-3"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={20} /></div><div className="flex-1"><div className="flex items-center justify-between"><div><div className="text-sm font-medium">{item.file.name}</div><div className="text-xs text-neutral-400">{fileType(item.file)} • {formatSize(item.file.size)}</div></div><div className="text-right text-xs text-neutral-400">{item.uploadedAt ? formatModifiedDate(new Date(item.uploadedAt).valueOf()) : formatModifiedDate(item.file.lastModified)}</div></div>{item.status !== 'ready' && <UploadFlow item={item} />}{item.status === "error" && <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2"><p className="text-xs text-red-200">{item.error}</p>{item.existingResourceId ? <Link href={`/resources?q=${encodeURIComponent(item.file.name)}`} className="shrink-0 text-xs font-semibold text-white underline underline-offset-2">Open existing</Link> : <button onClick={() => void retryFile(item)} className="shrink-0 text-xs font-semibold text-white underline underline-offset-2">Retry</button>}</div>}</div><div className="ml-3 flex shrink-0 items-center gap-2"><button onClick={() => removeFile(item.id)} disabled={item.status === "uploading"} aria-label={`Remove ${item.file.name} from queue`} className="grid size-9 place-items-center rounded-md bg-zinc-800 p-2 text-neutral-300 hover:bg-white/5 disabled:opacity-40"><X size={14} /></button></div></div></li>) }
           </ul>
         </section>
       )}

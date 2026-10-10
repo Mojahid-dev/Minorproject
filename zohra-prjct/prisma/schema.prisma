@@ -23,6 +23,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   resources     Resource[]
+  tasks         Task[]
 
   @@unique([email])
   @@map("user")
@@ -68,6 +69,35 @@ model Resource {
   @@index([userId, status])
   @@unique([userId, checksum])
   @@map("resource")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  userId      String
+  title       String       @db.VarChar(160)
+  description String?      @db.Text
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(NORMAL)
+  dueDate     DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, dueDate])
+  @@index([userId, dueDate])
+  @@map("task")
 }
 
 model Session {

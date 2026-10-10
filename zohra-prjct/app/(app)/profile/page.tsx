@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarDays, Mail, Settings2, UserRound } from "lucide-react";
+import { BadgeCheck, CalendarDays, Mail, Settings2 } from "lucide-react";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 
@@ -78,6 +78,13 @@ export default async function ProfilePage() {
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-xl bg-zinc-950/70 p-4">
+              <BadgeCheck size={18} className={user.emailVerified ? "text-emerald-300" : "text-amber-300"} />
+              <div>
+                <dt className="text-xs font-medium uppercase tracking-wide text-neutral-500">Email status</dt>
+                <dd className="text-sm text-white">{user.emailVerified ? "Verified" : "Not verified"}</dd>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl bg-zinc-950/70 p-4">
               <CalendarDays size={18} className="text-neutral-400" />
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wide text-neutral-500">Member since</dt>
@@ -88,23 +95,6 @@ export default async function ProfilePage() {
         </div>
       </section>
 
-      <section className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-5 sm:p-6">
-        <div className="flex items-center gap-3">
-          <div className="grid size-9 place-items-center rounded-lg bg-white text-black">
-            <UserRound size={18} />
-          </div>
-          <div>
-            <h2 className="font-semibold text-white">Profile settings</h2>
-            <p className="text-sm text-neutral-500">Update your name and profile photo.</p>
-          </div>
-        </div>
-        <Link
-          href="/settings"
-          className="mt-5 inline-flex rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-neutral-200"
-        >
-          Manage profile
-        </Link>
-      </section>
     </div>
   );
 }

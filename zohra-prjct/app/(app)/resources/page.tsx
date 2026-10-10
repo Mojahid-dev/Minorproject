@@ -10,13 +10,12 @@ import {
   Grid2X2,
   LayoutList,
   LoaderCircle,
-  MoreHorizontal,
   Plus,
   Presentation,
+  Search,
   ShieldAlert,
   Trash2,
   Upload,
-  Video,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -40,7 +39,7 @@ type ExtractedText = Pick<Resource, "id" | "originalName" | "textExtractionStatu
 };
 
 type ResourceTab = "subjects" | "all" | "recent" | "review";
-type ResourceFilter = "all" | "document" | "presentation" | "video" | "other";
+type ResourceFilter = "all" | "document" | "presentation" | "other";
 
 function formatSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -48,7 +47,6 @@ function formatSize(bytes: number) {
 }
 
 function resourceKind(resource: Resource): Exclude<ResourceFilter, "all"> {
-  if (resource.mimeType.startsWith("video/")) return "video";
   if (
     resource.mimeType.includes("presentation") ||
     resource.mimeType.includes("powerpoint")
@@ -64,14 +62,8 @@ function resourceKind(resource: Resource): Exclude<ResourceFilter, "all"> {
 }
 
 function typeLabel(resource: Resource) {
-  const kind = resourceKind(resource);
-  if (kind === "presentation") return "PPTX";
-  if (kind === "video") return "VIDEO";
-  if (resource.mimeType === "application/pdf") return "PDF";
-  if (resource.mimeType.includes("word")) return "DOCX";
-  if (resource.mimeType === "text/markdown") return "MD";
-  if (resource.mimeType === "text/plain") return "TXT";
-  return "FILE";
+  const extension = resource.originalName.split(".").pop()?.toUpperCase();
+  return extension || "FILE";
 }
 
 function formatAdded(date: string) {
@@ -88,9 +80,7 @@ function CollectionIcon({ kind }: { kind: Exclude<ResourceFilter, "all"> }) {
   const Icon =
     kind === "presentation"
       ? Presentation
-      : kind === "video"
-        ? Video
-        : kind === "document"
+      : kind === "document"
           ? FileText
           : FolderOpen;
   return <Icon size={22} />;
@@ -101,6 +91,8 @@ export default function ResourcesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ResourceTab>("subjects");
   const [filter, setFilter] = useState<ResourceFilter>("all");
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<"newest" | "oldest" | "name">("newest");
   const [isGrid, setIsGrid] = useState(true);
   const [deletingResourceId, setDeletingResourceId] = useState<string | null>(
     null,
@@ -109,6 +101,11 @@ export default function ResourcesPage() {
   const [isLoadingText, setIsLoadingText] = useState(false);
   const [isExtractingText, setIsExtractingText] = useState(false);
   const [extractedText, setExtractedText] = useState<ExtractedText | null>(null);
+  const [actionError, setActionError] = useState("");
+
+  useEffect(() => {
+    setQuery(new URLSearchParams(window.location.search).get("q") ?? "");
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -127,25 +124,24 @@ export default function ResourcesPage() {
     };
   }, []);
 
-  const filteredResources = useMemo(
-    () =>
-      resources.filter((resource) => {
-        if (activeTab === "review" && resource.status === "READY") return false;
-        return filter === "all" || resourceKind(resource) === filter;
-      }),
-    [activeTab, filter, resources],
-  );
+  const filteredResources = useMemo(() => {
+    const matching = resources.filter((resource) => {
+      if (activeTab === "review" && resource.status === "READY" && !["FAILED", "NO_TEXT"].includes(resource.textExtractionStatus)) return false;
+      return (filter === "all" || resourceKind(resource) === filter) && resource.originalName.toLowerCase().includes(query.trim().toLowerCase());
+    });
+    const activeSort = activeTab === "recent" ? "newest" : sort;
+    return matching.sort((a, b) => activeSort === "name" ? a.originalName.localeCompare(b.originalName) : activeSort === "oldest" ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [activeTab, filter, query, resources, sort]);
 
   const collections = useMemo(
     () =>
-      (["document", "presentation", "video", "other"] as const).map((kind) => {
+      (["document", "presentation", "other"] as const).map((kind) => {
         const matching = resources.filter(
           (resource) => resourceKind(resource) === kind,
         );
         const labels = {
           document: ["Documents", "DOCS"],
           presentation: ["Presentations", "SLIDES"],
-          video: ["Video lessons", "VIDEO"],
           other: ["Other materials", "FILES"],
         } as const;
         return {
@@ -160,7 +156,10 @@ export default function ResourcesPage() {
   );
 
   async function deleteResource(resourceId: string) {
+    const resource = resources.find((item) => item.id === resourceId);
+    if (resource && !window.confirm(`Remove “${resource.originalName}” from your library?`)) return;
     setDeletingResourceId(resourceId);
+    setActionError("");
     try {
       const response = await fetch(`/api/resources/${resourceId}`, {
         method: "DELETE",
@@ -169,6 +168,8 @@ export default function ResourcesPage() {
       setResources((current) =>
         current.filter((resource) => resource.id !== resourceId),
       );
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Unable to remove resource.");
     } finally {
       setDeletingResourceId(null);
     }
@@ -202,7 +203,7 @@ export default function ResourcesPage() {
   }
 
   const tabs: { id: ResourceTab; label: string; icon: typeof FolderOpen }[] = [
-    { id: "subjects", label: "Subjects", icon: FolderOpen },
+    { id: "subjects", label: "File types", icon: FolderOpen },
     { id: "all", label: "All resources", icon: FileText },
     { id: "recent", label: "Recently added", icon: Clock3 },
     { id: "review", label: "Needs review", icon: ShieldAlert },
@@ -216,8 +217,7 @@ export default function ResourcesPage() {
             Resources
           </h1>
           <p className="mt-2 text-base text-neutral-400 sm:text-lg">
-            All your study materials, organized around what you&apos;re
-            learning.
+            Keep the files behind your work organized and easy to find.
           </p>
         </div>
         <Link
@@ -240,7 +240,11 @@ export default function ResourcesPage() {
             {label}
           </button>
         ))}
-        <div className="ml-auto hidden h-11 items-center gap-2 rounded-lg border border-zinc-800 px-3 text-sm text-neutral-300 sm:flex">
+        <label className="ml-auto flex h-11 min-w-[145px] flex-1 items-center gap-2 rounded-lg border border-zinc-800 px-3 text-sm text-neutral-300 sm:max-w-xs">
+          <Search size={17} className="shrink-0 text-neutral-500" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search resources by file name" placeholder="Search names" className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-neutral-500" />
+        </label>
+        <div className="flex h-11 items-center gap-2 rounded-lg border border-zinc-800 px-3 text-sm text-neutral-300">
           <Filter size={18} />
           <select
             value={filter}
@@ -252,7 +256,6 @@ export default function ResourcesPage() {
             <option value="all">Filter</option>
             <option value="document">Documents</option>
             <option value="presentation">Presentations</option>
-            <option value="video">Videos</option>
             <option value="other">Other</option>
           </select>
         </div>
@@ -262,10 +265,12 @@ export default function ResourcesPage() {
         <section className="mt-7">
           <div className="mb-4 flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold">
-              {activeTab === "subjects" ? "Your subjects" : "All resources"}
+              {activeTab === "subjects" ? "Browse by file type" : "All resources"}
             </h2>
             <div className="flex items-center gap-3 text-sm text-neutral-400">
-              <span className="hidden sm:inline">Sort by: Name</span>
+              <label className="flex h-9 items-center gap-2 rounded-lg border border-zinc-800 px-2 text-xs text-neutral-400">Sort
+                <select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} aria-label="Sort resources" className="bg-transparent text-neutral-200 outline-none"><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="name">Name</option></select>
+              </label>
               <div className="flex rounded-lg border border-zinc-800 p-1">
                 <button
                   onClick={() => setIsGrid(true)}
@@ -285,7 +290,7 @@ export default function ResourcesPage() {
             </div>
           </div>
           {activeTab === "subjects" && (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {isLoading
                 ? Array.from({ length: 4 }).map((_, index) => (
                     <Skeleton
@@ -294,18 +299,14 @@ export default function ResourcesPage() {
                     />
                   ))
                 : collections.map((collection) => (
-                    <article
+                    <button type="button" onClick={() => { setFilter(collection.kind); setActiveTab("all"); }}
                       key={collection.kind}
-                      className="group min-h-56 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-5 transition hover:border-zinc-600 hover:bg-zinc-900"
+                      className="group min-h-56 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-5 text-left transition hover:border-zinc-600 hover:bg-zinc-900"
                     >
                       <div className="flex items-start justify-between">
                         <div className="grid size-13 place-items-center rounded-xl bg-zinc-800 text-neutral-100">
                           <CollectionIcon kind={collection.kind} />
                         </div>
-                        <MoreHorizontal
-                          size={20}
-                          className="text-neutral-500"
-                        />
                       </div>
                       <h3 className="mt-5 text-lg font-semibold">
                         {collection.name}
@@ -327,7 +328,7 @@ export default function ResourcesPage() {
                           →
                         </span>
                       </div>
-                    </article>
+                    </button>
                   ))}
             </div>
           )}
@@ -349,7 +350,7 @@ export default function ResourcesPage() {
               <span>
                 <span className="block font-medium">Add resources</span>
                 <span className="mt-1 block text-xs text-neutral-500">
-                  Upload a new learning material
+                  Add a file to your resource library
                 </span>
               </span>
             </Link>
@@ -360,7 +361,7 @@ export default function ResourcesPage() {
       <section className="mt-7">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">
-            {activeTab === "review" ? "Needs review" : "Recently added"}
+            {activeTab === "review" ? "Needs review" : activeTab === "recent" ? "Recently added" : "Latest resources"}
           </h2>
           {activeTab === "subjects" && (
             <button
@@ -372,13 +373,14 @@ export default function ResourcesPage() {
           )}
         </div>
         <ResourceTable
-          resources={activeTab === "review" ? filteredResources : resources}
+          resources={filteredResources}
           isLoading={isLoading}
           onDelete={deleteResource}
           onViewText={viewExtractedText}
           deletingResourceId={deletingResourceId}
         />
       </section>
+      {actionError && <p role="alert" className="mt-4 rounded-xl border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-200">{actionError}</p>}
       {isTextViewerOpen && <ExtractedTextViewer resource={extractedText} isLoading={isLoadingText} isExtracting={isExtractingText} onExtract={extractText} onClose={() => setIsTextViewerOpen(false)} />}
     </div>
   );
@@ -471,13 +473,15 @@ function ResourceTable({
   if (!resources.length) return <EmptyResources />;
   return (
     <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/45">
-      <table className="w-full min-w-[700px] text-left text-sm">
+      <table className="w-full min-w-[850px] text-left text-sm">
         <thead className="border-b border-zinc-800 text-neutral-400">
           <tr>
             <th className="px-6 py-3 font-medium">Name</th>
             <th className="px-6 py-3 font-medium">Collection</th>
             <th className="px-6 py-3 font-medium">Type</th>
+            <th className="px-6 py-3 font-medium">Size</th>
             <th className="px-6 py-3 font-medium">Added</th>
+            <th className="px-6 py-3 font-medium">Status</th>
             <th className="w-24 px-3 py-3" />
           </tr>
         </thead>
@@ -503,7 +507,13 @@ function ResourceTable({
                 {typeLabel(resource)}
               </td>
               <td className="px-6 py-3 text-neutral-400">
+                {formatSize(resource.sizeBytes)}
+              </td>
+              <td className="px-6 py-3 text-neutral-400">
                 {formatAdded(resource.createdAt)}
+              </td>
+              <td className="px-6 py-3 text-neutral-400">
+                {resource.status === "READY" ? resource.textExtractionStatus === "FAILED" ? "Text extraction failed" : resource.textExtractionStatus === "NO_TEXT" ? "No embedded text" : "Ready" : resource.status === "FAILED" ? "Upload failed" : "Processing"}
               </td>
               <td className="px-3 py-3">
                 <div className="flex items-center justify-end gap-1">
@@ -541,7 +551,7 @@ function EmptyResources() {
       <FolderOpen className="mx-auto text-neutral-500" size={28} />
       <p className="mt-3 font-medium">No resources here yet</p>
       <p className="mt-1 text-sm text-neutral-500">
-        Upload learning material to build your library.
+        Upload a project file to build your library.
       </p>
     </div>
   );

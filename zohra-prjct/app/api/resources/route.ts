@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     select: { id: true },
   });
   if (existingResource) {
-    return NextResponse.json({ error: "This exact file is already in your library." }, { status: 409 });
+    return NextResponse.json({ error: "This exact file is already in your library.", existingResourceId: existingResource.id }, { status: 409 });
   }
 
   const extension = getFileExtension(body.name);
@@ -55,19 +55,29 @@ export async function POST(request: Request) {
   const resourceId = crypto.randomUUID();
   const storageKey = `resources/${session.user.id}/${resourceId}/${safeFileName}`;
 
-  const resource = await prisma.resource.create({
-    data: {
-      id: resourceId,
-      userId: session.user.id,
-      originalName: body.name,
-      mimeType: body.type || "application/octet-stream",
-      extension,
-      sizeBytes: body.size,
-      checksum: body.checksum,
-      storageKey,
-      status: "PENDING",
-    },
-  });
+  let resource;
+  try {
+    resource = await prisma.resource.create({
+      data: {
+        id: resourceId,
+        userId: session.user.id,
+        originalName: body.name,
+        mimeType: body.type || "application/octet-stream",
+        extension,
+        sizeBytes: body.size,
+        checksum: body.checksum,
+        storageKey,
+        status: "PENDING",
+      },
+    });
+  } catch (error) {
+    const duplicate = await prisma.resource.findUnique({
+      where: { userId_checksum: { userId: session.user.id, checksum: body.checksum } },
+      select: { id: true },
+    });
+    if (duplicate) return NextResponse.json({ error: "This exact file is already in your library.", existingResourceId: duplicate.id }, { status: 409 });
+    throw error;
+  }
 
   return NextResponse.json({ resource }, { status: 201 });
 }

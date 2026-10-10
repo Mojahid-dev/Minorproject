@@ -9,7 +9,7 @@ import { ModeToggle } from "../../../components/ui/darkToggle";
 const navigation = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
-  { href: "/pricing", label: "Pricing" },
+  { href: "/pricing", label: "Plans" },
 ];
 
 export default function Navbar() {
@@ -44,7 +44,7 @@ export default function Navbar() {
             </div>
             <div className="min-w-0">
               <h1 className="text-lg font-semibold tracking-tight text-yellow-400">Zohra</h1>
-              <p className="text-[11px] font-medium tracking-wide text-zinc-400">AI WORKSPACE</p>
+              <p className="text-[11px] font-medium tracking-wide text-zinc-400">PERSONAL RESOURCE LIBRARY</p>
             </div>
           </Link>
           <ul className="absolute left-1/2 hidden -translate-x-1/2 items-center rounded-full border border-white/10 bg-black/20 p-1 lg:flex">

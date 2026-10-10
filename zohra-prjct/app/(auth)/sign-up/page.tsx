@@ -5,7 +5,7 @@ import { ModeToggle } from "@/components/ui/darkToggle";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
-import { authClient } from "@/lib/auth-client";
+import { authClient, googleAuthEnabled } from "@/lib/auth-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeftIcon, ArrowRight } from "lucide-react";
 import Image from "next/image";
@@ -170,8 +170,7 @@ export default function SignUpPage() {
             >
               {isSubmitting ? <Spinner className="animate-spin" /> : <>Create account <ArrowRight size={16} /></>}
             </button>
-            <div className="my-4 flex items-center gap-3"><span className="h-px flex-1 bg-white/10" /><span className="text-xs font-medium text-zinc-500">OR CONTINUE WITH</span><span className="h-px flex-1 bg-white/10" /></div>
-            <button
+            {googleAuthEnabled && <><div className="my-4 flex items-center gap-3"><span className="h-px flex-1 bg-white/10" /><span className="text-xs font-medium text-zinc-500">OR CONTINUE WITH</span><span className="h-px flex-1 bg-white/10" /></div><button
               type="button"
               className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/12 bg-white/[0.03] px-4 text-sm font-medium text-zinc-200 transition hover:border-white/25 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-60"
               onClick={signInWithGoogle}
@@ -183,7 +182,7 @@ export default function SignUpPage() {
                 <FcGoogle />
               )}
               Sign in with Google
-            </button>
+            </button></>}
           </form>
           <p className="mt-6 text-center text-sm text-zinc-500">Already have an account? <Link href="/login" className="font-medium text-yellow-400 transition hover:text-yellow-300">Sign in</Link></p>
         </div>

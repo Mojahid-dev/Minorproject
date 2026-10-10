@@ -7,6 +7,7 @@ export const authClient = createAuthClient({
 });
 
 export const { signIn, signUp, signOut, useSession } = authClient;
+export const googleAuthEnabled = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
 
 export async function signOutAndClearCookies() {
   // Call server/client signOut to invalidate session (may clear HttpOnly cookies server-side)

@@ -6,12 +6,14 @@ Zohra is a web workspace for keeping project resources together. It includes a p
 
 - **Accounts:** email and password registration and sign-in, with optional Google sign-in.
 - **Personal workspace:** dashboard, resource library, profile, settings, and upload pages behind authentication.
+- **Personal tasks:** create, update, complete, filter, and delete tasks with optional due dates and priorities.
 - **File uploads:** drag-and-drop or file-picker uploads to private Vercel Blob storage. Files are limited to 100 MB and checked against the supported file list. SHA-256 checksums prevent adding the same file to one user's library more than once.
 - **PDF text extraction:** text-based PDFs are processed after upload. The app records page count and extraction status and stores at most 500,000 extracted characters. Scanned PDFs without embedded text are marked as having no text; other supported file types are marked as not applicable.
 - **Library management:** browse resources, filter by type or status, inspect extracted PDF text, and delete resources.
+- **Dashboard:** current account greeting, resource totals, recent uploads, and tasks due today.
 - **Interface:** responsive Next.js app with dark and light themes, built with Tailwind CSS and reusable UI components.
 
-Supported uploads: PDF, DOC/DOCX, PPT/PPTX, TXT, Markdown, JPEG/PNG, and MP4/MOV/WebM. Text extraction is currently implemented for PDFs only.
+Supported uploads: PDF, DOC/DOCX, PPT/PPTX, TXT, Markdown, and JPEG/PNG. Videos are not supported. Text extraction is currently implemented for PDFs only.
 
 ## Tech stack
 
@@ -30,7 +32,7 @@ Supported uploads: PDF, DOC/DOCX, PPT/PPTX, TXT, Markdown, JPEG/PNG, and MP4/MOV
 - A PostgreSQL database
 - A Vercel Blob store and its read/write token for resource uploads
 
-Google OAuth and SMTP are optional. Google credentials enable Google sign-in. SMTP credentials enable the configured sign-up notification email; without SMTP, the app logs a warning and skips sending it.
+Google OAuth is optional. Email/password registration requires SMTP because email verification is enabled. Google credentials enable Google sign-in.
 
 ## Getting started
 
@@ -89,14 +91,15 @@ Put local values in `.env` at the project root. `.env*` files are ignored by Git
 | `NEXT_PUBLIC_BETTER_AUTH_URL` | Recommended | Client-side auth base URL. Defaults to `http://localhost:3000`; set it to the deployed app URL in production. |
 | `BLOB_READ_WRITE_TOKEN` | Yes for uploads and PDF extraction | Read/write token for the Vercel Blob store. It is required by the upload flow and private PDF extraction. |
 | `GOOGLE_CLIENT_ID` | Optional | Google OAuth client ID. |
-| `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth client secret. Set both Google values to enable Google sign-in. |
-| `SMTP_HOST` | Optional | SMTP host for configured email notifications. |
-| `SMTP_PORT` | Optional | SMTP port; defaults to `587`. Port `465` enables TLS. |
-| `SMTP_USER` | Optional | SMTP username and default sender address. |
-| `SMTP_PASS` or `SMTP_PASSWORD` | Optional | SMTP password. `SMTP_PASS` takes precedence. |
+| `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth client secret. Set both server values and `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` to enable Google sign-in. |
+| `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED` | Optional | Shows the Google sign-in option when set to `true`; requires both Google server credentials. |
+| `SMTP_HOST` | Required for email/password registration | SMTP host used to send verification emails. |
+| `SMTP_PORT` | Required for email/password registration | SMTP port; defaults to `587`. Port `465` enables TLS. |
+| `SMTP_USER` | Required for email/password registration | SMTP username and default sender address. |
+| `SMTP_PASS` or `SMTP_PASSWORD` | Required for email/password registration | SMTP password. `SMTP_PASS` takes precedence. |
 | `SMTP_FROM` | Optional | Sender address; defaults to `SMTP_USER`. |
 
-The checked-in `.env.example` currently contains the Blob token placeholder. Add the other values locally based on the table above. A minimal local configuration looks like this:
+Copy `.env.example` and add valid local values. Email/password registration will not complete until SMTP delivery is configured.
 
 ```dotenv
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?schema=public"
@@ -132,6 +135,7 @@ BLOB_READ_WRITE_TOKEN="your-vercel-blob-read-write-token"
 | `/login`, `/sign-up` | Account access pages. |
 | `/dashboard` | Authenticated workspace overview and recent resources. |
 | `/resources` | Authenticated resource library. |
+| `/tasks` | Authenticated personal tasks with due-date filters and status updates. |
 | `/upload` | Authenticated resource upload flow. |
 | `/profile`, `/settings` | Authenticated account and profile management. |
 
@@ -146,10 +150,11 @@ BLOB_READ_WRITE_TOKEN="your-vercel-blob-read-write-token"
 - `/api/account/delete` — delete the signed-in user's account.
 
 Resource APIs require an authenticated session and scope database access to the current user.
+Task API routes are `/api/tasks` (list and create) and `/api/tasks/[taskId]` (update and delete). They require an authenticated session and scope every read or write to the current user.
 
 ## Database and Prisma
 
-The Prisma schema is in `prisma/schema.prisma`; committed migrations are in `prisma/migrations`. The schema stores Better Auth users, sessions, accounts, and verifications, along with resource metadata and PDF extraction results.
+The Prisma schema is in `prisma/schema.prisma`; committed migrations are in `prisma/migrations`. The schema stores Better Auth users, sessions, accounts, and verifications, along with resource metadata, PDF extraction results, and personal tasks.
 
 The generated Prisma client is written to `lib/generated/prisma` and is ignored by Git. The package install and build scripts generate it automatically. `prisma.config.ts` reads `DIRECT_URL`, while the app's Prisma adapter reads `DATABASE_URL`.
 
@@ -163,7 +168,7 @@ The generated Prisma client is written to `lib/generated/prisma` and is ignored 
    pnpm vercel-build
    ```
 
-4. Add production environment values in **Project Settings → Environment Variables**. At minimum, configure `DATABASE_URL`, `DIRECT_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_BETTER_AUTH_URL`, and `BLOB_READ_WRITE_TOKEN`. Add Google and SMTP credentials if those integrations are used.
+4. Add production environment values in **Project Settings → Environment Variables**. At minimum, configure `DATABASE_URL`, `DIRECT_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_BETTER_AUTH_URL`, `BLOB_READ_WRITE_TOKEN`, and SMTP credentials for email/password verification. Add Google credentials if Google sign-in is enabled.
 5. Apply committed database migrations to the production database before or as part of release operations:
 
    ```bash
@@ -180,8 +185,8 @@ See [VERCEL_SETUP.md](./VERCEL_SETUP.md) for the repository's deployment checkli
 app/
   (marketing)/       Public landing, about, and pricing pages
   (auth)/            Login and sign-up pages
-  (app)/             Authenticated dashboard, resources, upload, profile, settings
-  api/               Auth, resource, upload, and account API routes
+  (app)/             Authenticated dashboard, resources, tasks, upload, profile, settings
+  api/               Auth, resource, task, upload, and account API routes
 components/          Shared app shell, theme provider, and UI components
 hooks/               Shared React hooks
 lib/                 Auth, Prisma client, validation, email, PDF helpers

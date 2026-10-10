@@ -5,7 +5,7 @@
 
 ### Your project resources, all in one personal workspace.
 
-Upload, organize, and revisit the files behind your work. Zohra brings your documents and media together, with readable text extraction for supported PDFs.
+Upload, organize, and revisit the files behind your work. Zohra provides a personal resource library, searchable filenames, task tracking, and readable text extraction for supported PDFs.
 
 [Explore the app](./zohra-prjct) · [Read setup instructions](./zohra-prjct/README.md)
 
@@ -26,7 +26,7 @@ Upload, organize, and revisit the files behind your work. Zohra brings your docu
 
 | Collect | Understand | Stay organized |
 | --- | --- | --- |
-| Upload PDFs, Word and PowerPoint documents, text, Markdown, images, and videos. | Extract text from text-based PDFs and view it alongside your resource. | Browse your library by type or status, inspect extraction results, and manage your files. |
+| Upload PDFs, Word and PowerPoint documents, text, Markdown, and images. | Extract text from text-based PDFs and view it alongside your resource. | Browse your library, search filenames, manage personal tasks, and remove resources. |
 
 ### Your own workspace
 

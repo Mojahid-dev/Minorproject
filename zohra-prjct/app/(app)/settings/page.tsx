@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Bell, Camera, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
+import { Trash2, UserRound, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -12,12 +12,10 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 
-const imageLimit = 1024 * 1024;
 type ProfileUser = { name: string; email: string; image?: string | null };
 
 function ProfileForm({ user }: { user: ProfileUser }) {
   const [name, setName] = useState(user.name ?? "");
-  const [image, setImage] = useState(user.image ?? "");
   const [status, setStatus] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -34,28 +32,6 @@ function ProfileForm({ user }: { user: ProfileUser }) {
     );
   }
 
-  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setStatus("Please choose an image file.");
-      return;
-    }
-    if (file.size > imageLimit) {
-      setStatus("Choose an image smaller than 1 MB.");
-      return;
-    }
-
-    // It is used to read the contents of the selected image in the browser
-    const reader = new FileReader();
-    // The onload event is triggered when the file has been read successfully. It sets the image state to the result of the file reader, which is a data URL representing the image, and clears any status messages.
-    reader.onload = () => {
-      setImage(typeof reader.result === "string" ? reader.result : "");
-      setStatus("");
-    };
-    // The readAsDataURL method of the FileReader object is called to read the contents of the selected image file. It converts the file into a data URL, which can be used to display the image in the browser.
-    reader.readAsDataURL(file);
-  }
   async function saveProfile() {
     const trimmedName = name.trim();
     if (!trimmedName) {
@@ -67,7 +43,6 @@ function ProfileForm({ user }: { user: ProfileUser }) {
     setStatus("");
     const { error } = await authClient.updateUser({
       name: trimmedName,
-      image: image || undefined,
     });
     setIsSaving(false);
     setStatus(
@@ -102,10 +77,10 @@ function ProfileForm({ user }: { user: ProfileUser }) {
       <div className="mt-5 border-t border-zinc-800 pt-5">
         <div className="flex flex-wrap items-center gap-4">
           <div className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-xl font-bold text-black">
-            {image ? (
+            {user.image ? (
               <Image
-                src={image}
-                alt="Profile preview"
+                src={user.image}
+                alt="Profile photo"
                 width={80}
                 height={80}
                 unoptimized
@@ -115,24 +90,7 @@ function ProfileForm({ user }: { user: ProfileUser }) {
               initials(displayName)
             )}
           </div>
-          <div>
-            <label
-              htmlFor="profile-photo"
-              className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-700 px-3.5 py-2.5 text-sm font-semibold text-neutral-200 transition hover:bg-white/10 hover:text-white"
-            >
-              <Camera size={16} /> Add profile photo
-            </label>
-            <input
-              id="profile-photo"
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="sr-only"
-            />
-            <p className="mt-2 text-xs text-neutral-500">
-              PNG, JPG, or WebP. Maximum 1 MB.
-            </p>
-          </div>
+          <p className="max-w-xs text-sm text-neutral-500">Profile photo changes are unavailable until managed image storage is configured.</p>
         </div>
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <label className="block">
@@ -174,8 +132,6 @@ function ProfileForm({ user }: { user: ProfileUser }) {
 export default function SettingsPage() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [focusMode, setFocusMode] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
@@ -235,66 +191,6 @@ export default function SettingsPage() {
           <ProfileForm user={session.user} />
         ) : null}
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 sm:p-6">
-          <div className="flex items-center gap-3">
-            <div className="grid size-9 place-items-center rounded-lg bg-white text-black">
-              <Bell size={18} />
-            </div>
-            <div>
-              <h2 className="font-semibold text-white">Notifications</h2>
-              <p className="text-sm text-neutral-500">
-                Control project and task updates.
-              </p>
-            </div>
-          </div>
-          <label className="mt-5 flex cursor-pointer items-center justify-between gap-4 border-t border-zinc-800 pt-5">
-            <span>
-              <span className="block text-sm font-medium text-white">
-                Email notifications
-              </span>
-              <span className="mt-1 block text-sm text-neutral-500">
-                Receive workspace activity updates by email.
-              </span>
-            </span>
-            <input
-              checked={emailNotifications}
-              onChange={(event) => setEmailNotifications(event.target.checked)}
-              type="checkbox"
-              className="size-5 accent-white"
-            />
-          </label>
-        </section>
-
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 sm:p-6">
-          <div className="flex items-center gap-3">
-            <div className="grid size-9 place-items-center rounded-lg bg-white text-black">
-              <ShieldCheck size={18} />
-            </div>
-            <div>
-              <h2 className="font-semibold text-white">Focus mode</h2>
-              <p className="text-sm text-neutral-500">
-                Keep distractions to a minimum.
-              </p>
-            </div>
-          </div>
-          <label className="mt-5 flex cursor-pointer items-center justify-between gap-4 border-t border-zinc-800 pt-5">
-            <span>
-              <span className="block text-sm font-medium text-white">
-                Enable focus mode
-              </span>
-              <span className="mt-1 block text-sm text-neutral-500">
-                Mute non-essential dashboard alerts.
-              </span>
-            </span>
-            <input
-              checked={focusMode}
-              onChange={(event) => setFocusMode(event.target.checked)}
-              type="checkbox"
-              className="size-5 accent-white"
-            />
-          </label>
-        </section>
-
         <section className="rounded-2xl border border-red-950 bg-zinc-900 p-5 sm:p-6">
           <div className="flex items-center gap-3">
             <div className="grid size-9 place-items-center rounded-lg bg-red-500/15 text-red-300">
@@ -303,7 +199,7 @@ export default function SettingsPage() {
             <div>
               <h2 className="font-semibold text-white">Delete account</h2>
               <p className="text-sm text-neutral-500">
-                Permanently remove your profile, sessions, and account data.
+                Permanently remove your profile, tasks, resources, stored files, and sessions.
               </p>
             </div>
           </div>
@@ -340,8 +236,8 @@ export default function SettingsPage() {
                   Delete your account?
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-neutral-400">
-                  This cannot be undone. All of your account data and active
-                  sessions will be permanently removed.
+                  This cannot be undone. Your profile, tasks, resources, stored
+                  files, and active sessions will be permanently removed.
                 </p>
               </div>
               <button
