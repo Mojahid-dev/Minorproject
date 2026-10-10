@@ -20,29 +20,7 @@ The current implementation and product copy do not fully agree:
 - The README describes an `.env.example` file that was not present in the project file listing during review.
 - There is no dedicated automated test script documented in the README.
 
-The authenticated app roadmap is now being implemented against the existing PostgreSQL, Prisma, private Blob, and Better Auth setup. Email verification remains enabled and therefore requires working SMTP configuration for email/password registration.
-
-## 2.1 Implementation status
-
-### Implemented in this pass
-
-- Persistent personal task records, user-scoped create/list/update/delete APIs, date filters, priorities, and task completion.
-- A `/tasks` route with All, Today, Upcoming, Overdue, and Completed filters, task editing, due-date labels, status controls, and deletion confirmation.
-- Dashboard resource and task counts, current date and account greeting, recent additions, today's task checklist, and conditional overdue summary.
-- App navigation limited to implemented routes, working resource search from the shared header, and replacement of hard-coded badges and simulated task controls.
-- Resource filename search, type cards, All/Recently added/Needs review views, working type filters and sort options, file size and processing state, and confirmed deletion.
-- Upload wording and picker aligned to PDF, Office, text/Markdown, and JPEG/PNG support; failed uploads attempt cleanup and can be retried; duplicates point users back to the existing library item.
-- Profile verification state, a single profile editor, removal of data-URI avatar upload, and removal of unsaved notification/focus settings.
-- Account deletion now clears the user's private Blob objects before database cascades; a retry can continue after a partial Blob cleanup failure.
-- Public home, About, and Plans pages aligned to current features; placeholder pricing, fake destinations, and old product naming have been removed from the live pages.
-- `.env.example`, SMTP requirements, Google sign-in visibility, route documentation, and supported file documentation updated.
-
-### Still required before release
-
-- Apply the new task migration to the target PostgreSQL database and regenerate Prisma Client in the target environment.
-- Configure and exercise PostgreSQL, the private Blob store, SMTP verification mail, and optional Google OAuth.
-- Run the critical-path and ownership checks described in Phase 6, then complete a staging smoke pass.
-- Confirm deployment project root and production environment values against the actual Vercel project.
+There is an existing uncommitted change in `zohra-prjct/prisma.config.ts` that supplies a fallback datasource URL. Preserve and review that change independently when working on database configuration.
 
 ## 3. First-release product definition
 
@@ -151,7 +129,7 @@ Zohra gives an individual user a private place to upload, organize, and revisit 
 3. Verify the configured Google sign-in behavior when credentials are absent and when they are present.
 4. Add a safe `.env.example` containing variable names and non-secret placeholders, if the project intends to document that file.
 5. Update the README and deployment guide with required variables, optional integrations, database migration steps, storage setup, and the real Vercel project root/build command.
-6. Confirm Prisma generation and migration behavior are both clearly described for the deployed repository configuration.
+6. Review the existing `prisma.config.ts` local change without overwriting it; ensure Prisma generation and migration behavior are both clearly described.
 
 **Deliverables:** A reproducible local setup and a deployment checklist consistent with the auth and storage implementation.
 
@@ -319,4 +297,4 @@ Do not start implementation of subscriptions, team workspaces, notes, calendar s
 
 ## 9. Review boundaries
 
-The initial repository review was read-only. Implementation now includes persistent personal tasks and their APIs, a task migration, data-backed dashboard cards, corrected app navigation, resource filtering/search/sorting, upload retry and cleanup behavior, profile verification display, removal of unsaved settings and avatar controls, Blob account cleanup, an environment template, and setup documentation. The public pages now describe Zohra's current individual resource and task features without placeholder pricing or Atlas copy. Apply the committed migrations and validate app behavior with PostgreSQL, Blob, and SMTP configured. Automated checks and staging verification remain release work.
+This plan is based on a read-only repository review. No source files were changed and no tests were run as part of that review. The existing uncommitted `prisma.config.ts` change was observed and should remain preserved during future work unless its owner chooses to revise it.

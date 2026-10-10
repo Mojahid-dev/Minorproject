@@ -23,7 +23,8 @@ const transporter = process.env.SMTP_HOST && process.env.SMTP_USER && smtpPasswo
 
 export async function sendEmail({ to, subject, text, html }: EmailPayload) {
   if (!transporter) {
-    throw new Error("SMTP is not configured. Set SMTP_HOST, SMTP_USER, and SMTP_PASS to send account emails.");
+    console.warn("SMTP is not configured. Email was not sent.");
+    return;
   }
 
   await transporter.sendMail({
