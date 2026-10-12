@@ -7,7 +7,7 @@ const supportedExtensions = new Set([
 export const SUPPORTED_RESOURCE_MIME_TYPES = [
   "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "text/plain", "text/markdown", "image/jpeg", "image/png"
+  "text/plain", "text/markdown", "image/jpeg", "image/png", "video/mp4", "video/quicktime", "video/x-msvideo", "video/x-matroska", "video/webm"
 ] as const;
 
 const supportedMimeTypes = new Set<string>(SUPPORTED_RESOURCE_MIME_TYPES);
