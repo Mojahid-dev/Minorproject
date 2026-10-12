@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { Bell, Camera, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Bell, Camera, ChevronRight, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -87,21 +88,20 @@ function ProfileForm({ user }: { user: ProfileUser }) {
   const displayName = name || user.name || "Your profile";
 
   return (
-    <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 sm:p-6">
+    <section className="rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#1b1c20] to-[#111214] p-5 sm:p-7">
       <div className="flex items-center gap-3">
-        <div className="grid size-9 place-items-center rounded-lg bg-white text-black">
+        <div className="grid size-10 place-items-center rounded-xl bg-lime-200 text-zinc-950 shadow-[0_8px_24px_rgba(163,230,53,0.12)]">
           <UserRound size={18} />
         </div>
         <div>
-          <h2 className="font-semibold text-white">Profile</h2>
-          <p className="text-sm text-neutral-500">
-            Update your public account details.
-          </p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-200">Your identity</p>
+          <h2 className="mt-0.5 text-lg font-semibold text-white">Profile details</h2>
+          <p className="text-sm text-neutral-400">Make this workspace feel like yours.</p>
         </div>
       </div>
       <div className="mt-5 border-t border-zinc-800 pt-5">
         <div className="flex flex-wrap items-center gap-4">
-          <div className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-xl font-bold text-black">
+          <div className="grid size-24 shrink-0 place-items-center overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-lime-100 to-emerald-300 text-xl font-bold text-zinc-950 shadow-lg">
             {image ? (
               <Image
                 src={image}
@@ -120,7 +120,7 @@ function ProfileForm({ user }: { user: ProfileUser }) {
               htmlFor="profile-photo"
               className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-700 px-3.5 py-2.5 text-sm font-semibold text-neutral-200 transition hover:bg-white/10 hover:text-white"
             >
-              <Camera size={16} /> Add profile photo
+              <Camera size={16} /> {image ? "Change profile photo" : "Add profile photo"}
             </label>
             <input
               id="profile-photo"
@@ -129,8 +129,8 @@ function ProfileForm({ user }: { user: ProfileUser }) {
               onChange={handleImageChange}
               className="sr-only"
             />
-            <p className="mt-2 text-xs text-neutral-500">
-              PNG, JPG, or WebP. Maximum 1 MB.
+            <p className="mt-2 text-xs text-neutral-400">
+              Square photos work best. PNG, JPG, or WebP · up to 1 MB.
             </p>
           </div>
         </div>
@@ -140,13 +140,13 @@ function ProfileForm({ user }: { user: ProfileUser }) {
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              className="mt-2 h-11 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-white outline-none transition placeholder:text-neutral-600 focus:border-neutral-400 focus:ring-4 focus:ring-zinc-800"
+              className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-black/25 px-3.5 text-sm text-white outline-none transition placeholder:text-neutral-600 focus:border-lime-200/60 focus:ring-4 focus:ring-lime-200/10"
               placeholder="Your name"
             />
           </label>
           <div>
             <span className="text-sm font-medium text-neutral-200">Email</span>
-            <div className="mt-2 flex h-11 items-center rounded-xl border border-zinc-800 bg-zinc-950 px-3 text-sm text-neutral-500">
+            <div className="mt-2 flex h-12 items-center rounded-xl border border-white/[0.06] bg-black/15 px-3.5 text-sm text-neutral-400">
               {user.email}
             </div>
           </div>
@@ -156,7 +156,7 @@ function ProfileForm({ user }: { user: ProfileUser }) {
             type="button"
             onClick={saveProfile}
             disabled={isSaving}
-            className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-xl bg-lime-200 px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-lime-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? <Spinner /> : "Save profile"}
           </button>
@@ -260,20 +260,28 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <header className="border-b border-zinc-800 pb-7">
-        <p className="text-sm font-medium text-neutral-500">
-          Account & workspace
-        </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-[-0.045em] text-white">
-          Settings
-        </h1>
-        <p className="mt-2 text-sm text-neutral-500">
-          Manage your Zohra account and workspace preferences.
-        </p>
+    <div className="mx-auto max-w-6xl pb-10">
+      <header className="relative isolate overflow-hidden rounded-[28px] border border-white/[0.09] bg-[#141519] p-5 sm:p-8">
+        <div aria-hidden="true" className="absolute -right-20 -top-36 -z-10 size-96 rounded-full bg-[radial-gradient(circle,rgba(163,230,53,0.14),transparent_68%)]" />
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-200">Account control room</p>
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+          <div><h1 className="text-4xl font-semibold tracking-[-0.055em] text-white sm:text-5xl">Settings</h1><p className="mt-2 max-w-xl text-sm leading-6 text-neutral-400">Shape how Zohra looks after your account and how your workspace feels.</p></div>
+          <div className="rounded-xl border border-white/10 bg-black/20 px-3.5 py-2.5 text-xs text-neutral-400">Profile edits save manually <span className="mx-1 text-neutral-600">·</span> Preferences save instantly</div>
+        </div>
       </header>
 
-      <div className="mt-6 space-y-4">
+      <div className="mt-6 grid gap-5 lg:grid-cols-[230px_minmax(0,1fr)]">
+        <aside className="h-fit rounded-3xl border border-white/[0.08] bg-[#141518] p-4 lg:sticky lg:top-24">
+          {session?.user && <div className="mb-4 flex items-center gap-3 border-b border-white/[0.07] px-1 pb-4"><div className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-lime-100 to-emerald-300 text-sm font-bold text-zinc-950">{session.user.image ? <Image src={session.user.image} alt="" width={44} height={44} unoptimized className="size-full object-cover" /> : (session.user.name?.split(" ").filter(Boolean).map((part) => part[0]).join("").slice(0, 2) || "U").toUpperCase()}</div><div className="min-w-0"><p className="truncate text-sm font-semibold text-white">{session.user.name}</p><p className="truncate text-xs text-neutral-500">Account settings</p></div></div>}
+          <p className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-500">Manage</p>
+          <nav aria-label="Settings sections" className="space-y-1">
+            {[{ href: "#profile-settings", label: "Profile", icon: UserRound }, { href: "#notification-settings", label: "Notifications", icon: Bell }, { href: "#focus-settings", label: "Focus mode", icon: ShieldCheck }, { href: "#account-security", label: "Account security", icon: Trash2 }].map(({ href, label, icon: Icon }) => <a key={href} href={href} className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-neutral-400 transition hover:bg-white/[0.06] hover:text-white"><Icon size={16} /><span className="flex-1">{label}</span><ChevronRight size={14} className="text-neutral-600 transition group-hover:translate-x-0.5 group-hover:text-neutral-300" /></a>)}
+          </nav>
+          <Link href="/profile" className="mt-4 flex items-center justify-between rounded-xl bg-lime-200/[0.08] px-3 py-3 text-xs font-medium text-lime-100 transition hover:bg-lime-200/[0.13]">View your profile <ArrowRight size={14} /></Link>
+        </aside>
+
+      <div className="min-w-0 space-y-4">
+        <div id="profile-settings" className="scroll-mt-24">
         {isPending ? (
           <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-sm text-neutral-500">
             <Spinner /> Loading your profile…
@@ -281,8 +289,9 @@ export default function SettingsPage() {
         ) : session?.user ? (
           <ProfileForm user={session.user} />
         ) : null}
+        </div>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 sm:p-6">
+        <section id="notification-settings" className="scroll-mt-24 rounded-3xl border border-white/[0.08] bg-[#141518] p-5 sm:p-6">
           <div className="flex items-center gap-3">
             <div className="grid size-9 place-items-center rounded-lg bg-white text-black">
               <Bell size={18} />
@@ -314,7 +323,7 @@ export default function SettingsPage() {
           <p className="mt-3 text-xs text-neutral-500">Email alert delivery is not active yet. This preference will be saved to your account.</p>
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 sm:p-6">
+        <section id="focus-settings" className="scroll-mt-24 rounded-3xl border border-white/[0.08] bg-[#141518] p-5 sm:p-6">
           <div className="flex items-center gap-3">
             <div className="grid size-9 place-items-center rounded-lg bg-white text-black">
               <ShieldCheck size={18} />
@@ -347,7 +356,7 @@ export default function SettingsPage() {
 
         {(preferenceMessage || preferenceError || preferencesLoading) && <p role={preferenceError ? "alert" : "status"} className={`px-1 text-sm ${preferenceError ? "text-red-300" : "text-neutral-400"}`}>{preferencesLoading ? "Loading saved preferences…" : savingPreference ? "Saving preference…" : preferenceError || preferenceMessage}</p>}
 
-        <section className="rounded-2xl border border-red-950 bg-zinc-900 p-5 sm:p-6">
+        <section id="account-security" className="scroll-mt-24 rounded-3xl border border-red-950/80 bg-[#141518] p-5 sm:p-6">
           <div className="flex items-center gap-3">
             <div className="grid size-9 place-items-center rounded-lg bg-red-500/15 text-red-300">
               <Trash2 size={18} />
@@ -373,6 +382,7 @@ export default function SettingsPage() {
             </button>
           </div>
         </section>
+      </div>
       </div>
 
       {deleteDialogOpen && (

@@ -1,111 +1,82 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarDays, Mail, Settings2, UserRound } from "lucide-react";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { ArrowRight, BadgeCheck, BookOpen, CalendarDays, CheckCircle2, FileStack, Mail, Settings2, Sparkles, Target, UserRound } from "lucide-react";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 function initials(name: string) {
-  return (
-    name
-      .split(" ")
-      .filter(Boolean)
-      .map((part) => part[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "U"
-  );
+  return name.split(" ").filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "U";
 }
 
 export default async function ProfilePage() {
   const session = await auth.api.getSession({ headers: await headers() });
   const user = session?.user;
+  if (!user) redirect("/");
 
-  if (!user) return null;
-
-  const joinedOn = new Intl.DateTimeFormat("en", {
-    month: "long",
-    year: "numeric",
-  }).format(new Date(user.createdAt));
+  const [resourceCount, completedTaskCount, activeTaskCount, recentResources] = await Promise.all([
+    prisma.resource.count({ where: { userId: user.id } }),
+    prisma.task.count({ where: { userId: user.id, completedAt: { not: null } } }),
+    prisma.task.count({ where: { userId: user.id, completedAt: null } }),
+    prisma.resource.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 3, select: { id: true, originalName: true, mimeType: true, createdAt: true } }),
+  ]);
+  const joinedOn = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(new Date(user.createdAt));
+  const totalTasks = completedTaskCount + activeTaskCount;
+  const completionPercent = totalTasks ? Math.round((completedTaskCount / totalTasks) * 100) : 0;
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-800 pb-7">
-        <div>
-          <p className="text-sm font-medium text-neutral-500">Your account</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-[-0.045em] text-white">
-            Profile
-          </h1>
-          <p className="mt-2 text-sm text-neutral-500">
-            View your account details and manage your profile.
-          </p>
-        </div>
-        <Link
-          href="/settings"
-          className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-3.5 py-2.5 text-sm font-semibold text-neutral-300 transition hover:bg-white/10 hover:text-white"
-        >
-          <Settings2 size={17} /> Edit profile
-        </Link>
+    <div className="mx-auto max-w-6xl pb-10 text-white">
+      <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
+        <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">Your corner of Zohra</p><h1 className="mt-2 text-4xl font-semibold tracking-[-0.055em] sm:text-5xl">Profile</h1><p className="mt-2 max-w-xl text-sm leading-6 text-neutral-400">A view of who you are here and the learning space you’ve been building.</p></div>
+        <Link href="/settings#profile-settings" className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:bg-white/10"><Settings2 size={16} /> Edit profile <ArrowRight size={15} /></Link>
       </header>
 
-      <section className="mt-6 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900">
-        <div className="h-28 bg-gradient-to-r from-zinc-800 to-zinc-950" />
-        <div className="px-5 pb-6 sm:px-6">
-          <div className="-mt-12 grid size-24 place-items-center overflow-hidden rounded-full border-4 border-zinc-900 bg-white text-2xl font-bold text-black">
-            {user.image ? (
-              <Image
-                src={user.image}
-                alt={`${user.name}'s profile photo`}
-                width={96}
-                height={96}
-                unoptimized
-                className="size-full object-cover"
-              />
-            ) : (
-              initials(user.name)
-            )}
+      <section className="relative isolate overflow-hidden rounded-[28px] border border-white/10 bg-[#111117] shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
+        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_10%_0%,rgba(139,92,246,0.24),transparent_42%),radial-gradient(ellipse_at_90%_10%,rgba(56,189,248,0.15),transparent_40%),linear-gradient(135deg,#1b1b25,#101014_55%,#15151b)]" />
+        <div aria-hidden="true" className="absolute -right-20 -top-32 size-80 rounded-full border border-white/[0.07]" />
+        <div aria-hidden="true" className="absolute -right-6 -top-20 size-52 rounded-full border border-white/[0.06]" />
+        <div className="relative flex flex-col gap-7 p-5 sm:p-8 lg:flex-row lg:items-end lg:justify-between lg:p-10">
+          <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-end sm:gap-6">
+            <div className="relative grid size-28 shrink-0 place-items-center overflow-hidden rounded-[30px] border border-white/20 bg-gradient-to-br from-violet-200 to-sky-200 text-3xl font-bold text-zinc-950 shadow-[0_14px_40px_rgba(0,0,0,0.3)] sm:size-32">
+              {user.image ? <Image src={user.image} alt={`${user.name}'s profile photo`} width={128} height={128} unoptimized className="size-full object-cover" /> : initials(user.name)}
+              <span className="absolute -bottom-1 -right-1 grid size-8 place-items-center rounded-full border-4 border-[#17171d] bg-emerald-400 text-zinc-950"><CheckCircle2 size={14} strokeWidth={3} /></span>
+            </div>
+            <div className="min-w-0 pb-1">
+              <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-medium text-violet-100"><Sparkles size={12} /> Personal workspace</div>
+              <h2 className="break-words text-3xl font-semibold tracking-[-0.045em] text-white sm:text-4xl">{user.name}</h2>
+              <p className="mt-2 flex items-center gap-2 text-sm text-neutral-300"><Mail size={15} className="text-neutral-400" /><span className="break-all">{user.email}</span>{user.emailVerified && <BadgeCheck size={16} className="shrink-0 text-sky-300" aria-label="Email verified" />}</p>
+              <p className="mt-2 text-xs text-neutral-400">Member since {joinedOn}</p>
+            </div>
           </div>
-          <h2 className="mt-4 text-2xl font-semibold tracking-[-0.035em] text-white">
-            {user.name}
-          </h2>
-          <p className="mt-1 text-sm text-neutral-500">Zohra workspace member</p>
-
-          <dl className="mt-6 grid gap-3 border-t border-zinc-800 pt-5 sm:grid-cols-2">
-            <div className="flex items-center gap-3 rounded-xl bg-zinc-950/70 p-4">
-              <Mail size={18} className="text-neutral-400" />
-              <div className="min-w-0">
-                <dt className="text-xs font-medium uppercase tracking-wide text-neutral-500">Email</dt>
-                <dd className="truncate text-sm text-white">{user.email}</dd>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-xl bg-zinc-950/70 p-4">
-              <CalendarDays size={18} className="text-neutral-400" />
-              <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-neutral-500">Member since</dt>
-                <dd className="text-sm text-white">{joinedOn}</dd>
-              </div>
-            </div>
-          </dl>
+          <Link href="/dashboard" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-violet-100">Go to overview <ArrowRight size={16} /></Link>
+        </div>
+        <div className="grid border-t border-white/[0.08] bg-black/15 sm:grid-cols-3">
+          <ProfileStat icon={FileStack} label="Resources collected" value={resourceCount} detail="Materials in your library" />
+          <ProfileStat icon={CheckCircle2} label="Tasks completed" value={completedTaskCount} detail={totalTasks ? `${completionPercent}% of your tasks` : "Your first win is waiting"} />
+          <ProfileStat icon={Target} label="Still in progress" value={activeTaskCount} detail={activeTaskCount ? "Keep your next step in view" : "No open tasks right now"} />
         </div>
       </section>
 
-      <section className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-5 sm:p-6">
-        <div className="flex items-center gap-3">
-          <div className="grid size-9 place-items-center rounded-lg bg-white text-black">
-            <UserRound size={18} />
-          </div>
-          <div>
-            <h2 className="font-semibold text-white">Profile settings</h2>
-            <p className="text-sm text-neutral-500">Update your name and profile photo.</p>
-          </div>
-        </div>
-        <Link
-          href="/settings"
-          className="mt-5 inline-flex rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-neutral-200"
-        >
-          Manage profile
-        </Link>
-      </section>
+      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)]">
+        <section className="rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#17181c] to-[#101114] p-5 sm:p-7">
+          <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">Your learning space</p><h2 className="mt-2 text-2xl font-semibold tracking-tight">A little momentum adds up.</h2><p className="mt-2 max-w-lg text-sm leading-6 text-neutral-400">Your materials and tasks stay together, so it’s easy to pick up where you left off.</p></div><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-300/10 text-violet-200"><BookOpen size={19} /></span></div>
+          <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/[0.07]" role="progressbar" aria-label="Completed tasks" aria-valuemin={0} aria-valuemax={totalTasks || 1} aria-valuenow={completedTaskCount}><div className="h-full rounded-full bg-gradient-to-r from-violet-300 via-sky-200 to-emerald-200 transition-all" style={{ width: `${completionPercent}%` }} /></div>
+          <div className="mt-2 flex justify-between text-xs text-neutral-400"><span>{completedTaskCount} completed</span><span>{activeTaskCount} active</span></div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2"><Link href="/resources" className="group flex items-center justify-between rounded-2xl border border-white/[0.08] bg-black/20 p-4 transition hover:border-violet-200/25 hover:bg-white/[0.04]"><span><span className="block text-sm font-semibold text-neutral-100">Browse resources</span><span className="mt-1 block text-xs text-neutral-400">Return to your study materials</span></span><ArrowRight size={16} className="text-neutral-500 transition group-hover:translate-x-1 group-hover:text-white" /></Link><Link href="/tasks" className="group flex items-center justify-between rounded-2xl border border-white/[0.08] bg-black/20 p-4 transition hover:border-sky-200/25 hover:bg-white/[0.04]"><span><span className="block text-sm font-semibold text-neutral-100">Open your planner</span><span className="mt-1 block text-xs text-neutral-400">See what’s next</span></span><ArrowRight size={16} className="text-neutral-500 transition group-hover:translate-x-1 group-hover:text-white" /></Link></div>
+        </section>
+
+        <section className="rounded-3xl border border-white/[0.08] bg-[#141518] p-5 sm:p-7">
+          <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">Latest additions</p><h2 className="mt-2 text-xl font-semibold">Your library</h2></div><Link href="/resources" aria-label="View all resources" className="grid size-9 place-items-center rounded-xl text-neutral-400 hover:bg-white/10 hover:text-white"><ArrowRight size={17} /></Link></div>
+          {recentResources.length ? <ul className="mt-5 space-y-2">{recentResources.map((resource) => <li key={resource.id}><Link href="/resources" className="flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.06] bg-black/20 p-3 transition hover:bg-white/[0.05]"><span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/[0.07] text-neutral-200"><FileStack size={16} /></span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-neutral-200">{resource.originalName}</span><span className="mt-1 block text-xs text-neutral-500">{resource.mimeType.split("/").pop()?.toUpperCase()}</span></span><ArrowRight size={14} className="shrink-0 text-neutral-600" /></Link></li>)}</ul> : <div className="mt-5 rounded-2xl border border-dashed border-zinc-700 p-5 text-center"><p className="text-sm text-neutral-300">Your library is ready for its first resource.</p><Link href="/upload" className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-violet-200 hover:text-white">Add a resource <ArrowRight size={14} /></Link></div>}
+          <div className="mt-5 flex items-center gap-3 border-t border-white/[0.07] pt-5"><span className="grid size-9 place-items-center rounded-xl bg-white/[0.06] text-neutral-300"><CalendarDays size={16} /></span><div><p className="text-xs text-neutral-500">Your membership</p><p className="mt-0.5 text-sm font-medium text-neutral-200">Started {joinedOn}</p></div></div>
+        </section>
+      </div>
+      <p className="mt-5 flex items-center gap-2 px-1 text-xs text-neutral-500"><UserRound size={14} /> Your account details are private to your workspace.</p>
     </div>
   );
 }
 
+function ProfileStat({ icon: Icon, label, value, detail }: { icon: typeof FileStack; label: string; value: number; detail: string }) {
+  return <div className="flex items-center gap-3 border-white/[0.08] p-4 sm:p-5 sm:[&:not(:last-child)]:border-r"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/[0.07] text-neutral-200"><Icon size={18} /></span><div className="min-w-0"><p className="text-xs text-neutral-400">{label}</p><div className="mt-0.5 flex flex-wrap items-baseline gap-x-2"><span className="text-2xl font-semibold tracking-tight text-white">{value}</span><span className="truncate text-[11px] text-neutral-500">{detail}</span></div></div></div>;
+}

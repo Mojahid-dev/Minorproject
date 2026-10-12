@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ArrowRight, CalendarDays, ListTodo, Plus } from "lucide-react";
+import { ArrowRight, CalendarDays, CheckCheck, CircleAlert, ListTodo, Plus, Sparkles } from "lucide-react";
 import { TaskRow } from "@/components/task-row";
 import { useTasks } from "@/hooks/use-tasks";
 import { formatTaskDate, localDateString, notifyTasksChanged } from "@/lib/task-utils";
@@ -27,11 +27,13 @@ export default function TasksPage() {
   const today = localDateString();
 
   const openTasks = useMemo(() => tasks.filter((task) => !task.completedAt), [tasks]);
-  const dueToday = openTasks.filter((task) => task.dueDate === today);
+  const dueToday = tasks.filter((task) => task.dueDate === today);
+  const openToday = dueToday.filter((task) => !task.completedAt).length;
   const overdue = openTasks.filter((task) => task.dueDate && task.dueDate < today);
   const upcoming = openTasks.filter((task) => task.dueDate && task.dueDate > today);
   const unscheduled = openTasks.filter((task) => !task.dueDate);
   const completed = tasks.filter((task) => Boolean(task.completedAt));
+  const completionRate = tasks.length ? Math.round((completed.length / tasks.length) * 100) : 0;
 
   const tabs: { id: TaskView; label: string; count: number }[] = [
     { id: "today", label: "Today", count: dueToday.length },
@@ -74,14 +76,21 @@ export default function TasksPage() {
 
   return (
     <div className="mx-auto max-w-[1440px] pb-10 text-white">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      <header className="relative isolate flex flex-wrap items-end justify-between gap-4 overflow-hidden rounded-[28px] border border-white/[0.08] bg-gradient-to-br from-[#1a1b20] to-[#111214] p-5 sm:p-7">
+        <div aria-hidden="true" className="absolute -right-16 -top-32 -z-10 size-80 rounded-full bg-[radial-gradient(circle,rgba(196,181,253,0.16),transparent_68%)]" />
         <div>
-          <p className="text-sm font-medium text-neutral-400">Your planner</p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-[-0.05em] sm:text-5xl">Tasks</h1>
-          <p className="mt-2 text-sm text-neutral-400">Keep today’s priorities and upcoming work in one place.</p>
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.17em] text-violet-200"><Sparkles size={14} /> Your planner</p>
+          <h1 className="mt-2 text-4xl font-semibold tracking-[-0.055em] sm:text-5xl">Make room for focus.</h1>
+          <p className="mt-2 text-sm text-neutral-300">Today, {formatTaskDate(today)} <span className="px-1 text-neutral-600">·</span> Keep your next step clear and your week in reach.</p>
         </div>
-        <Link href="/calendar" className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:bg-white/10"><CalendarDays size={17} /> Open calendar</Link>
+        <Link href="/calendar" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-violet-100"><CalendarDays size={17} /> Open calendar <ArrowRight size={15} /></Link>
       </header>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <TaskMetric icon={CalendarDays} label="Due today" value={dueToday.length} detail={dueToday.length ? `${dueToday.filter((task) => task.completedAt).length} completed` : "Nothing on the list"} tone="violet" />
+        <TaskMetric icon={CircleAlert} label="Overdue" value={overdue.length} detail={overdue.length ? "Bring these back into focus" : "You’re up to date"} tone={overdue.length ? "rose" : "neutral"} />
+        <TaskMetric icon={CheckCheck} label="Completed" value={completed.length} detail={tasks.length ? `${completionRate}% of all tasks` : "Your first win is waiting"} tone="emerald" />
+      </div>
 
       <form onSubmit={createTask} className="mt-7 rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#191a1d] to-[#111214] p-4 sm:p-5">
         <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-neutral-200"><Plus size={17} /> Quick add a task</div>
@@ -98,7 +107,8 @@ export default function TasksPage() {
         {formError && <p role="alert" className="mt-2 text-sm text-red-300">{formError}</p>}
       </form>
 
-      <section className="mt-7 rounded-2xl border border-white/[0.07] bg-gradient-to-br from-[#151619] to-[#101114] p-4 sm:p-5">
+      <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <section className="rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#17181c] to-[#101114] p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><div className="flex items-center gap-2 text-sm text-neutral-400"><ListTodo size={17} /> {view === "date" ? "Selected day" : "Personal tasks"}</div><h2 className="mt-1.5 text-xl font-semibold">{view === "date" ? formatTaskDate(selectedDate) : "Your tasks"}</h2></div>
           {view === "date" && <button onClick={() => { setView("today"); setSelectedDate(today); }} className="rounded-lg px-3 py-2 text-xs text-neutral-300 hover:bg-white/10">Back to today</button>}
@@ -112,9 +122,30 @@ export default function TasksPage() {
               : visibleTasks.length === 0 ? <EmptyTasks message={view === "completed" ? "Completed tasks will appear here." : view === "unscheduled" ? "Tasks without due dates will appear here." : view === "date" ? "No tasks are scheduled for this date." : "Nothing due today. Add a task above or enjoy the breathing room."} />
                 : <div className="mt-4 space-y-2">{view === "upcoming" && overdue.length > 0 && <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-rose-300">Overdue</p>}{visibleTasks.map((task) => <TaskRow key={task.id} task={task} onChanged={() => void refresh()} />)}</div>}
       </section>
+      <aside className="space-y-4 xl:sticky xl:top-24">
+        <section className="relative isolate overflow-hidden rounded-3xl border border-violet-200/10 bg-[#17151e] p-5">
+          <div aria-hidden="true" className="absolute -right-14 -top-16 -z-10 size-44 rounded-full bg-[radial-gradient(circle,rgba(167,139,250,0.2),transparent_70%)]" />
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-200">Today’s focus</p>
+          <p className="mt-3 text-3xl font-semibold tracking-tight">{openToday === 0 ? "Clear space." : `${openToday} to go.`}</p>
+          <p className="mt-1 text-sm text-neutral-400">{dueToday.length ? `${dueToday.length - openToday} of ${dueToday.length} tasks complete` : "You haven’t scheduled anything for today."}</p>
+          <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/[0.08]" role="progressbar" aria-label="Today’s task progress" aria-valuemin={0} aria-valuemax={dueToday.length || 1} aria-valuenow={dueToday.length - openToday}><div className="h-full rounded-full bg-gradient-to-r from-violet-300 to-sky-200 transition-all" style={{ width: `${dueToday.length ? ((dueToday.length - openToday) / dueToday.length) * 100 : 0}%` }} /></div>
+          <Link href={`/calendar?date=${today}`} className="mt-5 flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 text-sm text-neutral-200 transition hover:bg-white/[0.06]">See today in Calendar <ArrowRight size={15} /></Link>
+        </section>
+        <section className="rounded-3xl border border-white/[0.08] bg-[#141518] p-5">
+          <div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.15em] text-neutral-500">Coming up</p><h2 className="mt-1 text-lg font-semibold">Next on your list</h2></div><CalendarDays size={18} className="text-neutral-400" /></div>
+          {upcoming.length ? <div className="mt-4 space-y-2">{[...upcoming].sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? "")).slice(0, 3).map((task) => <div key={task.id} className="flex min-w-0 items-center gap-3 rounded-xl bg-white/[0.035] p-3"><span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white/[0.07] text-xs text-neutral-300">{task.dueDate ? new Date(`${task.dueDate}T00:00:00`).getDate() : "·"}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm text-neutral-200">{task.title}</span><span className="mt-0.5 block text-xs text-neutral-500">{task.dueDate ? formatTaskDate(task.dueDate) : "No due date"}</span></span></div>)}</div> : <p className="mt-4 rounded-xl border border-dashed border-zinc-800 px-3 py-5 text-center text-sm text-neutral-500">Add a due date to see what’s next.</p>}
+          <p className="mt-4 border-t border-white/[0.06] pt-4 text-xs leading-5 text-neutral-500">{completionRate}% of your tasks are complete. Keep your plan small enough to move forward.</p>
+        </section>
+      </aside>
+      </div>
       <div className="mt-4 flex items-center justify-between gap-4 text-xs text-neutral-500"><span>{openTasks.length} active task{openTasks.length === 1 ? "" : "s"}</span><span>Due dates use your local calendar day.</span></div>
     </div>
   );
+}
+
+function TaskMetric({ icon: Icon, label, value, detail, tone }: { icon: typeof CalendarDays; label: string; value: number; detail: string; tone: "violet" | "rose" | "emerald" | "neutral" }) {
+  const accents = { violet: "bg-violet-300/10 text-violet-200", rose: "bg-rose-300/10 text-rose-200", emerald: "bg-emerald-300/10 text-emerald-200", neutral: "bg-white/[0.07] text-neutral-200" };
+  return <div className="flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-[#151619] p-4"><span className={`grid size-10 shrink-0 place-items-center rounded-xl ${accents[tone]}`}><Icon size={18} /></span><div className="min-w-0 flex-1"><p className="text-xs text-neutral-400">{label}</p><div className="mt-0.5 flex items-baseline justify-between gap-2"><span className="text-2xl font-semibold text-white">{value}</span><span className="truncate text-[11px] text-neutral-500">{detail}</span></div></div></div>;
 }
 
 function EmptyTasks({ message }: { message: string }) {
