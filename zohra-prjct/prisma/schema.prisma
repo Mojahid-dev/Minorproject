@@ -23,6 +23,8 @@ model User {
   sessions      Session[]
   accounts      Account[]
   resources     Resource[]
+  tasks         Task[]
+  preferences   UserPreference?
 
   @@unique([email])
   @@map("user")
@@ -68,6 +70,34 @@ model Resource {
   @@index([userId, status])
   @@unique([userId, checksum])
   @@map("resource")
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String   @db.VarChar(180)
+  notes       String?  @db.Text
+  dueDate     DateTime? @db.Date
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, dueDate])
+  @@index([userId, completedAt])
+  @@map("task")
+}
+
+model UserPreference {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  emailNotifications Boolean  @default(true)
+  focusMode          Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preference")
 }
 
 model Session {

@@ -262,7 +262,7 @@ export default function ResourcesPage() {
         <section className="mt-7">
           <div className="mb-4 flex items-center justify-between gap-4">
             <h2 className="text-lg font-semibold">
-              {activeTab === "subjects" ? "Your subjects" : "All resources"}
+              {activeTab === "subjects" ? "File type collections" : "All resources"}
             </h2>
             <div className="flex items-center gap-3 text-sm text-neutral-400">
               <span className="hidden sm:inline">Sort by: Name</span>

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Bell, Camera, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   authClient,
   signOutAndClearCookies,
@@ -176,10 +176,57 @@ export default function SettingsPage() {
   const { data: session, isPending } = useSession();
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
+  const [preferencesLoading, setPreferencesLoading] = useState(true);
+  const [savingPreference, setSavingPreference] = useState("");
+  const [preferenceMessage, setPreferenceMessage] = useState("");
+  const [preferenceError, setPreferenceError] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(""); 
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/preferences", { cache: "no-store" })
+      .then(async (response) => {
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Unable to load preferences.");
+        if (active) {
+          setEmailNotifications(payload.preferences.emailNotifications);
+          setFocusMode(payload.preferences.focusMode);
+        }
+      })
+      .catch((error) => { if (active) setPreferenceError(error instanceof Error ? error.message : "Unable to load preferences."); })
+      .finally(() => { if (active) setPreferencesLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  async function updatePreference(key: "emailNotifications" | "focusMode", value: boolean) {
+    const previous = key === "emailNotifications" ? emailNotifications : focusMode;
+    if (key === "emailNotifications") setEmailNotifications(value);
+    else setFocusMode(value);
+    setSavingPreference(key);
+    setPreferenceError("");
+    setPreferenceMessage("");
+    try {
+      const response = await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: value }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Unable to save this preference.");
+      setEmailNotifications(payload.preferences.emailNotifications);
+      setFocusMode(payload.preferences.focusMode);
+      setPreferenceMessage("Preference saved.");
+    } catch (error) {
+      if (key === "emailNotifications") setEmailNotifications(previous);
+      else setFocusMode(previous);
+      setPreferenceError(error instanceof Error ? error.message : "Unable to save this preference.");
+    } finally {
+      setSavingPreference("");
+    }
+  }
 
   async function deleteAccount() {
     if (deleteConfirmation !== "DELETE") return;
@@ -243,7 +290,7 @@ export default function SettingsPage() {
             <div>
               <h2 className="font-semibold text-white">Notifications</h2>
               <p className="text-sm text-neutral-500">
-                Control project and task updates.
+                Choose your email alert preference.
               </p>
             </div>
           </div>
@@ -253,16 +300,18 @@ export default function SettingsPage() {
                 Email notifications
               </span>
               <span className="mt-1 block text-sm text-neutral-500">
-                Receive workspace activity updates by email.
+                Allow email alerts when workspace notifications are available.
               </span>
             </span>
             <input
               checked={emailNotifications}
-              onChange={(event) => setEmailNotifications(event.target.checked)}
+              disabled={preferencesLoading || savingPreference !== ""}
+              onChange={(event) => void updatePreference("emailNotifications", event.target.checked)}
               type="checkbox"
               className="size-5 accent-white"
             />
           </label>
+          <p className="mt-3 text-xs text-neutral-500">Email alert delivery is not active yet. This preference will be saved to your account.</p>
         </section>
 
         <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 sm:p-6">
@@ -273,7 +322,7 @@ export default function SettingsPage() {
             <div>
               <h2 className="font-semibold text-white">Focus mode</h2>
               <p className="text-sm text-neutral-500">
-                Keep distractions to a minimum.
+                Save your preference for a quieter workspace.
               </p>
             </div>
           </div>
@@ -283,17 +332,20 @@ export default function SettingsPage() {
                 Enable focus mode
               </span>
               <span className="mt-1 block text-sm text-neutral-500">
-                Mute non-essential dashboard alerts.
+                Reduce non-essential workspace interruptions as they become available.
               </span>
             </span>
             <input
               checked={focusMode}
-              onChange={(event) => setFocusMode(event.target.checked)}
+              disabled={preferencesLoading || savingPreference !== ""}
+              onChange={(event) => void updatePreference("focusMode", event.target.checked)}
               type="checkbox"
               className="size-5 accent-white"
             />
           </label>
         </section>
+
+        {(preferenceMessage || preferenceError || preferencesLoading) && <p role={preferenceError ? "alert" : "status"} className={`px-1 text-sm ${preferenceError ? "text-red-300" : "text-neutral-400"}`}>{preferencesLoading ? "Loading saved preferences…" : savingPreference ? "Saving preference…" : preferenceError || preferenceMessage}</p>}
 
         <section className="rounded-2xl border border-red-950 bg-zinc-900 p-5 sm:p-6">
           <div className="flex items-center gap-3">

@@ -6,6 +6,7 @@ Zohra is a web workspace for keeping project resources together. It includes a p
 
 - **Accounts:** email and password registration and sign-in, with optional Google sign-in.
 - **Personal workspace:** dashboard, resource library, profile, settings, and upload pages behind authentication.
+- **Personal planner:** create, schedule, edit, complete, and delete tasks; use the Today sidebar card and monthly calendar to stay on top of due dates.
 - **File uploads:** drag-and-drop or file-picker uploads to private Vercel Blob storage. Files are limited to 100 MB and checked against the supported file list. SHA-256 checksums prevent adding the same file to one user's library more than once.
 - **PDF text extraction:** text-based PDFs are processed after upload. The app records page count and extraction status and stores at most 500,000 extracted characters. Scanned PDFs without embedded text are marked as having no text; other supported file types are marked as not applicable.
 - **Library management:** browse resources, filter by type or status, inspect extracted PDF text, and delete resources.
@@ -131,6 +132,8 @@ BLOB_READ_WRITE_TOKEN="your-vercel-blob-read-write-token"
 | `/about`, `/pricing` | Public marketing pages. |
 | `/login`, `/sign-up` | Account access pages. |
 | `/dashboard` | Authenticated workspace overview and recent resources. |
+| `/tasks` | Authenticated personal task list with Today, Upcoming, Unscheduled, and Completed views. |
+| `/calendar` | Authenticated monthly calendar and selected-day task agenda. |
 | `/resources` | Authenticated resource library. |
 | `/upload` | Authenticated resource upload flow. |
 | `/profile`, `/settings` | Authenticated account and profile management. |
@@ -143,6 +146,8 @@ BLOB_READ_WRITE_TOKEN="your-vercel-blob-read-write-token"
 - `/api/resources/[resourceId]` — fetch or delete a resource owned by the current user.
 - `/api/resources/[resourceId]/text` — retrieve extracted text for an owned PDF resource.
 - `/api/resources/[resourceId]/extract` — trigger PDF text extraction for an owned resource.
+- `/api/tasks` and `/api/tasks/[taskId]` — list and manage tasks owned by the signed-in user.
+- `/api/preferences` — read and update the signed-in user's saved notification and focus preferences.
 - `/api/account/delete` — delete the signed-in user's account.
 
 Resource APIs require an authenticated session and scope database access to the current user.

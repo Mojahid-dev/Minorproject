@@ -5,7 +5,6 @@ import {
   Database,
   FileText,
   LoaderCircle,
-  Paperclip,
   ShieldCheck,
   Sparkles,
   Trash2,
@@ -286,7 +285,7 @@ export default function UploadPage() {
       </section>
 
       <div className="mt-9 flex items-center gap-5 text-center before:h-px before:flex-1 before:bg-zinc-800 after:h-px after:flex-1 after:bg-zinc-800">
-        <div className="shrink-0"><p className="flex items-center justify-center gap-2 text-sm font-medium"><Sparkles size={17} fill="currentColor" />Zohra handles the rest</p><p className="mt-1 text-xs text-neutral-500">We process uploads so they're searchable and ready to study.</p></div>
+        <div className="shrink-0"><p className="flex items-center justify-center gap-2 text-sm font-medium"><Sparkles size={17} fill="currentColor" />Zohra handles the rest</p><p className="mt-1 text-xs text-neutral-500">We process uploads so they&apos;re searchable and ready to study.</p></div>
       </div>
 
       {items.length > 0 && (
