@@ -49,6 +49,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ re
       semesterId: resolvedSemesterId,
       subjectId: resolvedSubjectId,
       chapterId: chapter?.id ?? null,
+      awaitingOrganizationInput: false,
       organizationStatus: hasSubjectLocation ? "ORGANIZED" : "NEEDS_REVIEW",
       organizationNote: hasSubjectLocation
         ? "Manually organized by you."

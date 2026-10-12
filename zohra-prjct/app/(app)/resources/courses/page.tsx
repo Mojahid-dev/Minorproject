@@ -119,7 +119,7 @@ export default function CourseStructurePage() {
     <main className="mx-auto max-w-6xl pb-10 text-white">
       <Link href="/resources" className="inline-flex min-h-10 items-center gap-2 rounded-lg text-sm text-neutral-400 transition hover:text-white"><ArrowLeft size={16} /> Back to resources</Link>
       <header className="mt-5 flex flex-col gap-3 border-b border-white/[0.08] pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-200">Your study system</p><h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-5xl">Course folders</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-400">Create the real structure of your studies. Zohra checks these names and aliases against each upload; anything unclear stays in Needs review.</p></div>
+        <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-200">Your study system</p><h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-5xl">Course folders</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-400">Manage and rename folders here, or enter course details after uploading. Zohra reuses matching folders and creates any missing parts of the path automatically.</p></div>
         <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-neutral-300"><FolderTree size={16} className="text-violet-200" /> Year → semester → subject → chapter</div>
       </header>
 

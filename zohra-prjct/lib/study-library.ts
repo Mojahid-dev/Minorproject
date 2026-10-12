@@ -208,17 +208,19 @@ function matchLocation(tree: YearRecord[], originalName: string, extractedText: 
   return { studyYearId: year.id, semesterId: semester.id, subjectId: null, chapterId: null, organizationStatus: "NEEDS_REVIEW", organizationNote: note };
 }
 
-export async function processStudyResource(resourceId: string, retryStale = false) {
+export async function processStudyResource(resourceId: string, retryStale = false, preserveOrganization = false) {
   const resource = await prisma.resource.findUnique({ where: { id: resourceId } });
   if (!resource) throw new Error("Resource not found.");
+  if (resource.awaitingOrganizationInput) return;
   if (resource.organizationStatus === "PROCESSING" && (!retryStale || resource.updatedAt.getTime() > Date.now() - 3 * 60_000)) return;
-  if (resource.organizationStatus === "ORGANIZED") return;
+  if (resource.organizationStatus === "ORGANIZED" && !preserveOrganization) return;
 
   const claimed = await prisma.resource.updateMany({
     where: {
       id: resourceId,
       OR: [
         { organizationStatus: { in: ["PENDING", "FAILED", "NEEDS_REVIEW"] } },
+        ...(preserveOrganization ? [{ organizationStatus: "ORGANIZED" as const }] : []),
         ...(retryStale ? [{ organizationStatus: "PROCESSING" as const, updatedAt: { lt: new Date(Date.now() - 3 * 60_000) } }] : []),
       ],
     },
@@ -265,12 +267,12 @@ export async function processStudyResource(resourceId: string, retryStale = fals
         extractedTextLength: result.textLength,
         pageCount: result.pageCount,
         extractedAt: new Date(),
-        organizationStatus: location.organizationStatus,
-        organizationNote: location.organizationNote,
-        studyYearId: location.studyYearId,
-        semesterId: location.semesterId,
-        subjectId: location.subjectId,
-        chapterId: location.chapterId,
+        organizationStatus: preserveOrganization ? resource.organizationStatus : location.organizationStatus,
+        organizationNote: preserveOrganization ? resource.organizationNote : location.organizationNote,
+        studyYearId: preserveOrganization ? resource.studyYearId : location.studyYearId,
+        semesterId: preserveOrganization ? resource.semesterId : location.semesterId,
+        subjectId: preserveOrganization ? resource.subjectId : location.subjectId,
+        chapterId: preserveOrganization ? resource.chapterId : location.chapterId,
       },
     });
   } catch (error) {
@@ -281,8 +283,8 @@ export async function processStudyResource(resourceId: string, retryStale = fals
         status: "READY",
         textExtractionStatus: "FAILED",
         extractionError: message.slice(0, 1000),
-        organizationStatus: "FAILED",
-        organizationNote: "Text could not be read. You can retry processing or assign this file manually.",
+        organizationStatus: preserveOrganization ? resource.organizationStatus : "FAILED",
+        organizationNote: preserveOrganization ? resource.organizationNote : "Text could not be read. You can retry processing or assign this file manually.",
       },
     });
   }

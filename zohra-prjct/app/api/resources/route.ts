@@ -25,6 +25,8 @@ export async function GET() {
       semesterId: true,
       subjectId: true,
       chapterId: true,
+      tags: true,
+      awaitingOrganizationInput: true,
       studyYear: { select: { id: true, label: true } },
       semester: { select: { id: true, name: true } },
       subject: { select: { id: true, name: true } },
@@ -77,6 +79,7 @@ export async function POST(request: Request) {
       checksum: body.checksum,
       storageKey,
       status: "PENDING",
+      awaitingOrganizationInput: true,
     },
   });
 

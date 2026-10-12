@@ -8,10 +8,13 @@ import {
   ShieldCheck,
   Sparkles,
   Trash2,
+  FolderTree,
+  Tag,
   UploadCloud,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { validateResourceFile } from "@/lib/resource-validation";
@@ -38,8 +41,20 @@ type SavedResource = {
   status: "PENDING" | "PROCESSING" | "READY" | "FAILED";
   organizationStatus: "PENDING" | "PROCESSING" | "ORGANIZED" | "NEEDS_REVIEW" | "FAILED";
   organizationNote?: string | null;
+  awaitingOrganizationInput: boolean;
+  tags: string[];
+  studyYearId?: string | null;
+  semesterId?: string | null;
+  subjectId?: string | null;
+  chapterId?: string | null;
+  studyYear?: { id: string; label: string } | null;
+  semester?: { id: string; name: string } | null;
+  subject?: { id: string; name: string } | null;
+  chapter?: { id: string; name: string } | null;
   createdAt: string;
 };
+
+type StudyYear = { id: string; label: string; semesters: { id: string; name: string; subjects: { id: string; name: string; chapters: { id: string; name: string }[] }[] }[] };
 
 const acceptedTypes = ".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.jpg,.jpeg,.png,.mp4,.mov,.webm";
 
@@ -105,6 +120,7 @@ async function fileChecksum(file: File) {
 
 function resourceStatus(resource: SavedResource) {
   if (resource.status === "FAILED") return { label: "Upload failed", complete: false };
+  if (resource.awaitingOrganizationInput) return { label: "Add course details", complete: false };
   if (resource.organizationStatus === "ORGANIZED") return { label: "Organized", complete: true };
   if (resource.organizationStatus === "NEEDS_REVIEW") return { label: "Needs review", complete: false };
   if (resource.organizationStatus === "FAILED") return { label: "Could not organize", complete: false };
@@ -119,6 +135,16 @@ export default function UploadPage() {
   const [savedResources, setSavedResources] = useState<SavedResource[]>([]);
   const [isLoadingResources, setIsLoadingResources] = useState(true);
   const [deletingResourceId, setDeletingResourceId] = useState<string | null>(null);
+  const [years, setYears] = useState<StudyYear[]>([]);
+  const [selectedOrganizationIds, setSelectedOrganizationIds] = useState<string[]>([]);
+  const [academicYear, setAcademicYear] = useState("");
+  const [semester, setSemester] = useState("");
+  const [subject, setSubject] = useState("");
+  const [unit, setUnit] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagDraft, setTagDraft] = useState("");
+  const [organizing, setOrganizing] = useState(false);
+  const [organizeNotice, setOrganizeNotice] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -126,9 +152,10 @@ export default function UploadPage() {
 
     async function loadResources() {
       try {
-        const response = await fetch("/api/resources");
-        const payload = await response.json();
-        if (response.ok && active) setSavedResources(payload.resources);
+        const [resourceResponse, structureResponse] = await Promise.all([fetch("/api/resources"), fetch("/api/study-structure")]);
+        const [resourcePayload, structurePayload] = await Promise.all([resourceResponse.json(), structureResponse.json()]);
+        if (resourceResponse.ok && active) setSavedResources(resourcePayload.resources);
+        if (structureResponse.ok && active) setYears(structurePayload.years);
       } finally {
         if (active) setIsLoadingResources(false);
       }
@@ -225,10 +252,13 @@ export default function UploadPage() {
           mimeType: payload.resource.mimeType,
           sizeBytes: payload.resource.sizeBytes,
           status: "READY",
-          organizationStatus: "PROCESSING",
+          organizationStatus: "PENDING",
           organizationNote: null,
+          awaitingOrganizationInput: true,
+          tags: [],
           createdAt: payload.resource.createdAt,
         }, ...current]);
+        setSelectedOrganizationIds((current) => [payload.resource.id, ...current]);
       } catch (error) {
         setItems((current) => current.map((currentItem) => currentItem.id === item.id ? {
           ...currentItem,
@@ -238,6 +268,68 @@ export default function UploadPage() {
         } : currentItem));
       }
     }));
+  }
+
+  function addTag(value = tagDraft) {
+    const cleaned = value.trim().replace(/^#/, "").replace(/,+$/, "").trim();
+    if (!cleaned) return;
+    if (!tags.some((tag) => tag.toLocaleLowerCase() === cleaned.toLocaleLowerCase())) setTags((current) => [...current, cleaned]);
+    setTagDraft("");
+  }
+
+  function toggleOrganizationSelection(resourceId: string) {
+    setSelectedOrganizationIds((current) => current.includes(resourceId) ? current.filter((id) => id !== resourceId) : current.length < 50 ? [...current, resourceId] : current);
+  }
+
+  async function organizeSelected(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedOrganizationIds.length) return;
+    const finalTags = [...tags];
+    const pendingTag = tagDraft.trim().replace(/^#/, "");
+    if (pendingTag && !finalTags.some((tag) => tag.toLowerCase() === pendingTag.toLowerCase())) finalTags.push(pendingTag);
+    setOrganizing(true);
+    setValidationErrors([]);
+    setOrganizeNotice("");
+    try {
+      const response = await fetch("/api/resources/organize-batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resourceIds: selectedOrganizationIds, year: academicYear, semester, subject, unit, tags: finalTags }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not organize these files.");
+      const resourceResponse = await fetch("/api/resources", { cache: "no-store" });
+      const resourcePayload = await resourceResponse.json();
+      if (resourceResponse.ok) setSavedResources(resourcePayload.resources);
+      setSelectedOrganizationIds([]);
+      setTags([]);
+      setTagDraft("");
+      setOrganizeNotice(`${payload.count} file${payload.count === 1 ? "" : "s"} placed in ${[payload.names.year, payload.names.semester, payload.names.subject, payload.names.unit].filter(Boolean).join(" → ")}.`);
+    } catch (error) {
+      setValidationErrors([error instanceof Error ? error.message : "Could not organize these files."]);
+    } finally {
+      setOrganizing(false);
+    }
+  }
+
+  async function skipTagging() {
+    if (!selectedOrganizationIds.length) return;
+    setOrganizing(true);
+    setValidationErrors([]);
+    try {
+      const results = await Promise.all(selectedOrganizationIds.map(async (id) => {
+        const response = await fetch(`/api/resources/${id}/process`, { method: "POST" });
+        const payload = await response.json();
+        if (!response.ok && response.status !== 409) throw new Error(payload.error || "Could not start filename organization.");
+      }));
+      void results;
+      setSelectedOrganizationIds([]);
+      setOrganizeNotice("Zohra is checking the selected file names and readable text. Anything unclear will appear in Needs review.");
+    } catch (error) {
+      setValidationErrors([error instanceof Error ? error.message : "Could not start filename organization."]);
+    } finally {
+      setOrganizing(false);
+    }
   }
 
   function removeFile(id: string) {
@@ -259,6 +351,8 @@ export default function UploadPage() {
   }
 
   const readyCount = items.filter((item) => item.status === "ready").length;
+  const needsOrganization = savedResources.filter((resource) => resource.status === "READY" && (resource.awaitingOrganizationInput || resource.organizationStatus === "NEEDS_REVIEW" || resource.organizationStatus === "FAILED" || resource.organizationStatus === "PENDING"));
+  const selectedFileNames = savedResources.filter((resource) => selectedOrganizationIds.includes(resource.id)).map((resource) => resource.originalName);
 
   return (
     <div className="mx-auto max-w-6xl pb-8 text-white">
@@ -271,6 +365,26 @@ export default function UploadPage() {
       </header>
 
       {validationErrors.length > 0 && <div role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-left text-sm text-red-200"><p className="font-medium">Some files were not accepted</p><ul className="mt-2 text-xs"><li>{validationErrors.join("\n")}</li></ul></div>}
+      {organizeNotice && <div role="status" className="mt-4 rounded-xl border border-emerald-200/15 bg-emerald-200/[0.06] px-4 py-3 text-sm text-emerald-100">{organizeNotice}</div>}
+
+      {needsOrganization.length > 0 && <section className="mt-5 overflow-hidden rounded-[26px] border border-violet-200/15 bg-[radial-gradient(ellipse_at_top_right,rgba(139,92,246,0.12),transparent_45%),#141418] p-4 sm:p-6">
+        <div className="flex flex-col gap-3 border-b border-white/[0.08] pb-4 sm:flex-row sm:items-start sm:justify-between"><div><div className="flex items-center gap-2 text-violet-100"><span className="grid size-9 place-items-center rounded-xl bg-violet-200/10"><Tag size={17} /></span><p className="text-xs font-semibold uppercase tracking-[0.16em]">Your upload, your structure</p></div><h2 className="mt-3 text-xl font-semibold tracking-tight sm:text-2xl">Where should these files live?</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-400">Select files, add their course details, and Zohra will create any folders that are missing. Choose several files to place them together.</p></div><Link href="/resources/courses" className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 px-3 text-sm text-neutral-200 transition hover:bg-white/[0.06]"><FolderTree size={15} /> Manage folders</Link></div>
+
+        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.8fr)]">
+          <div className="min-w-0 rounded-2xl border border-white/[0.07] bg-black/20 p-3 sm:p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="text-sm font-semibold">Choose files for this folder</h3><p className="mt-1 text-xs text-neutral-500">{selectedOrganizationIds.length} selected · select another group for a different subject</p></div><button type="button" onClick={() => setSelectedOrganizationIds(selectedOrganizationIds.length === needsOrganization.length ? [] : needsOrganization.map((resource) => resource.id).slice(0, 50))} className="min-h-9 rounded-lg px-2.5 text-xs font-medium text-violet-200 hover:bg-white/[0.06]">{selectedOrganizationIds.length === needsOrganization.length ? "Clear selection" : "Select all"}</button></div><ul className="mt-3 max-h-64 divide-y divide-white/[0.06] overflow-auto">{needsOrganization.map((resource) => <li key={resource.id}><label className="flex min-w-0 cursor-pointer items-center gap-3 py-3"><input type="checkbox" checked={selectedOrganizationIds.includes(resource.id)} onChange={() => toggleOrganizationSelection(resource.id)} className="size-4 shrink-0 accent-violet-300" /><span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/[0.06] text-neutral-300"><FileText size={16} /></span><span className="min-w-0 flex-1"><span className="block break-words text-sm text-neutral-200">{resource.originalName}</span><span className="mt-0.5 block text-[11px] text-neutral-500">{formatSize(resource.sizeBytes)} · {resource.organizationStatus === "PROCESSING" ? "Checking file…" : "Ready to organize"}</span></span></label></li>)}</ul><p className="mt-3 text-[11px] leading-5 text-neutral-500">Tip: select only the Web Technology files, organize them, then select another group and give it a different subject.</p></div>
+
+          <form onSubmit={organizeSelected} className="min-w-0 space-y-3 rounded-2xl border border-white/[0.07] bg-black/20 p-3 sm:p-4"><div><h3 className="text-sm font-semibold">Tell Zohra where they belong</h3><p className="mt-1 text-xs leading-5 text-neutral-500">Existing folders are reused. New names create folders automatically.</p></div>
+            <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs font-medium text-neutral-300">Academic year<input required list="study-year-options" value={academicYear} onChange={(event) => setAcademicYear(event.target.value)} placeholder="2026–27" maxLength={80} className="mt-1.5 min-h-11 w-full rounded-xl border border-white/10 bg-zinc-950 px-3 text-sm text-white outline-none transition focus:border-violet-300/60" /><datalist id="study-year-options">{years.map((year) => <option key={year.id} value={year.label} />)}</datalist></label>
+              <label className="text-xs font-medium text-neutral-300">Semester<input required list="semester-options" value={semester} onChange={(event) => setSemester(event.target.value)} placeholder="Semester 1" maxLength={80} className="mt-1.5 min-h-11 w-full rounded-xl border border-white/10 bg-zinc-950 px-3 text-sm text-white outline-none transition focus:border-violet-300/60" /><datalist id="semester-options">{years.flatMap((year) => year.semesters.map((item) => <option key={item.id} value={item.name} />))}</datalist></label>
+              <label className="text-xs font-medium text-neutral-300">Subject<input required list="subject-options" value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Web Technology" maxLength={120} className="mt-1.5 min-h-11 w-full rounded-xl border border-white/10 bg-zinc-950 px-3 text-sm text-white outline-none transition focus:border-violet-300/60" /><datalist id="subject-options">{years.flatMap((year) => year.semesters.flatMap((item) => item.subjects.map((entry) => <option key={entry.id} value={entry.name} />)))}</datalist></label>
+              <label className="text-xs font-medium text-neutral-300">Unit or chapter <span className="font-normal text-neutral-500">(optional)</span><input list="unit-options" value={unit} onChange={(event) => setUnit(event.target.value)} placeholder="Unit 1" maxLength={140} className="mt-1.5 min-h-11 w-full rounded-xl border border-white/10 bg-zinc-950 px-3 text-sm text-white outline-none transition focus:border-violet-300/60" /><datalist id="unit-options">{years.flatMap((year) => year.semesters.flatMap((item) => item.subjects.flatMap((entry) => entry.chapters.map((chapter) => <option key={chapter.id} value={chapter.name} />))))}</datalist></label></div>
+            <div><label htmlFor="upload-tags" className="text-xs font-medium text-neutral-300">Topics or tags <span className="font-normal text-neutral-500">(optional)</span></label><div className="mt-1.5 flex min-h-11 flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-zinc-950 px-2.5 py-2 focus-within:border-violet-300/60">{tags.map((tag) => <span key={tag} className="inline-flex items-center gap-1 rounded-lg bg-violet-200/10 px-2 py-1 text-xs text-violet-100">#{tag}<button type="button" aria-label={`Remove ${tag} tag`} onClick={() => setTags((current) => current.filter((value) => value !== tag))} className="ml-0.5 text-violet-200/70 hover:text-white">×</button></span>)}<input id="upload-tags" value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === ",") { event.preventDefault(); addTag(); } }} placeholder={tags.length ? "Add another…" : "e.g. HTML, CSS, lecture notes"} className="min-w-[120px] flex-1 bg-transparent py-1 text-sm text-white outline-none placeholder:text-neutral-600" /><button type="button" onClick={() => addTag()} disabled={!tagDraft.trim()} className="rounded-lg px-2 py-1 text-xs font-medium text-violet-200 hover:bg-white/[0.06] disabled:opacity-40">Add</button></div><p className="mt-1 text-[11px] leading-5 text-neutral-500">Press Enter or comma after each tag. Tags are saved on every selected file.</p></div>
+            <div className="rounded-xl border border-violet-200/10 bg-violet-200/[0.04] px-3 py-2.5"><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-200">Folder preview</p><p className="mt-1 break-words text-sm text-neutral-200">{[academicYear || "Academic year", semester || "Semester", subject || "Subject", unit].filter(Boolean).join(" → ")}</p><p className="mt-1 text-[11px] text-neutral-500">{selectedFileNames.length > 0 ? `${selectedFileNames.length} selected file${selectedFileNames.length === 1 ? "" : "s"} will be placed here.` : "Select at least one uploaded file."}</p></div>
+            <button disabled={organizing || selectedOrganizationIds.length === 0 || !academicYear.trim() || !semester.trim() || !subject.trim()} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-zinc-950 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-45"><FolderTree size={16} />{organizing ? "Creating folders and organizing…" : `Create folders & organize ${selectedOrganizationIds.length || "selected"} file${selectedOrganizationIds.length === 1 ? "" : "s"}`}</button>
+            <button type="button" disabled={organizing || selectedOrganizationIds.length === 0} onClick={() => void skipTagging()} className="min-h-10 w-full rounded-xl px-3 text-xs text-neutral-400 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-40">Skip tags and try matching file names instead</button>
+          </form>
+        </div>
+      </section>}
 
       <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(250px,0.7fr)] lg:gap-4">
         <section
@@ -325,7 +439,7 @@ export default function UploadPage() {
             ))}
           {!isLoadingResources && savedResources.map((resource) => {
             const status = resourceStatus(resource);
-            return <li key={resource.id} className="flex min-w-0 items-center gap-2 py-3.5 sm:gap-3"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={20} /></div><div className="min-w-0 flex-1"><div className="break-all text-sm font-medium">{resource.originalName}</div><div className="text-xs text-neutral-400">{resource.mimeType} • {formatSize(resource.sizeBytes)}</div></div><div className="ml-3 flex shrink-0 items-center gap-2"><div className={`text-xs rounded-md px-2 py-1 ${status.complete ? 'bg-emerald-500 text-black' : 'bg-zinc-800 text-neutral-300'}`}>{status.label}</div><button onClick={() => deleteResource(resource.id)} className="ml-2 grid size-9 place-items-center rounded-md bg-zinc-800 p-2 text-neutral-300 hover:bg-white/5">{deletingResourceId === resource.id ? <LoaderCircle size={16} className="animate-spin" /> : <Trash2 size={16} />}</button></div></li>
+            return <li key={resource.id} className="flex min-w-0 items-center gap-2 py-3.5 sm:gap-3"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={20} /></div><div className="min-w-0 flex-1"><div className="break-all text-sm font-medium">{resource.originalName}</div><div className="text-xs text-neutral-400">{resource.mimeType} • {formatSize(resource.sizeBytes)}</div>{(resource.subject || resource.tags?.length) && <div className="mt-1 flex flex-wrap gap-1.5">{resource.subject && <span className="rounded-md bg-white/[0.06] px-2 py-0.5 text-[10px] text-neutral-300">{[resource.semester?.name, resource.subject.name, resource.chapter?.name].filter(Boolean).join(" · ")}</span>}{resource.tags?.map((tag) => <span key={tag} className="rounded-md bg-violet-200/[0.08] px-2 py-0.5 text-[10px] text-violet-200">#{tag}</span>)}</div>}</div><div className="ml-3 flex shrink-0 items-center gap-2"><div className={`text-xs rounded-md px-2 py-1 ${status.complete ? 'bg-emerald-500 text-black' : 'bg-zinc-800 text-neutral-300'}`}>{status.label}</div><button onClick={() => deleteResource(resource.id)} aria-label={`Delete ${resource.originalName}`} className="ml-2 grid size-9 place-items-center rounded-md bg-zinc-800 p-2 text-neutral-300 hover:bg-white/5">{deletingResourceId === resource.id ? <LoaderCircle size={16} className="animate-spin" /> : <Trash2 size={16} />}</button></div></li>
           })}
           {!isLoadingResources && savedResources.length === 0 && <li className="py-8 text-center text-sm text-neutral-500">Your uploaded learning materials will appear here.</li>}
         </ul>

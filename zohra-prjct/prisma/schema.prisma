@@ -145,6 +145,8 @@ model Resource {
   extractionError String?     @db.Text
   organizationStatus OrganizationStatus @default(PENDING)
   organizationNote String?    @db.VarChar(500)
+  awaitingOrganizationInput Boolean @default(false)
+  tags         String[]       @default([])
   studyYearId String?
   semesterId String?
   subjectId String?
