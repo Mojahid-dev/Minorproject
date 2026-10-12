@@ -125,9 +125,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <main className="h-dvh overflow-hidden bg-zinc-950 text-neutral-100">
-      <div className="flex h-full max-w-full overflow-hidden border border-zinc-800 bg-zinc-950 shadow-[0_25px_80px_rgba(0,0,0,0.4)]">
-        <aside className={`${collapsed ? "lg:w-[86px]" : "lg:w-[272px]"} fixed inset-y-0 left-0 z-40 flex h-dvh w-[280px] shrink-0 flex-col border-r border-zinc-800 bg-black px-4 py-5 shadow-xl transition-[width,transform] duration-200 lg:sticky lg:top-0 lg:translate-x-0 ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
+    <main className="h-dvh w-full overflow-hidden overflow-x-clip bg-zinc-950 text-neutral-100">
+      <div className="flex h-full w-full min-w-0 overflow-hidden border border-zinc-800 bg-zinc-950 shadow-[0_25px_80px_rgba(0,0,0,0.4)]">
+        <aside className={`${collapsed ? "lg:w-[86px]" : "lg:w-[272px]"} fixed inset-y-0 left-0 z-40 flex h-dvh w-[min(280px,calc(100vw_-_2rem))] shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-zinc-800 bg-black px-4 py-5 shadow-xl transition-[width,transform] duration-200 lg:sticky lg:top-0 lg:translate-x-0 lg:overflow-visible ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
           <div className="flex items-center justify-between px-2">
             <ZohraMark compact={collapsed} />
             <button onClick={() => setMobileMenuOpen(false)} aria-label="Close menu" className="grid size-8 place-items-center rounded-lg text-neutral-500 transition hover:bg-white/10 hover:text-white lg:hidden"><X size={18} /></button>
@@ -173,7 +173,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         {mobileMenuOpen && <button type="button" aria-label="Close menu overlay" onClick={() => setMobileMenuOpen(false)} className="fixed inset-0 z-30 bg-black/50 lg:hidden" />}
-        <section className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-zinc-950">
+        <section className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-clip bg-zinc-950">
           <header className="sticky top-0 z-10 flex h-16 items-center border-b border-zinc-800 bg-zinc-950/95 px-3 backdrop-blur-xl sm:h-[76px] sm:px-6 lg:px-8">
             <button onClick={() => { setMobileMenuOpen(true); setMobileMoreOpen(false); }} className="mr-2 grid size-10 shrink-0 place-items-center rounded-xl text-neutral-300 transition hover:bg-white/10 hover:text-white lg:hidden" aria-label="Open workspace menu"><Menu size={22} /></button>
             <Link href="/dashboard" className="mr-3 flex shrink-0 items-center lg:hidden"><ZohraMark /></Link>
@@ -191,7 +191,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
           </header>
-          <div className="p-4 pb-[calc(6.75rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(6.75rem+env(safe-area-inset-bottom))] lg:p-8 lg:pb-8">{children}</div>
+          <div className="w-full min-w-0 p-4 pb-[calc(7.25rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(7.25rem+env(safe-area-inset-bottom))] lg:p-8 lg:pb-8">{children}</div>
         </section>
         {!mobileMenuOpen && <>
           {mobileMoreOpen && <button type="button" aria-label="Close more navigation" onClick={() => setMobileMoreOpen(false)} className="fixed inset-0 z-40 bg-black/45 lg:hidden" />}

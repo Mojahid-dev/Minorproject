@@ -258,6 +258,13 @@ export default function ResourcesPage() {
         </div>
       </nav>
 
+      <label className="mt-3 flex h-10 items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950/30 px-3 text-xs text-neutral-400 sm:hidden">
+        <Filter size={16} /> Filter library
+        <select value={filter} onChange={(event) => setFilter(event.target.value as ResourceFilter)} aria-label="Filter resources by file type" className="ml-auto max-w-[55%] bg-transparent text-right text-neutral-200 outline-none">
+          <option value="all">All files</option><option value="document">Documents</option><option value="presentation">Presentations</option><option value="video">Videos</option><option value="other">Other</option>
+        </select>
+      </label>
+
       {(activeTab === "subjects" || activeTab === "all") && (
         <section className="mt-7">
           <div className="mb-4 flex items-center justify-between gap-4">
@@ -470,7 +477,26 @@ function ResourceTable({
     );
   if (!resources.length) return <EmptyResources />;
   return (
-    <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/45">
+    <>
+    <div className="space-y-2 sm:hidden">
+      {resources.map((resource) => (
+        <article key={resource.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/55 p-3.5">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-800 text-neutral-200"><FileText size={19} /></div>
+            <div className="min-w-0 flex-1">
+              <p className="break-all text-sm font-medium text-white">{resource.originalName}</p>
+              <p className="mt-1 text-xs text-neutral-400">{typeLabel(resource)} <span className="px-1 text-neutral-600">·</span> {resourceKind(resource)}</p>
+              <p className="mt-1 text-[11px] text-neutral-500">Added {formatAdded(resource.createdAt)}</p>
+            </div>
+          </div>
+          <div className="mt-3 flex justify-end gap-1 border-t border-white/[0.06] pt-2">
+            {resource.mimeType === "application/pdf" && <button onClick={() => onViewText(resource.id)} aria-label={`View extracted text for ${resource.originalName}`} className="grid size-10 place-items-center rounded-xl text-neutral-400 hover:bg-white/10 hover:text-white"><BookOpenText size={17} /></button>}
+            <button onClick={() => onDelete(resource.id)} disabled={deletingResourceId === resource.id} aria-label={`Remove ${resource.originalName}`} className="grid size-10 place-items-center rounded-xl text-neutral-400 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50">{deletingResourceId === resource.id ? <LoaderCircle size={17} className="animate-spin" /> : <Trash2 size={17} />}</button>
+          </div>
+        </article>
+      ))}
+    </div>
+    <div className="hidden overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900/45 sm:block">
       <table className="w-full min-w-[700px] text-left text-sm">
         <thead className="border-b border-zinc-800 text-neutral-400">
           <tr>
@@ -527,6 +553,7 @@ function ResourceTable({
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 

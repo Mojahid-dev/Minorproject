@@ -146,7 +146,7 @@ function ProfileForm({ user }: { user: ProfileUser }) {
           </label>
           <div>
             <span className="text-sm font-medium text-neutral-200">Email</span>
-            <div className="mt-2 flex h-12 items-center rounded-xl border border-white/[0.06] bg-black/15 px-3.5 text-sm text-neutral-400">
+            <div className="mt-2 flex min-h-12 min-w-0 items-center rounded-xl border border-white/[0.06] bg-black/15 px-3.5 py-2 text-xs leading-5 text-neutral-400 [overflow-wrap:anywhere] sm:text-sm">
               {user.email}
             </div>
           </div>
