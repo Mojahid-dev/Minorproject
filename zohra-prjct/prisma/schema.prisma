@@ -23,6 +23,10 @@ model User {
   sessions      Session[]
   accounts      Account[]
   resources     Resource[]
+  studyYears    StudyYear[]
+  semesters     Semester[]
+  subjects      Subject[]
+  chapters      Chapter[]
   tasks         Task[]
   preferences   UserPreference?
 
@@ -46,6 +50,83 @@ enum TextExtractionStatus {
   NOT_APPLICABLE
 }
 
+enum OrganizationStatus {
+  PENDING
+  PROCESSING
+  ORGANIZED
+  NEEDS_REVIEW
+  FAILED
+}
+
+model StudyYear {
+  id        String     @id @default(cuid())
+  userId    String
+  label     String     @db.VarChar(80)
+  aliases   String[]   @default([])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  semesters Semester[]
+  resources Resource[]
+
+  @@unique([userId, label])
+  @@index([userId])
+  @@map("study_year")
+}
+
+model Semester {
+  id          String     @id @default(cuid())
+  userId      String
+  studyYearId String
+  name        String     @db.VarChar(80)
+  aliases     String[]   @default([])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studyYear   StudyYear  @relation(fields: [studyYearId], references: [id], onDelete: Cascade)
+  subjects    Subject[]
+  resources   Resource[]
+
+  @@unique([studyYearId, name])
+  @@index([userId])
+  @@map("semester")
+}
+
+model Subject {
+  id        String     @id @default(cuid())
+  userId    String
+  semesterId String
+  name      String     @db.VarChar(120)
+  aliases   String[]   @default([])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  semester  Semester   @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  chapters  Chapter[]
+  resources Resource[]
+
+  @@unique([semesterId, name])
+  @@index([userId])
+  @@map("subject")
+}
+
+model Chapter {
+  id        String     @id @default(cuid())
+  userId    String
+  subjectId String
+  name      String     @db.VarChar(140)
+  aliases   String[]   @default([])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  resources Resource[]
+
+  @@unique([subjectId, name])
+  @@index([userId])
+  @@map("chapter")
+}
+
 model Resource {
   id           String         @id @default(cuid())
   userId       String
@@ -62,12 +143,24 @@ model Resource {
   pageCount    Int?
   extractedAt  DateTime?
   extractionError String?     @db.Text
+  organizationStatus OrganizationStatus @default(PENDING)
+  organizationNote String?    @db.VarChar(500)
+  studyYearId String?
+  semesterId String?
+  subjectId String?
+  chapterId String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studyYear    StudyYear?     @relation(fields: [studyYearId], references: [id], onDelete: SetNull)
+  semester     Semester?      @relation(fields: [semesterId], references: [id], onDelete: SetNull)
+  subject      Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  chapter      Chapter?       @relation(fields: [chapterId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([userId, status])
+  @@index([userId, organizationStatus])
+  @@index([userId, studyYearId, semesterId, subjectId, chapterId])
   @@unique([userId, checksum])
   @@map("resource")
 }

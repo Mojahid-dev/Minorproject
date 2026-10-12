@@ -1,10 +1,10 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { extractAndStorePdfText } from "@/lib/pdf-text-extraction";
+import { processStudyResource } from "@/lib/study-library";
 import { MAX_RESOURCE_SIZE_BYTES, SUPPORTED_RESOURCE_MIME_TYPES } from "@/lib/resource-validation";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { headers } from "next/headers";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 type UploadPayload = { resourceId: string };
 
@@ -46,8 +46,10 @@ export async function POST(request: Request) {
       onUploadCompleted: async ({ blob, tokenPayload }) => {
         if (!tokenPayload) throw new Error("Missing uploaded resource data.");
         const { resourceId } = JSON.parse(tokenPayload) as UploadPayload;
-        await prisma.resource.update({ where: { id: resourceId }, data: { storageKey: blob.pathname } });
-        await extractAndStorePdfText(resourceId);
+        await prisma.resource.update({ where: { id: resourceId }, data: { storageKey: blob.pathname, status: "READY" } });
+        after(async () => {
+          await processStudyResource(resourceId);
+        });
       },
     });
 

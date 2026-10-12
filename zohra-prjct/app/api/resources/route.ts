@@ -19,7 +19,18 @@ export async function GET() {
       status: true,
       textExtractionStatus: true,
       pageCount: true,
+      organizationStatus: true,
+      organizationNote: true,
+      studyYearId: true,
+      semesterId: true,
+      subjectId: true,
+      chapterId: true,
+      studyYear: { select: { id: true, label: true } },
+      semester: { select: { id: true, name: true } },
+      subject: { select: { id: true, name: true } },
+      chapter: { select: { id: true, name: true } },
       createdAt: true,
+      updatedAt: true,
     },
   });
 

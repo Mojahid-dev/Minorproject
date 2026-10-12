@@ -36,6 +36,8 @@ type SavedResource = {
   mimeType: string;
   sizeBytes: number;
   status: "PENDING" | "PROCESSING" | "READY" | "FAILED";
+  organizationStatus: "PENDING" | "PROCESSING" | "ORGANIZED" | "NEEDS_REVIEW" | "FAILED";
+  organizationNote?: string | null;
   createdAt: string;
 };
 
@@ -102,9 +104,11 @@ async function fileChecksum(file: File) {
 }
 
 function resourceStatus(resource: SavedResource) {
-  if (resource.status === "READY") return { label: "Added to library", complete: true };
   if (resource.status === "FAILED") return { label: "Upload failed", complete: false };
-  return { label: resource.status === "PROCESSING" ? "Processing..." : "Finalizing upload...", complete: false };
+  if (resource.organizationStatus === "ORGANIZED") return { label: "Organized", complete: true };
+  if (resource.organizationStatus === "NEEDS_REVIEW") return { label: "Needs review", complete: false };
+  if (resource.organizationStatus === "FAILED") return { label: "Could not organize", complete: false };
+  return { label: resource.organizationStatus === "PROCESSING" ? "Organizing…" : "Waiting to organize…", complete: false };
 }
 
 
@@ -133,6 +137,20 @@ export default function UploadPage() {
     void loadResources();
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!savedResources.some((resource) => resource.organizationStatus === "PENDING" || resource.organizationStatus === "PROCESSING")) return;
+    const timer = window.setInterval(async () => {
+      try {
+        const response = await fetch("/api/resources", { cache: "no-store" });
+        const payload = await response.json();
+        if (response.ok) setSavedResources(payload.resources);
+      } catch {
+        // Keep the last known upload state; the next poll can recover automatically.
+      }
+    }, 3500);
+    return () => window.clearInterval(timer);
+  }, [savedResources]);
 
   async function addFiles(files: FileList | File[]) {
     const rejected: string[] = [];
@@ -207,6 +225,8 @@ export default function UploadPage() {
           mimeType: payload.resource.mimeType,
           sizeBytes: payload.resource.sizeBytes,
           status: "READY",
+          organizationStatus: "PROCESSING",
+          organizationNote: null,
           createdAt: payload.resource.createdAt,
         }, ...current]);
       } catch (error) {

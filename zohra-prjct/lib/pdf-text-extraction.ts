@@ -11,7 +11,7 @@ export function isPdfResource(mimeType: string) {
   return mimeType === "application/pdf";
 }
 
-async function extractPdfText(storageKey: string) {
+export async function extractPdfText(storageKey: string) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) throw new Error("Theres some server misconfiguration. Please contact support.");
 
