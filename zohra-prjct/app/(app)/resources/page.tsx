@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpenText, CalendarDays, CheckCircle2, Clock3, FileText, Filter, FolderOpen, FolderTree, LoaderCircle, RotateCcw, ShieldAlert, Trash2, Upload, X } from "lucide-react";
+import { ArrowRight, CalendarDays, CheckCircle2, Clock3, Eye, FileText, Filter, FolderOpen, FolderTree, LoaderCircle, RotateCcw, ShieldAlert, Trash2, Upload, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -19,7 +19,6 @@ type Semester = { id: string; name: string; aliases: string[]; subjects: Subject
 type StudyYear = { id: string; label: string; aliases: string[]; semesters: Semester[] };
 type Tab = "subjects" | "all" | "recent" | "review";
 type Filter = "all" | "document" | "presentation" | "image" | "other";
-type TextRecord = { id: string; originalName: string; textExtractionStatus: Resource["textExtractionStatus"]; extractedText: string | null; extractedTextLength: number | null; pageCount: number | null; extractionError: string | null };
 
 function fileKind(resource: Resource): Filter {
   const type = resource.mimeType.toLowerCase();
@@ -28,7 +27,6 @@ function fileKind(resource: Resource): Filter {
   if (type.includes("pdf") || type.includes("word") || type.startsWith("text/")) return "document";
   return "other";
 }
-
 function typeName(resource: Resource) {
   const extension = resource.originalName.split(".").pop()?.toUpperCase();
   return extension && extension !== resource.originalName.toUpperCase() ? extension : resource.mimeType.split("/").pop()?.toUpperCase() || "FILE";
@@ -50,8 +48,6 @@ export default function ResourcesPage() {
   const [tab, setTab] = useState<Tab>("subjects");
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
-  const [textRecord, setTextRecord] = useState<TextRecord | null>(null);
-  const [textLoading, setTextLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
@@ -131,17 +127,6 @@ export default function ResourcesPage() {
     finally { setDeleteId(null); }
   }
 
-  async function viewText(resource: Resource) {
-    setTextLoading(true); setTextRecord(null);
-    try {
-      const response = await fetch(`/api/resources/${resource.id}/text`);
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Could not load extracted text.");
-      setTextRecord(payload.resource);
-    } catch (error) { setActionError(error instanceof Error ? error.message : "Could not load extracted text."); }
-    finally { setTextLoading(false); }
-  }
-
   const tabs: { id: Tab; label: string; icon: typeof FolderTree; count?: number }[] = [
     { id: "subjects", label: "Courses", icon: FolderTree },
     { id: "all", label: "All resources", icon: FileText },
@@ -163,10 +148,9 @@ export default function ResourcesPage() {
 
     {tab === "subjects" ? <CourseLibrary years={years} resources={resources} loading={loading} onOrganize={setSelectedResource} /> : <section className="mt-6">
       <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-lg font-semibold">{tab === "review" ? "Review your uploads" : tab === "recent" ? "Recently added" : "All resources"}</h2><p className="mt-1 text-xs leading-5 text-neutral-500">{tab === "review" ? "Files without a clear course match stay here until you choose a location." : "Each file keeps its original name and private storage location."}</p></div><span className="text-xs text-neutral-500">{visible.length} file{visible.length === 1 ? "" : "s"}</span></div>
-      {loading ? <div className="space-y-2">{Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-24 rounded-2xl bg-zinc-900" />)}</div> : visible.length === 0 ? <EmptyState review={tab === "review"} hasCourses={years.length > 0} /> : <div className="space-y-2">{visible.map((resource) => <ResourceCard key={resource.id} resource={resource} now={now} busy={busyId === resource.id} deleting={deleteId === resource.id} onOrganize={() => setSelectedResource(resource)} onRetry={() => void retry(resource)} onDelete={() => void remove(resource)} onViewText={() => void viewText(resource)} />)}</div>}
+      {loading ? <div className="space-y-2">{Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-24 rounded-2xl bg-zinc-900" />)}</div> : visible.length === 0 ? <EmptyState review={tab === "review"} hasCourses={years.length > 0} /> : <div className="space-y-2">{visible.map((resource) => <ResourceCard key={resource.id} resource={resource} now={now} busy={busyId === resource.id} deleting={deleteId === resource.id} onOrganize={() => setSelectedResource(resource)} onRetry={() => void retry(resource)} onDelete={() => void remove(resource)} />)}</div>}
     </section>}
     {selectedResource && <OrganizerDialog resource={selectedResource} years={years} busy={busyId === selectedResource.id} error={actionError} onClose={() => setSelectedResource(null)} onSave={(location) => void assign(selectedResource, location)} />}
-    {(textLoading || textRecord) && <TextDialog loading={textLoading} record={textRecord} onClose={() => { setTextRecord(null); setTextLoading(false); }} />}
   </main>;
 }
 
@@ -192,16 +176,15 @@ function PlusIcon() { return <span className="text-lg leading-none">+</span>; }
 
 function ResourceStack({ resources, onOrganize }: { resources: Resource[]; onOrganize: (resource: Resource) => void }) {
   if (!resources.length) return <p className="py-1 text-xs text-neutral-600">No files in this folder</p>;
-  return <ul className="space-y-1">{resources.map((resource) => <li key={resource.id} className="flex min-w-0 items-center gap-2 rounded-lg px-2 py-2 hover:bg-white/[0.035]"><FileText size={15} className="shrink-0 text-neutral-500" /><span className="min-w-0 flex-1 truncate text-xs text-neutral-200">{resource.originalName}</span><StatusBadge resource={resource} /><button onClick={() => onOrganize(resource)} className="min-h-8 shrink-0 rounded-lg px-2 text-[11px] text-violet-200 hover:bg-white/[0.07] hover:text-white">Move</button></li>)}</ul>;
+  return <ul className="space-y-1">{resources.map((resource) => <li key={resource.id} className="flex min-w-0 items-center gap-2 rounded-lg px-2 py-2 hover:bg-white/[0.035]"><FileText size={15} className="shrink-0 text-neutral-500" /><Link href={`/resources/${resource.id}`} className="min-w-0 flex-1 truncate text-xs text-neutral-200 hover:text-violet-100">{resource.originalName}</Link><StatusBadge resource={resource} /><button onClick={() => onOrganize(resource)} className="min-h-8 shrink-0 rounded-lg px-2 text-[11px] text-violet-200 hover:bg-white/[0.07] hover:text-white">Move</button></li>)}</ul>;
 }
 
-function ResourceCard({ resource, now, busy, deleting, onOrganize, onRetry, onDelete, onViewText }: { resource: Resource; now: number | null; busy: boolean; deleting: boolean; onOrganize: () => void; onRetry: () => void; onDelete: () => void; onViewText: () => void }) {
+function ResourceCard({ resource, now, busy, deleting, onOrganize, onRetry, onDelete }: { resource: Resource; now: number | null; busy: boolean; deleting: boolean; onOrganize: () => void; onRetry: () => void; onDelete: () => void }) {
   const location = [resource.studyYear?.label, resource.semester?.name, resource.subject?.name, resource.chapter?.name].filter(Boolean).join(" → ");
-  const processable = ["pdf", "docx", "pptx", "txt", "md"].includes(resource.originalName.split(".").pop()?.toLowerCase() ?? "");
   const staleProcessing = resource.organizationStatus === "PROCESSING" && now !== null && now - new Date(resource.updatedAt).getTime() > 3 * 60_000;
   const canRetry = resource.organizationStatus === "FAILED" || resource.organizationStatus === "NEEDS_REVIEW" || (resource.organizationStatus === "PENDING" && resource.status === "READY") || staleProcessing;
-  return <article className="min-w-0 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-3.5 sm:p-4"><div className="flex min-w-0 items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/[0.06] text-neutral-200"><FileText size={18} /></span><div className="min-w-0 flex-1"><p className="break-words text-sm font-medium text-white">{resource.originalName}</p><p className="mt-1 text-xs text-neutral-500">{typeName(resource)} <span className="px-1 text-neutral-700">·</span> {formatSize(resource.sizeBytes)} <span className="px-1 text-neutral-700">·</span> {formatAdded(resource.createdAt)}</p><div className="mt-2 flex flex-wrap items-center gap-2"><StatusBadge resource={resource} />{location ? <span className="max-w-full break-words text-xs text-neutral-400">{location}</span> : null}{resource.tags?.map((tag) => <span key={tag} className="rounded-md bg-violet-200/[0.08] px-2 py-0.5 text-[10px] text-violet-200">#{tag}</span>)}</div>{resource.organizationNote && (resource.organizationStatus === "NEEDS_REVIEW" || resource.organizationStatus === "FAILED") && <p className="mt-2 text-xs leading-5 text-amber-100/75">{resource.organizationNote}</p>}</div></div>
-    <div className="mt-3 flex flex-wrap justify-end gap-1 border-t border-white/[0.06] pt-2">{processable && resource.textExtractionStatus === "EXTRACTED" && <button onClick={onViewText} aria-label={`View extracted text for ${resource.originalName}`} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs text-neutral-400 hover:bg-white/[0.07] hover:text-white"><BookOpenText size={15} /> View text</button>}{(resource.organizationStatus === "NEEDS_REVIEW" || resource.organizationStatus === "FAILED" || resource.organizationStatus === "ORGANIZED") && <button onClick={onOrganize} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs text-violet-200 hover:bg-white/[0.07] hover:text-white"><FolderTree size={14} /> {location ? "Move" : "Choose folder"}</button>}{canRetry && <button disabled={busy} onClick={onRetry} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs text-neutral-300 hover:bg-white/[0.07] disabled:opacity-50">{busy ? <LoaderCircle size={14} className="animate-spin" /> : <RotateCcw size={14} />} Retry</button>}<button disabled={deleting} onClick={onDelete} aria-label={`Delete ${resource.originalName}`} className="grid size-9 place-items-center rounded-lg text-neutral-500 hover:bg-rose-300/10 hover:text-rose-200 disabled:opacity-50">{deleting ? <LoaderCircle size={15} className="animate-spin" /> : <Trash2 size={15} />}</button></div>
+  return <article className="min-w-0 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-3.5 sm:p-4"><div className="flex min-w-0 items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/[0.06] text-neutral-200"><FileText size={18} /></span><div className="min-w-0 flex-1"><Link href={`/resources/${resource.id}`} className="break-words text-sm font-medium text-white hover:text-violet-100">{resource.originalName}</Link><p className="mt-1 text-xs text-neutral-500">{typeName(resource)} <span className="px-1 text-neutral-700">·</span> {formatSize(resource.sizeBytes)} <span className="px-1 text-neutral-700">·</span> {formatAdded(resource.createdAt)}</p><div className="mt-2 flex flex-wrap items-center gap-2"><StatusBadge resource={resource} />{location ? <span className="max-w-full break-words text-xs text-neutral-400">{location}</span> : null}{resource.tags?.map((tag) => <span key={tag} className="rounded-md bg-violet-200/[0.08] px-2 py-0.5 text-[10px] text-violet-200">#{tag}</span>)}</div>{resource.organizationNote && (resource.organizationStatus === "NEEDS_REVIEW" || resource.organizationStatus === "FAILED") && <p className="mt-2 text-xs leading-5 text-amber-100/75">{resource.organizationNote}</p>}</div></div>
+    <div className="mt-3 flex flex-wrap justify-end gap-1 border-t border-white/[0.06] pt-2"><Link href={`/resources/${resource.id}`} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs text-violet-200 hover:bg-white/[0.07] hover:text-white"><Eye size={15} /> Preview</Link>{(resource.organizationStatus === "NEEDS_REVIEW" || resource.organizationStatus === "FAILED" || resource.organizationStatus === "ORGANIZED") && <button onClick={onOrganize} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs text-neutral-300 hover:bg-white/[0.07] hover:text-white"><FolderTree size={14} /> {location ? "Move" : "Choose folder"}</button>}{canRetry && <button disabled={busy} onClick={onRetry} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs text-neutral-300 hover:bg-white/[0.07] disabled:opacity-50">{busy ? <LoaderCircle size={14} className="animate-spin" /> : <RotateCcw size={14} />} Retry</button>}<button disabled={deleting} onClick={onDelete} aria-label={`Delete ${resource.originalName}`} className="grid size-9 place-items-center rounded-lg text-neutral-500 hover:bg-rose-300/10 hover:text-rose-200 disabled:opacity-50">{deleting ? <LoaderCircle size={15} className="animate-spin" /> : <Trash2 size={15} />}</button></div>
   </article>;
 }
 
@@ -230,8 +213,4 @@ function OrganizerDialog({ resource, years, busy, error, onClose, onSave }: { re
     {years.length === 0 ? <div className="mt-5 rounded-xl border border-dashed border-zinc-700 p-4 text-sm text-neutral-400">Create your academic year and course folders first. <Link href="/resources/courses" className="mt-2 inline-flex text-violet-200 underline">Manage course folders</Link></div> : <div className="mt-5 space-y-3"><label className="block text-xs font-medium text-neutral-300">Academic year<select value={yearId} onChange={(event) => { setYearId(event.target.value); setSemesterId(""); setSubjectId(""); setChapterId(""); }} className={`${selectClass} mt-1.5`}><option value="">Choose or leave unsorted</option>{years.map((year) => <option key={year.id} value={year.id}>{year.label}</option>)}</select></label><label className="block text-xs font-medium text-neutral-300">Semester<select disabled={!yearId} value={semesterId} onChange={(event) => { setSemesterId(event.target.value); setSubjectId(""); setChapterId(""); }} className={`${selectClass} mt-1.5 disabled:opacity-40`}><option value="">Choose a semester</option>{semesters.map((semester) => <option key={semester.id} value={semester.id}>{semester.name}</option>)}</select></label><label className="block text-xs font-medium text-neutral-300">Subject<select disabled={!semesterId} value={subjectId} onChange={(event) => { setSubjectId(event.target.value); setChapterId(""); }} className={`${selectClass} mt-1.5 disabled:opacity-40`}><option value="">Choose a subject</option>{subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select></label><label className="block text-xs font-medium text-neutral-300">Chapter <span className="font-normal text-neutral-500">(optional)</span><select disabled={!subjectId} value={chapterId} onChange={(event) => setChapterId(event.target.value)} className={`${selectClass} mt-1.5 disabled:opacity-40`}><option value="">No chapter</option>{chapters.map((chapter) => <option key={chapter.id} value={chapter.id}>{chapter.name}</option>)}</select></label></div>}
     {error && <p role="alert" className="mt-3 text-sm text-rose-200">{error}</p>}<div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between"><button disabled={busy} onClick={() => onSave({ studyYearId: null, semesterId: null, subjectId: null, chapterId: null })} className="min-h-11 rounded-xl border border-zinc-700 px-4 text-sm text-neutral-300 hover:bg-white/[0.05] disabled:opacity-50">Move to Unsorted</button><div className="flex gap-2"><button onClick={onClose} className="min-h-11 flex-1 rounded-xl px-4 text-sm text-neutral-400 hover:bg-white/[0.05] sm:flex-none">Cancel</button><button disabled={busy || !subjectId} onClick={() => onSave({ studyYearId: yearId || null, semesterId: semesterId || null, subjectId: subjectId || null, chapterId: chapterId || null })} className="min-h-11 flex-1 rounded-xl bg-white px-4 text-sm font-semibold text-black hover:bg-neutral-200 disabled:opacity-50 sm:flex-none">{busy ? "Saving…" : "Save location"}</button></div></div>
   </section></div>;
-}
-
-function TextDialog({ loading, record, onClose }: { loading: boolean; record: TextRecord | null; onClose: () => void }) {
-  return <div className="fixed inset-0 z-[60] grid place-items-center bg-black/75 p-4 backdrop-blur-sm"><section role="dialog" aria-modal="true" aria-label="Extracted text" className="flex max-h-[85dvh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-950"><header className="flex items-start justify-between border-b border-zinc-800 px-4 py-4 sm:px-5"><div className="min-w-0"><h2 className="font-semibold">Readable document text</h2><p className="mt-1 truncate text-xs text-neutral-500">{record?.originalName ?? "Loading…"}{record?.pageCount ? ` · ${record.pageCount} pages` : ""}</p></div><button onClick={onClose} aria-label="Close extracted text" className="grid size-9 shrink-0 place-items-center rounded-lg text-neutral-400 hover:bg-white/[0.08]"><X size={18} /></button></header><div className="min-h-40 overflow-y-auto p-4 sm:p-5">{loading ? <p className="text-sm text-neutral-400">Loading extracted text…</p> : record?.extractedText ? <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-neutral-300">{record.extractedText}</pre> : <p className="text-sm leading-6 text-neutral-400">{record?.extractionError || "No selectable text was found. Scans and images are not read automatically in this version."}</p>}</div></section></div>;
 }
