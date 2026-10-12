@@ -45,22 +45,7 @@ export default function SignUpPage() {
       name: data.name,
       email: data.email,
       password: data.password,
-      callbackURL: "/",
-      fetchOptions: {
-              onSuccess: () => {
-                toast.add({
-                  type: "success",
-                  description: "Sign up successful! Redirecting to dashboard...",
-                });
-                router.push("/");
-              },
-              onError: () => {
-                toast.add({
-                  type: "error",
-                  description: "Sign up failed. Please try again.",
-                });
-              }
-            }
+      callbackURL: "/dashboard",
     });
 
     setIsSubmitting(false);
@@ -70,7 +55,11 @@ export default function SignUpPage() {
       return;
     }
 
-    router.push("/");
+    toast.add({
+      type: "success",
+      description: "Account created. Redirecting to your dashboard...",
+    });
+    router.replace("/dashboard");
   };
 
   const signInWithGoogle = async () => {
@@ -79,7 +68,7 @@ export default function SignUpPage() {
 
     const result = await authClient.signIn.social({
       provider: "google",
-      callbackURL: "/",
+      callbackURL: "/dashboard",
     });
 
     if (result?.error) {
