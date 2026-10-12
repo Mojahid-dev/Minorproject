@@ -76,7 +76,7 @@ export default function TasksPage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-[1440px] overflow-x-clip pb-10 text-white">
-      <header className="relative isolate flex flex-wrap items-end justify-between gap-4 overflow-hidden rounded-[28px] border border-white/[0.08] bg-gradient-to-br from-[#1a1b20] to-[#111214] p-5 sm:p-7">
+      <header className="relative isolate flex flex-wrap items-end justify-between gap-4 overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#1a1b20] to-[#111214] p-4 sm:rounded-[28px] sm:p-7">
         <div aria-hidden="true" className="absolute -right-16 -top-32 -z-10 size-80 rounded-full bg-[radial-gradient(circle,rgba(196,181,253,0.16),transparent_68%)]" />
         <div>
           <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.17em] text-violet-200"><Sparkles size={14} /> Your planner</p>
@@ -86,15 +86,15 @@ export default function TasksPage() {
         <Link href="/calendar" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-violet-100"><CalendarDays size={17} /> Open calendar <ArrowRight size={15} /></Link>
       </header>
 
-      <div className="mt-4 grid w-full min-w-0 grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
+      <div className="mt-3 grid w-full min-w-0 grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
         <TaskMetric icon={CalendarDays} label="Due today" value={dueToday.length} detail={dueToday.length ? `${dueToday.filter((task) => task.completedAt).length} completed` : "Nothing on the list"} tone="violet" />
         <TaskMetric icon={CircleAlert} label="Overdue" value={overdue.length} detail={overdue.length ? "Bring these back into focus" : "You’re up to date"} tone={overdue.length ? "rose" : "neutral"} />
         <TaskMetric icon={CheckCheck} label="Completed" value={completed.length} detail={tasks.length ? `${completionRate}% of all tasks` : "Your first win is waiting"} tone="emerald" />
       </div>
 
-      <form onSubmit={createTask} className="mt-5 w-full min-w-0 rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#191a1d] to-[#111214] p-3.5 sm:mt-7 sm:p-5">
+      <form onSubmit={createTask} className="mt-4 w-full min-w-0 rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#191a1d] to-[#111214] p-3 sm:mt-7 sm:p-5">
         <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-neutral-200"><Plus size={17} /> Quick add a task</div>
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2.5 sm:gap-3 md:grid-cols-[minmax(0,1fr)_190px_auto]">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2 sm:gap-3 md:grid-cols-[minmax(0,1fr)_190px_auto]">
           <label className="sr-only" htmlFor="new-task-title">Task title</label>
           <input id="new-task-title" required maxLength={180} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="What do you need to do?" className="col-span-2 h-11 min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 text-sm text-white outline-none placeholder:text-neutral-500 focus:border-neutral-400 md:col-span-1" />
           <label className="sr-only" htmlFor="new-task-date">Due date</label>
@@ -107,7 +107,7 @@ export default function TasksPage() {
         {formError && <p role="alert" className="mt-2 text-sm text-red-300">{formError}</p>}
       </form>
 
-      <div className="mt-4 grid w-full min-w-0 grid-cols-1 items-start gap-4 sm:mt-5 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="mt-4 grid w-full min-w-0 grid-cols-1 items-start gap-3 sm:mt-5 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
       <section className="w-full min-w-0 rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#17181c] to-[#101114] p-3.5 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><div className="flex items-center gap-2 text-sm text-neutral-400"><ListTodo size={17} /> {view === "date" ? "Selected day" : "Personal tasks"}</div><h2 className="mt-1.5 text-xl font-semibold">{view === "date" ? formatTaskDate(selectedDate) : "Your tasks"}</h2></div>

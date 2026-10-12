@@ -17,7 +17,6 @@ import {
   LayoutGrid,
   ListTodo,
   LogOut,
-  Menu,
   MessageCircle,
   Plus,
   Search,
@@ -25,7 +24,6 @@ import {
   Upload,
   UserRound,
   UsersRound,
-  X,
 } from "lucide-react";
 import { signOutAndClearCookies, useSession } from "@/lib/auth-client";
 import { localDateString, type TaskRecord } from "@/lib/task-utils";
@@ -40,10 +38,10 @@ const navigation = [
 ];
 
 function MobileNavLink({ href, label, icon: Icon, active, badge, onNavigate }: { href: string; label: string; icon: typeof Home; active: boolean; badge?: number; onNavigate?: () => void }) {
-  return <Link href={href} onClick={onNavigate} aria-current={active ? "page" : undefined} className={`relative flex min-h-[58px] flex-col items-center justify-end gap-1 rounded-xl pb-1 text-[10px] font-medium transition ${active ? "text-white" : "text-neutral-500 hover:text-neutral-200"}`}>
-    <span className={`grid size-8 place-items-center rounded-xl transition ${active ? "bg-white/[0.1] text-white" : "text-current"}`}><Icon size={20} strokeWidth={active ? 2.2 : 1.8} /></span>
-    {badge ? <span aria-label={`${badge} active tasks`} className="absolute right-[calc(50%-1.25rem)] top-1 grid min-h-4 min-w-4 place-items-center rounded-full border border-[#111214] bg-violet-200 px-1 text-[9px] font-bold leading-none text-zinc-950">{badge > 99 ? "99+" : badge}</span> : null}
-    <span>{label}</span>
+  return <Link href={href} onClick={onNavigate} aria-current={active ? "page" : undefined} className={`group relative flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold transition-[color,transform] duration-200 motion-reduce:transition-none active:scale-95 ${active ? "text-white" : "text-neutral-500 hover:text-neutral-200"}`}>
+    <span className={`relative grid size-9 place-items-center rounded-[14px] transition-[background-color,transform] duration-300 ${active ? "-translate-y-0.5 bg-white/[0.12] text-white" : "text-current group-hover:bg-white/[0.05]"}`}><Icon size={20} strokeWidth={active ? 2.3 : 1.8} />{active && <span className="absolute -bottom-1.5 size-1 rounded-full bg-violet-200" />}</span>
+    {badge ? <span aria-label={`${badge} active tasks`} className="absolute right-[calc(50%-1.4rem)] top-1 grid min-h-4 min-w-4 place-items-center rounded-full border-2 border-[#111214] bg-violet-200 px-1 text-[9px] font-bold leading-none text-zinc-950">{badge > 99 ? "99+" : badge}</span> : null}
+    <span className="max-w-full truncate">{label}</span>
   </Link>;
 }
 
@@ -60,7 +58,6 @@ function ZohraMark({ compact = false }: { compact?: boolean }) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [resourceCount, setResourceCount] = useState<number | null>(null);
@@ -125,12 +122,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <main className="h-dvh w-full overflow-hidden overflow-x-clip bg-zinc-950 text-neutral-100">
-      <div className="flex h-full w-full min-w-0 overflow-hidden border border-zinc-800 bg-zinc-950 shadow-[0_25px_80px_rgba(0,0,0,0.4)]">
-        <aside className={`${collapsed ? "lg:w-[86px]" : "lg:w-[272px]"} fixed inset-y-0 left-0 z-40 flex h-dvh w-[min(280px,calc(100vw_-_2rem))] shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-zinc-800 bg-black px-4 py-5 shadow-xl transition-[width,transform] duration-200 lg:sticky lg:top-0 lg:translate-x-0 lg:overflow-visible ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
+    <main className="min-h-dvh w-full min-w-0 overflow-x-clip bg-zinc-950 text-neutral-100 lg:h-dvh lg:overflow-hidden">
+      <div className="flex min-h-dvh w-full min-w-0 flex-col border-zinc-800 bg-zinc-950 lg:h-full lg:flex-row lg:overflow-hidden lg:border lg:shadow-[0_25px_80px_rgba(0,0,0,0.4)]">
+        <aside className={`${collapsed ? "lg:w-[86px]" : "lg:w-[272px]"} hidden shrink-0 flex-col border-r border-zinc-800 bg-black px-4 py-5 transition-[width] duration-200 lg:sticky lg:top-0 lg:flex lg:h-dvh lg:overflow-y-auto`}>
           <div className="flex items-center justify-between px-2">
             <ZohraMark compact={collapsed} />
-            <button onClick={() => setMobileMenuOpen(false)} aria-label="Close menu" className="grid size-8 place-items-center rounded-lg text-neutral-500 transition hover:bg-white/10 hover:text-white lg:hidden"><X size={18} /></button>
             {!collapsed && <button onClick={() => setCollapsed(true)} aria-label="Collapse sidebar" className="hidden size-8 place-items-center rounded-lg text-neutral-500 transition hover:bg-white/10 hover:text-white lg:grid"><ChevronLeft size={18} /></button>}
           </div>
           {collapsed && <button onClick={() => setCollapsed(false)} aria-label="Expand sidebar" className="mt-5 hidden size-10 place-items-center self-center rounded-xl bg-zinc-800 text-white transition hover:bg-zinc-700 lg:grid"><ChevronRight size={18} /></button>}
@@ -144,7 +140,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 const className = `flex h-11 w-full items-center rounded-xl border px-3 text-sm font-medium transition ${isActive ? "relative isolate overflow-hidden border-white/15 bg-white/[0.09] text-white shadow-[0_8px_24px_rgba(0,0,0,0.24)]" : "border-transparent text-neutral-500 hover:bg-white/[0.06] hover:text-neutral-200"} ${unavailable ? "cursor-not-allowed opacity-60" : ""}`;
                 const content = <><Icon size={19} strokeWidth={isActive ? 2.4 : 2} /><span className="ml-3 flex-1 text-left">{!collapsed && label}</span>{!collapsed && unavailable && <span className="rounded-md bg-zinc-800 px-1.5 py-0.5 text-[10px] text-neutral-400">Soon</span>}{!collapsed && badge && count !== null && <span className="rounded-md bg-zinc-800 px-1.5 py-0.5 text-[11px] font-semibold text-neutral-300">{count}</span>}</>;
                 if (unavailable || !href) return <div key={label} aria-disabled="true" title="Team collaboration is coming soon" className={className}>{content}</div>;
-                return <Link key={label} href={href} onClick={() => setMobileMenuOpen(false)} title={collapsed ? label : undefined} aria-current={isActive ? "page" : undefined} className={className}>{content}</Link>;
+                return <Link key={label} href={href} title={collapsed ? label : undefined} aria-current={isActive ? "page" : undefined} className={className}>{content}</Link>;
               })}
             </nav>
           </div>
@@ -172,11 +168,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        {mobileMenuOpen && <button type="button" aria-label="Close menu overlay" onClick={() => setMobileMenuOpen(false)} className="fixed inset-0 z-30 bg-black/50 lg:hidden" />}
-        <section className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-clip bg-zinc-950">
+        <section className="min-w-0 flex-1 overflow-x-clip bg-zinc-950 lg:min-h-0 lg:overflow-y-auto">
           <header className="sticky top-0 z-10 flex h-16 items-center border-b border-zinc-800 bg-zinc-950/95 px-3 backdrop-blur-xl sm:h-[76px] sm:px-6 lg:px-8">
-            <button onClick={() => { setMobileMenuOpen(true); setMobileMoreOpen(false); }} className="mr-2 grid size-10 shrink-0 place-items-center rounded-xl text-neutral-300 transition hover:bg-white/10 hover:text-white lg:hidden" aria-label="Open workspace menu"><Menu size={22} /></button>
-            <Link href="/dashboard" className="mr-3 flex shrink-0 items-center lg:hidden"><ZohraMark /></Link>
+            <Link href="/dashboard" className="mr-3 flex min-w-0 shrink items-center lg:hidden"><ZohraMark /></Link>
             <div className="relative hidden min-w-0 max-w-sm flex-1 lg:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-600" size={18} />
               <input aria-label="Search coming soon" title="Search is coming soon" disabled placeholder="Search coming soon" className="h-10 w-full cursor-not-allowed rounded-xl border border-zinc-800 bg-zinc-900 pl-10 pr-3 text-sm text-neutral-500 placeholder:text-neutral-600" />
@@ -191,31 +185,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
           </header>
-          <div className="w-full min-w-0 p-4 pb-[calc(7.25rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(7.25rem+env(safe-area-inset-bottom))] lg:p-8 lg:pb-8">{children}</div>
+          <div className="w-full min-w-0 p-3 pb-[calc(6.75rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(6.75rem+env(safe-area-inset-bottom))] lg:p-8 lg:pb-8">{children}</div>
         </section>
-        {!mobileMenuOpen && <>
+        <>
           {mobileMoreOpen && <button type="button" aria-label="Close more navigation" onClick={() => setMobileMoreOpen(false)} className="fixed inset-0 z-40 bg-black/45 lg:hidden" />}
-          <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.09] bg-[#111214]/95 px-2 pt-2 shadow-[0_-12px_40px_rgba(0,0,0,0.4)] backdrop-blur-2xl [padding-bottom:env(safe-area-inset-bottom)] lg:hidden">
-            {mobileMoreOpen && <div role="menu" aria-label="More workspace links" className="absolute bottom-[calc(100%+0.75rem)] right-3 z-50 w-[min(18rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-white/10 bg-[#191a1d] p-2 shadow-2xl">
+          <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 motion-safe:animate-mobile-dock-in lg:hidden">
+            {mobileMoreOpen && <div role="menu" aria-label="More workspace links" className="absolute bottom-[calc(100%+0.75rem)] right-3 z-50 max-h-[min(70dvh,34rem)] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-[#191a1d] p-2 shadow-2xl">
               <p className="px-3 pb-2 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-500">Your workspace</p>
+              <section aria-label="Today tasks" className="mb-2 rounded-xl border border-white/[0.07] bg-black/25 p-3">
+                <div className="flex items-center justify-between"><Link role="menuitem" href={`/tasks?date=${today}`} onClick={() => setMobileMoreOpen(false)} className="flex items-center gap-2 text-sm font-semibold text-neutral-100"><CalendarDays size={16} />Today</Link><span className="text-[11px] text-neutral-400">{completedToday}/{todaysTasks.length} done</span></div>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.08]" role="progressbar" aria-label="Today task progress" aria-valuemin={0} aria-valuemax={todaysTasks.length || 1} aria-valuenow={completedToday}><div className="h-full rounded-full bg-gradient-to-r from-violet-200 to-sky-100 transition-[width] duration-500" style={{ width: `${todaysTasks.length ? (completedToday / todaysTasks.length) * 100 : 0}%` }} /></div>
+                <div className="mt-2 space-y-1">{todaysTasks.slice(0, 2).map((task) => <button key={task.id} role="menuitemcheckbox" aria-checked={Boolean(task.completedAt)} onClick={() => void toggleTask(task)} className="flex min-h-8 w-full min-w-0 items-center gap-2 rounded-lg px-1 text-left text-xs text-neutral-300 hover:bg-white/[0.05]"><span className={`grid size-4 shrink-0 place-items-center rounded-full border ${task.completedAt ? "border-violet-200 bg-violet-200 text-zinc-950" : "border-zinc-600"}`}>{task.completedAt && <span className="text-[10px] font-bold">✓</span>}</span><span className={`min-w-0 flex-1 truncate ${task.completedAt ? "text-neutral-500 line-through" : ""}`}>{task.title}</span></button>)}{todaysTasks.length === 0 && <p className="px-1 py-1 text-xs text-neutral-500">Nothing due today. Enjoy the breathing room.</p>}{todaysTasks.length > 2 && <p className="pl-7 text-[11px] text-neutral-500">+{todaysTasks.length - 2} more today</p>}</div>
+                <Link role="menuitem" href={`/tasks?date=${today}`} onClick={() => setMobileMoreOpen(false)} className="mt-2 flex min-h-9 items-center justify-between rounded-lg bg-white/[0.07] px-2.5 text-xs font-medium text-neutral-200">Open today&apos;s tasks<ArrowRight size={14} /></Link>
+              </section>
               <Link role="menuitem" href="/resources" onClick={() => setMobileMoreOpen(false)} className="flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm text-neutral-200 hover:bg-white/[0.07]"><FolderKanban size={18} />Resources{resourceCount !== null && <span className="ml-auto rounded-md bg-white/[0.08] px-2 py-0.5 text-xs text-neutral-300">{resourceCount}</span>}</Link>
               <Link role="menuitem" href="/profile" onClick={() => setMobileMoreOpen(false)} className="flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm text-neutral-200 hover:bg-white/[0.07]"><UserRound size={18} />Profile</Link>
               <Link role="menuitem" href="/settings" onClick={() => setMobileMoreOpen(false)} className="flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm text-neutral-200 hover:bg-white/[0.07]"><Settings size={18} />Settings</Link>
               <div className="my-1 border-t border-white/[0.07]" />
               <button role="menuitem" onClick={() => void handleSignOut()} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm text-neutral-400 hover:bg-white/[0.07] hover:text-white"><LogOut size={18} />Sign out</button>
             </div>}
-            <nav aria-label="Mobile navigation" className="mx-auto grid max-w-lg grid-cols-5 items-end gap-1">
+            <nav aria-label="Mobile navigation" className="relative mx-auto grid max-w-lg grid-cols-5 items-center gap-1 rounded-[26px] border border-white/[0.1] bg-[#17181c]/95 px-2 py-1.5 shadow-[0_14px_45px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
               <MobileNavLink href="/dashboard" label="Home" icon={Home} active={pathname === "/dashboard"} onNavigate={() => setMobileMoreOpen(false)} />
               <MobileNavLink href="/tasks" label="Tasks" icon={ListTodo} active={pathname.startsWith("/tasks")} badge={activeTaskCount || undefined} onNavigate={() => setMobileMoreOpen(false)} />
-              <Link href="/upload" onClick={() => setMobileMoreOpen(false)} aria-label="Add a resource" className="group flex min-h-[58px] flex-col items-center justify-end gap-1 pb-1 text-[10px] font-medium text-neutral-400">
-                <span className="-mt-6 grid size-12 place-items-center rounded-2xl border border-white/20 bg-white text-zinc-950 shadow-[0_8px_26px_rgba(255,255,255,0.18)] transition group-hover:-translate-y-0.5 group-hover:bg-neutral-200"><Plus size={23} strokeWidth={2.2} /></span>
+              <Link href="/upload" onClick={() => setMobileMoreOpen(false)} aria-label="Add a resource" className="group flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 text-[10px] font-semibold text-neutral-400">
+                <span className="grid size-11 place-items-center rounded-2xl border border-white/20 bg-white text-zinc-950 shadow-[0_5px_20px_rgba(255,255,255,0.16)] transition duration-300 motion-reduce:transition-none group-hover:-translate-y-1 group-hover:rotate-90 group-hover:bg-violet-100 group-active:scale-90"><Plus size={22} strokeWidth={2.2} /></span>
                 <span>Add</span>
               </Link>
               <MobileNavLink href="/calendar" label="Calendar" icon={CalendarDays} active={pathname.startsWith("/calendar")} onNavigate={() => setMobileMoreOpen(false)} />
-              <button type="button" aria-haspopup="menu" aria-expanded={mobileMoreOpen} onClick={() => setMobileMoreOpen((open) => !open)} className={`flex min-h-[58px] flex-col items-center justify-end gap-1 rounded-xl pb-1 text-[10px] font-medium transition ${mobileMoreOpen || pathname.startsWith("/resources") || pathname.startsWith("/profile") || pathname.startsWith("/settings") ? "text-white" : "text-neutral-500 hover:text-neutral-200"}`}><Ellipsis size={21} strokeWidth={2} /><span>More</span></button>
+              <button type="button" aria-haspopup="menu" aria-expanded={mobileMoreOpen} onClick={() => setMobileMoreOpen((open) => !open)} className={`group flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold transition-colors ${mobileMoreOpen || pathname.startsWith("/resources") || pathname.startsWith("/profile") || pathname.startsWith("/settings") ? "text-white" : "text-neutral-500 hover:text-neutral-200"}`}><span className={`grid size-9 place-items-center rounded-[14px] transition-all duration-300 motion-reduce:transition-none ${mobileMoreOpen ? "-translate-y-0.5 rotate-90 bg-white/[0.12]" : "group-hover:bg-white/[0.05]"}`}><Ellipsis size={21} strokeWidth={2} /></span><span>More</span></button>
             </nav>
           </div>
-        </>}
+        </>
       </div>
     </main>
   );
