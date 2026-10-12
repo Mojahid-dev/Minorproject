@@ -1,7 +1,7 @@
 export const MAX_RESOURCE_SIZE_BYTES = 100 * 1024 * 1024;
 
 const supportedExtensions = new Set([
-  "pdf", "doc", "docx", "ppt", "pptx", "txt", "md", "jpg", "jpeg", "png" 
+  "pdf", "doc", "docx", "ppt", "pptx", "txt", "md", "jpg", "jpeg", "png", "mp4", "mov", "avi", "mkv", "webm"
 ]);
 
 export const SUPPORTED_RESOURCE_MIME_TYPES = [
