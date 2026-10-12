@@ -21,12 +21,15 @@ import {
   Plus,
   Search,
   Settings,
+  Sun,
+  Moon,
   Upload,
   UserRound,
   UsersRound,
 } from "lucide-react";
 import { signOutAndClearCookies, useSession } from "@/lib/auth-client";
 import { localDateString, type TaskRecord } from "@/lib/task-utils";
+import { useTheme } from "next-themes";
 
 const navigation = [
   { label: "Overview", href: "/dashboard", icon: Home },
@@ -63,6 +66,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [resourceCount, setResourceCount] = useState<number | null>(null);
   const pathname = usePathname();
   const router = useRouter();
+  const { resolvedTheme, setTheme } = useTheme();
+  const isLightTheme = resolvedTheme === "light";
   const { data: session } = useSession();
   const profileName = session?.user?.name || "Zohra";
   const profileImage = session?.user?.image || "";
@@ -122,7 +127,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <main className="min-h-dvh w-full min-w-0 overflow-x-clip bg-zinc-950 text-neutral-100 lg:h-dvh lg:overflow-hidden">
+    <main className="workspace-shell min-h-dvh w-full min-w-0 overflow-x-clip bg-zinc-950 text-neutral-100 lg:h-dvh lg:overflow-hidden">
       <div className="flex min-h-dvh w-full min-w-0 flex-col border-zinc-800 bg-zinc-950 lg:h-full lg:flex-row lg:overflow-hidden lg:border lg:shadow-[0_25px_80px_rgba(0,0,0,0.4)]">
         <aside className={`${collapsed ? "lg:w-[86px]" : "lg:w-[272px]"} hidden shrink-0 flex-col border-r border-zinc-800 bg-black px-4 py-5 transition-[width] duration-200 lg:sticky lg:top-0 lg:flex lg:h-dvh lg:overflow-y-auto`}>
           <div className="flex items-center justify-between px-2">
@@ -168,8 +173,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        <section className="min-w-0 flex-1 overflow-x-clip bg-zinc-950 lg:min-h-0 lg:overflow-y-auto">
-          <header className="sticky top-0 z-10 flex h-16 items-center border-b border-zinc-800 bg-zinc-950/95 px-3 backdrop-blur-xl sm:h-[76px] sm:px-6 lg:px-8">
+        <section className="mobile-app-content min-w-0 flex-1 overflow-x-clip bg-zinc-950 lg:min-h-0 lg:overflow-y-auto">
+          <header className="mobile-app-header sticky top-0 z-10 flex h-16 items-center border-b border-zinc-800 bg-zinc-950/95 px-3 backdrop-blur-xl sm:h-[76px] sm:px-6 lg:px-8">
             <Link href="/dashboard" className="mr-3 flex min-w-0 shrink items-center lg:hidden"><ZohraMark /></Link>
             <div className="relative hidden min-w-0 max-w-sm flex-1 lg:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-600" size={18} />
@@ -179,6 +184,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <button aria-label="Messages coming soon" title="Messages are coming soon" disabled className="hidden size-10 cursor-not-allowed place-items-center rounded-xl text-neutral-600 sm:grid"><MessageCircle size={20} /></button>
               <button aria-label="Notifications coming soon" title="Notifications are coming soon" disabled className="hidden size-10 cursor-not-allowed place-items-center rounded-xl text-neutral-600 sm:grid"><Bell size={20} /></button>
               <Link href="/upload" aria-label="Add resources" className="hidden items-center gap-2 rounded-xl bg-white px-3.5 py-2.5 text-sm font-semibold text-black shadow-[0_8px_18px_rgba(0,0,0,0.18)] transition hover:bg-neutral-200 lg:flex"><Plus size={17} />Add resources</Link>
+              <button type="button" onClick={() => setTheme(isLightTheme ? "dark" : "light")} aria-label={`Switch to ${isLightTheme ? "dark" : "light"} mode`} title={`Switch to ${isLightTheme ? "dark" : "light"} mode`} className="grid size-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-neutral-300 transition hover:bg-white/[0.1] hover:text-white motion-reduce:transition-none"><span className="transition-transform duration-300 hover:rotate-12 motion-reduce:transition-none">{isLightTheme ? <Moon size={17} /> : <Sun size={17} />}</span></button>
               <div className="mx-1 hidden h-8 w-px bg-white/10 sm:block" />
               <Link href="/profile" aria-label={`Open ${profileName} profile`} title={profileName} className="group flex shrink-0 items-center gap-1 rounded-xl px-1.5 py-1 text-neutral-300 transition hover:bg-white/[0.06] hover:text-white">
                 <span className="grid size-9 place-items-center overflow-hidden rounded-full border border-white/35 bg-gradient-to-br from-zinc-100 to-zinc-400 text-xs font-bold text-zinc-900">{profileImage ? <Image src={profileImage} alt="" width={36} height={36} unoptimized className="size-full object-cover" /> : profileInitials}</span><ChevronDown size={14} className="hidden sm:block" />
@@ -189,7 +195,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </section>
         <>
           {mobileMoreOpen && <button type="button" aria-label="Close more navigation" onClick={() => setMobileMoreOpen(false)} className="fixed inset-0 z-40 bg-black/45 lg:hidden" />}
-          <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 motion-safe:animate-mobile-dock-in lg:hidden">
+          <div className="mobile-app-dock fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 motion-safe:animate-mobile-dock-in lg:hidden">
             {mobileMoreOpen && <div role="menu" aria-label="More workspace links" className="absolute bottom-[calc(100%+0.75rem)] right-3 z-50 max-h-[min(70dvh,34rem)] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-[#191a1d] p-2 shadow-2xl">
               <p className="px-3 pb-2 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-500">Your workspace</p>
               <section aria-label="Today tasks" className="mb-2 rounded-xl border border-white/[0.07] bg-black/25 p-3">
@@ -201,6 +207,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link role="menuitem" href="/resources" onClick={() => setMobileMoreOpen(false)} className="flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm text-neutral-200 hover:bg-white/[0.07]"><FolderKanban size={18} />Resources{resourceCount !== null && <span className="ml-auto rounded-md bg-white/[0.08] px-2 py-0.5 text-xs text-neutral-300">{resourceCount}</span>}</Link>
               <Link role="menuitem" href="/profile" onClick={() => setMobileMoreOpen(false)} className="flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm text-neutral-200 hover:bg-white/[0.07]"><UserRound size={18} />Profile</Link>
               <Link role="menuitem" href="/settings" onClick={() => setMobileMoreOpen(false)} className="flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm text-neutral-200 hover:bg-white/[0.07]"><Settings size={18} />Settings</Link>
+              <button role="menuitem" onClick={() => setTheme(isLightTheme ? "dark" : "light")} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm text-neutral-200 transition hover:bg-white/[0.07]"><span className="grid size-8 place-items-center rounded-lg bg-violet-200/10 text-violet-100">{isLightTheme ? <Moon size={17} /> : <Sun size={17} />}</span>{isLightTheme ? "Switch to dark mode" : "Switch to light mode"}</button>
               <div className="my-1 border-t border-white/[0.07]" />
               <button role="menuitem" onClick={() => void handleSignOut()} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm text-neutral-400 hover:bg-white/[0.07] hover:text-white"><LogOut size={18} />Sign out</button>
             </div>}

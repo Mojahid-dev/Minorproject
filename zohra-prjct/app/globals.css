@@ -185,6 +185,152 @@
   }
 }
 
+/* Keep workspace theme overrides scoped to the authenticated app, leaving the
+   public marketing pages on their own visual system. */
+.light .workspace-shell {
+  background-color: #f3f4f8 !important;
+  color: #20212b !important;
+}
+
+.light .workspace-shell > div,
+.light .workspace-shell .mobile-app-content {
+  background-color: #f3f4f8 !important;
+}
+
+.light .workspace-shell aside {
+  background-color: #ffffff !important;
+  border-color: #e3e5ed !important;
+}
+
+.light .workspace-shell [class*="bg-[#"] {
+  background-color: #ffffff !important;
+}
+
+.light .workspace-shell [class*="bg-gradient-to-br"] {
+  background-image: linear-gradient(145deg, #ffffff, #f3f4f8) !important;
+}
+
+.light .workspace-shell [class*="bg-zinc-950"],
+.light .workspace-shell [class*="bg-zinc-900"] {
+  background-color: #f8f9fc !important;
+}
+
+.light .workspace-shell [class*="bg-black"] {
+  background-color: rgb(241 243 248 / 90%) !important;
+}
+
+.light .workspace-shell [class*="text-white"],
+.light .workspace-shell [class*="text-neutral-100"],
+.light .workspace-shell [class*="text-neutral-200"] {
+  color: #222431 !important;
+}
+
+.light .workspace-shell [class*="text-neutral-300"] {
+  color: #414657 !important;
+}
+
+.light .workspace-shell [class*="text-neutral-400"],
+.light .workspace-shell [class*="text-neutral-500"],
+.light .workspace-shell [class*="text-neutral-600"] {
+  color: #687084 !important;
+}
+
+.light .workspace-shell [class*="border-white/"],
+.light .workspace-shell [class*="border-zinc-800"],
+.light .workspace-shell [class*="border-zinc-700"] {
+  border-color: #e2e5ed !important;
+}
+
+.light .workspace-shell .mobile-app-header {
+  background-color: rgb(248 249 252 / 94%) !important;
+  border-color: #e1e4ed !important;
+}
+
+.light .workspace-shell .mobile-app-dock nav {
+  background-color: rgb(255 255 255 / 94%) !important;
+  border-color: #e0e3ec !important;
+  box-shadow: 0 14px 42px rgb(43 47 67 / 16%);
+}
+
+.light .workspace-shell nav[aria-label="Mobile navigation"] [aria-current="page"] span:first-child,
+.light .workspace-shell nav[aria-label="Mobile navigation"] button[aria-expanded="true"] span:first-child {
+  background-color: #eee9ff !important;
+  color: #5b45a5 !important;
+}
+
+@media (max-width: 1023px) {
+  .workspace-shell,
+  .workspace-shell > div,
+  .workspace-shell .mobile-app-content {
+    background-color: #0d1222 !important;
+  }
+
+  .workspace-shell .mobile-app-header {
+    background-color: rgb(13 19 37 / 94%) !important;
+    border-color: #252e49 !important;
+  }
+
+  .workspace-shell .mobile-app-dock nav {
+    background-color: rgb(24 31 54 / 96%) !important;
+    border-color: #303b5d !important;
+    box-shadow: 0 14px 42px rgb(0 0 0 / 44%);
+  }
+
+  .workspace-shell [class*="bg-gradient-to-br"] {
+    background-image: linear-gradient(145deg, #202744, #151b30) !important;
+  }
+
+  .workspace-shell [class*="bg-[#"] {
+    background-color: #171e34 !important;
+  }
+
+  .workspace-shell [role="menu"] {
+    background-color: #1b2340 !important;
+    border-color: #374264 !important;
+  }
+
+  .workspace-shell nav[aria-label="Mobile navigation"] [aria-current="page"] span:first-child,
+  .workspace-shell nav[aria-label="Mobile navigation"] button[aria-expanded="true"] span:first-child {
+    background-color: #343b60 !important;
+    color: #e0dcff !important;
+  }
+
+  .light .workspace-shell,
+  .light .workspace-shell > div,
+  .light .workspace-shell .mobile-app-content {
+    background-color: #f2f1f8 !important;
+  }
+
+  .light .workspace-shell .mobile-app-header {
+    background-color: rgb(248 247 253 / 95%) !important;
+    border-color: #e3e0ef !important;
+  }
+
+  .light .workspace-shell .mobile-app-dock nav {
+    background-color: rgb(255 255 255 / 95%) !important;
+    border-color: #e2dfed !important;
+  }
+
+  .light .workspace-shell [class*="bg-gradient-to-br"] {
+    background-image: linear-gradient(145deg, #ffffff, #f4f1fb) !important;
+  }
+
+  .light .workspace-shell [class*="bg-[#"] {
+    background-color: #ffffff !important;
+  }
+
+  .light .workspace-shell [role="menu"] {
+    background-color: #ffffff !important;
+    border-color: #e4e0ef !important;
+  }
+
+  .light .workspace-shell nav[aria-label="Mobile navigation"] [aria-current="page"] span:first-child,
+  .light .workspace-shell nav[aria-label="Mobile navigation"] button[aria-expanded="true"] span:first-child {
+    background-color: #eee9ff !important;
+    color: #5b45a5 !important;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .motion-safe\:animate-atlas-float {
     animation: atlas-float 7s ease-in-out infinite;

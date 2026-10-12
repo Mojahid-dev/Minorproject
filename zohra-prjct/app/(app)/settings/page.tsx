@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Bell, Camera, ChevronRight, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
+import { ArrowRight, Bell, Camera, Check, ChevronRight, Moon, ShieldCheck, Sun, Trash2, UserRound, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/lib/auth-client";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
+import { useTheme } from "next-themes";
 
 const imageLimit = 1024 * 1024;
 type ProfileUser = { name: string; email: string; image?: string | null };
@@ -173,6 +174,8 @@ function ProfileForm({ user }: { user: ProfileUser }) {
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { resolvedTheme, setTheme } = useTheme();
+  const selectedTheme = resolvedTheme === "light" ? "light" : "dark";
   const { data: session, isPending } = useSession();
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
@@ -275,7 +278,7 @@ export default function SettingsPage() {
           {session?.user && <div className="mb-4 flex items-center gap-3 border-b border-white/[0.07] px-1 pb-4"><div className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-lime-100 to-emerald-300 text-sm font-bold text-zinc-950">{session.user.image ? <Image src={session.user.image} alt="" width={44} height={44} unoptimized className="size-full object-cover" /> : (session.user.name?.split(" ").filter(Boolean).map((part) => part[0]).join("").slice(0, 2) || "U").toUpperCase()}</div><div className="min-w-0"><p className="truncate text-sm font-semibold text-white">{session.user.name}</p><p className="truncate text-xs text-neutral-500">Account settings</p></div></div>}
           <p className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-500">Manage</p>
           <nav aria-label="Settings sections" className="grid grid-cols-2 gap-1 sm:grid-cols-4 lg:block lg:space-y-1">
-            {[{ href: "#profile-settings", label: "Profile", icon: UserRound }, { href: "#notification-settings", label: "Notifications", icon: Bell }, { href: "#focus-settings", label: "Focus mode", icon: ShieldCheck }, { href: "#account-security", label: "Account security", icon: Trash2 }].map(({ href, label, icon: Icon }) => <a key={href} href={href} className="group flex min-h-10 items-center gap-2 rounded-xl px-2 py-2 text-[11px] text-neutral-400 transition hover:bg-white/[0.06] hover:text-white sm:px-3 sm:text-sm lg:gap-3"><Icon size={15} className="shrink-0" /><span className="min-w-0 flex-1 leading-4">{label}</span><ChevronRight size={13} className="shrink-0 text-neutral-600 transition group-hover:translate-x-0.5 group-hover:text-neutral-300" /></a>)}
+            {[{ href: "#profile-settings", label: "Profile", icon: UserRound }, { href: "#appearance-settings", label: "Appearance", icon: Sun }, { href: "#notification-settings", label: "Notifications", icon: Bell }, { href: "#focus-settings", label: "Focus mode", icon: ShieldCheck }, { href: "#account-security", label: "Account security", icon: Trash2 }].map(({ href, label, icon: Icon }) => <a key={href} href={href} className="group flex min-h-10 items-center gap-2 rounded-xl px-2 py-2 text-[11px] text-neutral-400 transition hover:bg-white/[0.06] hover:text-white sm:px-3 sm:text-sm lg:gap-3"><Icon size={15} className="shrink-0" /><span className="min-w-0 flex-1 leading-4">{label}</span><ChevronRight size={13} className="shrink-0 text-neutral-600 transition group-hover:translate-x-0.5 group-hover:text-neutral-300" /></a>)}
           </nav>
           <Link href="/profile" className="mt-4 flex items-center justify-between rounded-xl bg-lime-200/[0.08] px-3 py-3 text-xs font-medium text-lime-100 transition hover:bg-lime-200/[0.13]">View your profile <ArrowRight size={14} /></Link>
         </aside>
@@ -290,6 +293,20 @@ export default function SettingsPage() {
           <ProfileForm user={session.user} />
         ) : null}
         </div>
+
+        <section id="appearance-settings" className="scroll-mt-24 rounded-3xl border border-white/[0.08] bg-[#141518] p-4 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-violet-200/10 text-violet-100"><Sun size={18} /></div>
+              <div><h2 className="font-semibold text-white">Appearance</h2><p className="text-sm text-neutral-500">Choose the colors that feel comfortable to use.</p></div>
+            </div>
+            <div role="group" aria-label="Color theme" className="grid w-full grid-cols-2 gap-2 sm:w-auto">
+              <button type="button" aria-pressed={selectedTheme === "light"} onClick={() => setTheme("light")} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-medium transition ${selectedTheme === "light" ? "border-violet-200/40 bg-violet-200 text-violet-950 shadow-[0_6px_20px_rgba(196,181,253,0.12)]" : "border-white/10 bg-black/20 text-neutral-300 hover:bg-white/[0.06]"}`}><Sun size={16} />Light{selectedTheme === "light" && <Check size={15} />}</button>
+              <button type="button" aria-pressed={selectedTheme === "dark"} onClick={() => setTheme("dark")} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-medium transition ${selectedTheme === "dark" ? "border-sky-200/35 bg-[#202a3e] text-sky-100 shadow-[0_6px_20px_rgba(125,211,252,0.1)]" : "border-white/10 bg-black/20 text-neutral-300 hover:bg-white/[0.06]"}`}><Moon size={16} />Dark{selectedTheme === "dark" && <Check size={15} />}</button>
+            </div>
+          </div>
+          <p className="mt-3 text-xs leading-5 text-neutral-500">Your choice is saved on this device. Mobile has its own color treatment for either theme.</p>
+        </section>
 
         <section id="notification-settings" className="scroll-mt-24 rounded-3xl border border-white/[0.08] bg-[#141518] p-4 sm:p-6">
           <div className="flex items-center gap-3">
