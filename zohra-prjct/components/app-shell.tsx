@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   ArrowRight,
+  BadgeCheck,
   Bell,
   CalendarDays,
   ChevronDown,
@@ -115,6 +116,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [resourceCount, setResourceCount] = useState<number | null>(null);
+  const [isRecognized, setIsRecognized] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
@@ -160,6 +162,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [refreshSidebarData, pathname]);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/recognition-request", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (active) setIsRecognized(payload.request?.status === "APPROVED");
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [pathname]);
 
   useEffect(() => {
     if (!mobileMoreOpen) return;
@@ -462,23 +476,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="mx-1 hidden h-8 w-px bg-white/10 sm:block" />
               <Link
                 href="/profile"
-                aria-label={`Open ${profileName} profile`}
-                title={profileName}
+                aria-label={`Open ${profileName} profile${isRecognized ? ", Zohra recognized" : ""}`}
+                title={isRecognized ? `${profileName} · Zohra Recognized` : profileName}
                 className="group flex shrink-0 items-center gap-1 rounded-xl px-1.5 py-1 text-neutral-300 transition hover:bg-white/[0.06] hover:text-white"
               >
-                <span className="grid size-9 place-items-center overflow-hidden rounded-full border border-white/35 bg-gradient-to-br from-zinc-100 to-zinc-400 text-xs font-bold text-zinc-900">
-                  {profileImage ? (
-                    <Image
-                      src={profileImage}
-                      alt=""
-                      width={36}
-                      height={36}
-                      unoptimized
-                      className="size-full object-cover"
-                    />
-                  ) : (
-                    profileInitials
-                  )}
+                <span className="relative grid size-9 place-items-center overflow-visible rounded-full border border-white/35 bg-gradient-to-br from-zinc-100 to-zinc-400 text-xs font-bold text-zinc-900">
+                  <span className="grid size-full place-items-center overflow-hidden rounded-full">
+                    {profileImage ? (
+                      <Image
+                        src={profileImage}
+                        alt=""
+                        width={36}
+                        height={36}
+                        unoptimized
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      profileInitials
+                    )}
+                  </span>
+                  {isRecognized && <span aria-hidden="true" className="absolute -bottom-1 -right-1 grid size-[18px] place-items-center rounded-full border-2 border-zinc-950 bg-violet-200 text-violet-950 shadow"><BadgeCheck size={12} strokeWidth={3} /></span>}
                 </span>
                 <ChevronDown size={14} className="hidden sm:block" />
               </Link>
