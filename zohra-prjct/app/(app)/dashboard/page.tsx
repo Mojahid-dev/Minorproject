@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BookOpen, CalendarDays, CheckCircle2, Clock3, Compass, FileText, Folder, Plus, UploadCloud } from "lucide-react";
+import { ArrowRight, BadgeCheck, BookOpen, CalendarDays, CheckCircle2, Clock3, Compass, FileText, Folder, Plus, UploadCloud } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
 import { useTasks } from "@/hooks/use-tasks";
 import { localDateString } from "@/lib/task-utils";
@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [resourcesLoading, setResourcesLoading] = useState(true);
   const [resourceError, setResourceError] = useState("");
+  const [isRecognized, setIsRecognized] = useState(false);
   const today = localDateString();
   const todaysTasks = useMemo(() => tasks.filter((task) => task.dueDate === today), [tasks, today]);
   const openToday = todaysTasks.filter((task) => !task.completedAt).length;
@@ -44,6 +45,18 @@ export default function DashboardPage() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    fetch("/api/recognition-request", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (active) setIsRecognized(payload.request?.status === "APPROVED");
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
   const cards = [
     { icon: CheckCircle2, eyebrow: "Your focus today", title: tasksLoading ? "Loading tasks…" : taskError ? "Tasks unavailable" : openToday === 0 ? "You’re all caught up" : `${openToday} task${openToday === 1 ? "" : "s"} due today`, href: `/tasks?date=${today}`, tone: "light" },
     { icon: BookOpen, eyebrow: "Recently added", title: resourcesLoading ? "Loading resources…" : resources[0]?.originalName ?? "Add your first resource", href: resources[0] ? "/resources" : "/upload", tone: "dark" },
@@ -53,7 +66,7 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto max-w-[1440px] pb-8 text-white">
       <div className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-end">
-        <div><p className="mb-2 text-sm font-medium text-neutral-400">{todayLabel}</p><h1 className="text-3xl font-bold tracking-[-0.045em] sm:text-[30px]">{greeting}, {userName} <span aria-hidden="true" className="text-neutral-300">✦</span></h1><p className="mt-2 text-sm text-neutral-300">Here&apos;s a focused view of what needs your attention today.</p></div>
+        <div><p className="mb-2 text-sm font-medium text-neutral-400">{todayLabel}</p><h1 className="text-3xl font-bold tracking-[-0.045em] sm:text-[30px]">{greeting}, {userName} <span aria-hidden="true" className="text-neutral-300">✦</span></h1>{isRecognized && <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-violet-200/25 bg-violet-200/10 px-2.5 py-1 text-xs font-semibold text-violet-100"><BadgeCheck size={15} />Zohra Recognized</p>}<p className="mt-2 text-sm text-neutral-300">Here&apos;s a focused view of what needs your attention today.</p></div>
         <Link href="/resources" className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 px-3.5 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-white/25 hover:bg-white/[0.06] sm:flex-none"><Compass size={17} /> Explore workspace</Link>
       </div>
 

@@ -24,5 +24,21 @@ export async function GET() {
     },
   });
   requests.sort((a, b) => Number(b.status === "PENDING") - Number(a.status === "PENDING"));
-  return NextResponse.json({ requests });
+  const userIds = [...new Set(requests.map((request) => request.user.id))];
+  const [resourceCounts, completedTaskCounts] = userIds.length ? await Promise.all([
+    prisma.resource.groupBy({ by: ["userId"], where: { userId: { in: userIds } }, _count: { _all: true } }),
+    prisma.task.groupBy({ by: ["userId"], where: { userId: { in: userIds }, completedAt: { not: null } }, _count: { _all: true } }),
+  ]) : [[], []];
+  const resourceCountByUser = new Map(resourceCounts.map((item) => [item.userId, item._count._all]));
+  const completedTasksByUser = new Map(completedTaskCounts.map((item) => [item.userId, item._count._all]));
+  return NextResponse.json({
+    requests: requests.map((request) => ({
+      ...request,
+      user: {
+        ...request.user,
+        resourceCount: resourceCountByUser.get(request.user.id) ?? 0,
+        completedTaskCount: completedTasksByUser.get(request.user.id) ?? 0,
+      },
+    })),
+  });
 }

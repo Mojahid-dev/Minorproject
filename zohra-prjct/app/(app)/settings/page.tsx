@@ -13,6 +13,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { useTheme } from "next-themes";
+import { RecognitionRequestCard } from "@/components/recognition/request-card";
 
 const imageLimit = 1024 * 1024;
 type ProfileUser = { name: string; email: string; image?: string | null };
@@ -290,7 +291,12 @@ export default function SettingsPage() {
             <Spinner /> Loading your profile…
           </section>
         ) : session?.user ? (
-          <ProfileForm user={session.user} />
+          <>
+            <ProfileForm user={session.user} />
+            <div className="mt-4">
+              <RecognitionRequestCard initialRequest={null} initialEligibleAt={null} />
+            </div>
+          </>
         ) : null}
         </div>
 
