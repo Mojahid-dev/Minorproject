@@ -96,6 +96,7 @@ Put local values in `.env` at the project root. `.env*` files are ignored by Git
 | `SMTP_USER` | Optional | SMTP username and default sender address. |
 | `SMTP_PASS` or `SMTP_PASSWORD` | Optional | SMTP password. `SMTP_PASS` takes precedence. |
 | `SMTP_FROM` | Optional | Sender address; defaults to `SMTP_USER`. |
+| `ZOHRA_RECOGNITION_REVIEWER_IDS` | Optional | Comma-separated Better Auth user IDs allowed to review recognition requests. If unset, no account can access the reviewer page or decision API. |
 
 The checked-in `.env.example` currently contains the Blob token placeholder. Add the other values locally based on the table above. A minimal local configuration looks like this:
 
@@ -106,6 +107,8 @@ BETTER_AUTH_SECRET="replace-with-a-long-random-secret"
 BETTER_AUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_BETTER_AUTH_URL="http://localhost:3000"
 BLOB_READ_WRITE_TOKEN="your-vercel-blob-read-write-token"
+# Optional: comma-separated Better Auth user IDs allowed to review recognition requests
+ZOHRA_RECOGNITION_REVIEWER_IDS="your-user-id"
 ```
 
 ## Commands
@@ -137,6 +140,7 @@ BLOB_READ_WRITE_TOKEN="your-vercel-blob-read-write-token"
 | `/resources` | Authenticated resource library. |
 | `/upload` | Authenticated resource upload flow. |
 | `/profile`, `/settings` | Authenticated account and profile management. |
+| `/admin/recognition` | Private recognition review queue; access is limited to IDs in `ZOHRA_RECOGNITION_REVIEWER_IDS`. |
 
 ### API
 
@@ -149,6 +153,8 @@ BLOB_READ_WRITE_TOKEN="your-vercel-blob-read-write-token"
 - `/api/tasks` and `/api/tasks/[taskId]` — list and manage tasks owned by the signed-in user.
 - `/api/preferences` — read and update the signed-in user's saved notification and focus preferences.
 - `/api/account/delete` — delete the signed-in user's account.
+- `/api/recognition-request` and `/api/recognition-request/[requestId]` — request recognition, check status, and cancel a pending request.
+- `/api/admin/recognition-requests` and `/api/admin/recognition-requests/[requestId]` — reviewer-only queue and grant, decline, or revoke actions.
 
 Resource APIs require an authenticated session and scope database access to the current user.
 

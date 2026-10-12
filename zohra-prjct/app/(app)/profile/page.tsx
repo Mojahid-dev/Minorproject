@@ -2,9 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { ArrowRight, BadgeCheck, BookOpen, CalendarDays, CheckCircle2, FileStack, Mail, Settings2, Sparkles, Target, UserRound } from "lucide-react";
+import { ArrowRight, Award, BadgeCheck, BookOpen, CalendarDays, CheckCircle2, FileStack, Mail, Settings2, ShieldCheck, Sparkles, Target, UserRound } from "lucide-react";
 import { auth } from "@/lib/auth";
+import { isRecognitionReviewer } from "@/lib/recognition-admin";
 import { prisma } from "@/lib/prisma";
+import { RecognitionRequestCard } from "@/components/recognition/request-card";
 
 function initials(name: string) {
   return name.split(" ").filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "U";
@@ -15,15 +17,24 @@ export default async function ProfilePage() {
   const user = session?.user;
   if (!user) redirect("/");
 
-  const [resourceCount, completedTaskCount, activeTaskCount, recentResources] = await Promise.all([
+  const [resourceCount, completedTaskCount, activeTaskCount, recentResources, latestRecognition] = await Promise.all([
     prisma.resource.count({ where: { userId: user.id } }),
     prisma.task.count({ where: { userId: user.id, completedAt: { not: null } } }),
     prisma.task.count({ where: { userId: user.id, completedAt: null } }),
     prisma.resource.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 3, select: { id: true, originalName: true, mimeType: true, createdAt: true } }),
+    prisma.recognitionRequest.findFirst({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, select: { id: true, status: true, createdAt: true, reviewedAt: true } }),
   ]);
   const joinedOn = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(new Date(user.createdAt));
   const totalTasks = completedTaskCount + activeTaskCount;
   const completionPercent = totalTasks ? Math.round((completedTaskCount / totalTasks) * 100) : 0;
+  const recognitionRequest = latestRecognition ? {
+    ...latestRecognition,
+    createdAt: latestRecognition.createdAt.toISOString(),
+    reviewedAt: latestRecognition.reviewedAt?.toISOString() ?? null,
+  } : null;
+  const recognitionEligibleAt = latestRecognition?.status === "DECLINED" && latestRecognition.reviewedAt
+    ? new Date(latestRecognition.reviewedAt.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString()
+    : null;
 
   return (
     <div className="mx-auto max-w-6xl pb-10 text-white">
@@ -45,6 +56,7 @@ export default async function ProfilePage() {
             <div className="min-w-0 pb-1">
               <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-medium text-violet-100"><Sparkles size={12} /> Personal workspace</div>
               <h2 className="break-words text-2xl font-semibold tracking-[-0.045em] text-white sm:text-4xl">{user.name}</h2>
+              {latestRecognition?.status === "APPROVED" && <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-violet-200/25 bg-violet-200/10 px-2.5 py-1 text-xs font-semibold text-violet-100"><Award size={14} />Zohra Recognized</span>}
               <p className="mt-2 flex items-center gap-2 text-sm text-neutral-300"><Mail size={15} className="text-neutral-400" /><span className="break-all">{user.email}</span>{user.emailVerified && <BadgeCheck size={16} className="shrink-0 text-sky-300" aria-label="Email verified" />}</p>
               <p className="mt-2 text-xs text-neutral-400">Member since {joinedOn}</p>
             </div>
@@ -57,6 +69,9 @@ export default async function ProfilePage() {
           <ProfileStat icon={Target} label="Still in progress" value={activeTaskCount} detail={activeTaskCount ? "Keep your next step in view" : "No open tasks right now"} />
         </div>
       </section>
+
+      <div className="mt-4 sm:mt-5"><RecognitionRequestCard initialRequest={recognitionRequest} initialEligibleAt={recognitionEligibleAt} /></div>
+      {isRecognitionReviewer(user.id) && <Link href="/admin/recognition" className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-violet-200/15 px-3.5 text-sm font-medium text-violet-100 transition hover:bg-violet-200/[0.08]"><ShieldCheck size={16} />Review recognition requests<ArrowRight size={15} /></Link>}
 
       <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)]">
         <section className="rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#17181c] to-[#101114] p-4 sm:p-7">

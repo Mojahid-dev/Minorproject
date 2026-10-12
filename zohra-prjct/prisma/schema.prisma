@@ -29,6 +29,7 @@ model User {
   chapters      Chapter[]
   tasks         Task[]
   preferences   UserPreference?
+  recognitionRequests RecognitionRequest[] @relation("RecognitionApplicant")
 
   @@unique([email])
   @@map("user")
@@ -56,6 +57,14 @@ enum OrganizationStatus {
   ORGANIZED
   NEEDS_REVIEW
   FAILED
+}
+
+enum RecognitionStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  REVOKED
+  CANCELLED
 }
 
 model StudyYear {
@@ -193,6 +202,21 @@ model UserPreference {
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_preference")
+}
+
+model RecognitionRequest {
+  id         String            @id @default(cuid())
+  userId     String
+  status     RecognitionStatus @default(PENDING)
+  reviewerId String?
+  createdAt  DateTime          @default(now())
+  reviewedAt DateTime?
+  updatedAt  DateTime          @updatedAt
+  user       User              @relation("RecognitionApplicant", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("recognition_request")
 }
 
 model Session {
