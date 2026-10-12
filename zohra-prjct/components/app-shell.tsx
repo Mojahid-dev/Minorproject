@@ -13,6 +13,7 @@ import {
   ChevronRight,
   FolderKanban,
   Home,
+  Ellipsis,
   LayoutGrid,
   ListTodo,
   LogOut,
@@ -20,7 +21,9 @@ import {
   MessageCircle,
   Plus,
   Search,
+  Settings,
   Upload,
+  UserRound,
   UsersRound,
   X,
 } from "lucide-react";
@@ -36,6 +39,14 @@ const navigation = [
   { label: "Upload", href: "/upload", icon: Upload },
 ];
 
+function MobileNavLink({ href, label, icon: Icon, active, badge, onNavigate }: { href: string; label: string; icon: typeof Home; active: boolean; badge?: number; onNavigate?: () => void }) {
+  return <Link href={href} onClick={onNavigate} aria-current={active ? "page" : undefined} className={`relative flex min-h-[58px] flex-col items-center justify-end gap-1 rounded-xl pb-1 text-[10px] font-medium transition ${active ? "text-white" : "text-neutral-500 hover:text-neutral-200"}`}>
+    <span className={`grid size-8 place-items-center rounded-xl transition ${active ? "bg-white/[0.1] text-white" : "text-current"}`}><Icon size={20} strokeWidth={active ? 2.2 : 1.8} /></span>
+    {badge ? <span aria-label={`${badge} active tasks`} className="absolute right-[calc(50%-1.25rem)] top-1 grid min-h-4 min-w-4 place-items-center rounded-full border border-[#111214] bg-violet-200 px-1 text-[9px] font-bold leading-none text-zinc-950">{badge > 99 ? "99+" : badge}</span> : null}
+    <span>{label}</span>
+  </Link>;
+}
+
 function ZohraMark({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-3">
@@ -50,6 +61,7 @@ function ZohraMark({ compact = false }: { compact?: boolean }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [resourceCount, setResourceCount] = useState<number | null>(null);
   const pathname = usePathname();
@@ -85,6 +97,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [refreshSidebarData, pathname]);
 
   useEffect(() => {
+    if (!mobileMoreOpen) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setMobileMoreOpen(false);
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [mobileMoreOpen]);
+
+  useEffect(() => {
     window.addEventListener("zohra:tasks-updated", refreshSidebarData);
     return () => window.removeEventListener("zohra:tasks-updated", refreshSidebarData);
   }, [refreshSidebarData]);
@@ -104,15 +125,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <main className="h-screen overflow-hidden bg-zinc-950 text-neutral-100">
+    <main className="h-dvh overflow-hidden bg-zinc-950 text-neutral-100">
       <div className="flex h-full max-w-full overflow-hidden border border-zinc-800 bg-zinc-950 shadow-[0_25px_80px_rgba(0,0,0,0.4)]">
-        <aside className={`${collapsed ? "md:w-[86px]" : "md:w-[272px]"} fixed inset-y-0 left-0 z-40 flex h-screen w-[280px] shrink-0 flex-col border-r border-zinc-800 bg-black px-4 py-5 shadow-xl transition-[width,transform] duration-200 md:sticky md:top-0 md:translate-x-0 ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <aside className={`${collapsed ? "lg:w-[86px]" : "lg:w-[272px]"} fixed inset-y-0 left-0 z-40 flex h-dvh w-[280px] shrink-0 flex-col border-r border-zinc-800 bg-black px-4 py-5 shadow-xl transition-[width,transform] duration-200 lg:sticky lg:top-0 lg:translate-x-0 ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
           <div className="flex items-center justify-between px-2">
             <ZohraMark compact={collapsed} />
-            <button onClick={() => setMobileMenuOpen(false)} aria-label="Close menu" className="grid size-8 place-items-center rounded-lg text-neutral-500 transition hover:bg-white/10 hover:text-white md:hidden"><X size={18} /></button>
-            {!collapsed && <button onClick={() => setCollapsed(true)} aria-label="Collapse sidebar" className="hidden size-8 place-items-center rounded-lg text-neutral-500 transition hover:bg-white/10 hover:text-white md:grid"><ChevronLeft size={18} /></button>}
+            <button onClick={() => setMobileMenuOpen(false)} aria-label="Close menu" className="grid size-8 place-items-center rounded-lg text-neutral-500 transition hover:bg-white/10 hover:text-white lg:hidden"><X size={18} /></button>
+            {!collapsed && <button onClick={() => setCollapsed(true)} aria-label="Collapse sidebar" className="hidden size-8 place-items-center rounded-lg text-neutral-500 transition hover:bg-white/10 hover:text-white lg:grid"><ChevronLeft size={18} /></button>}
           </div>
-          {collapsed && <button onClick={() => setCollapsed(false)} aria-label="Expand sidebar" className="mt-5 hidden size-10 place-items-center self-center rounded-xl bg-zinc-800 text-white transition hover:bg-zinc-700 md:grid"><ChevronRight size={18} /></button>}
+          {collapsed && <button onClick={() => setCollapsed(false)} aria-label="Expand sidebar" className="mt-5 hidden size-10 place-items-center self-center rounded-xl bg-zinc-800 text-white transition hover:bg-zinc-700 lg:grid"><ChevronRight size={18} /></button>}
 
           <div className="mt-9">
             {!collapsed && <p className="px-3 pb-3 text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-400">Workspace</p>}
@@ -151,26 +172,50 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        {mobileMenuOpen && <button type="button" aria-label="Close menu overlay" onClick={() => setMobileMenuOpen(false)} className="fixed inset-0 z-30 bg-black/50 md:hidden" />}
-        <section className="min-w-0 flex-1 overflow-y-auto bg-zinc-950">
-          <header className="sticky top-0 z-10 flex h-[76px] items-center border-b border-zinc-800 bg-zinc-950 px-5 sm:px-8">
-            <button onClick={() => setMobileMenuOpen(true)} className="mr-3 grid size-10 shrink-0 place-items-center rounded-xl text-neutral-300 transition hover:bg-white/10 hover:text-white md:hidden" aria-label="Open menu"><Menu size={22} /></button>
-            <div className="relative min-w-0 max-w-sm flex-1">
+        {mobileMenuOpen && <button type="button" aria-label="Close menu overlay" onClick={() => setMobileMenuOpen(false)} className="fixed inset-0 z-30 bg-black/50 lg:hidden" />}
+        <section className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-zinc-950">
+          <header className="sticky top-0 z-10 flex h-16 items-center border-b border-zinc-800 bg-zinc-950/95 px-3 backdrop-blur-xl sm:h-[76px] sm:px-6 lg:px-8">
+            <button onClick={() => { setMobileMenuOpen(true); setMobileMoreOpen(false); }} className="mr-2 grid size-10 shrink-0 place-items-center rounded-xl text-neutral-300 transition hover:bg-white/10 hover:text-white lg:hidden" aria-label="Open workspace menu"><Menu size={22} /></button>
+            <Link href="/dashboard" className="mr-3 flex shrink-0 items-center lg:hidden"><ZohraMark /></Link>
+            <div className="relative hidden min-w-0 max-w-sm flex-1 lg:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-600" size={18} />
               <input aria-label="Search coming soon" title="Search is coming soon" disabled placeholder="Search coming soon" className="h-10 w-full cursor-not-allowed rounded-xl border border-zinc-800 bg-zinc-900 pl-10 pr-3 text-sm text-neutral-500 placeholder:text-neutral-600" />
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
               <button aria-label="Messages coming soon" title="Messages are coming soon" disabled className="hidden size-10 cursor-not-allowed place-items-center rounded-xl text-neutral-600 sm:grid"><MessageCircle size={20} /></button>
               <button aria-label="Notifications coming soon" title="Notifications are coming soon" disabled className="hidden size-10 cursor-not-allowed place-items-center rounded-xl text-neutral-600 sm:grid"><Bell size={20} /></button>
-              <Link href="/upload" aria-label="Add resources" className="flex items-center gap-2 rounded-xl bg-white px-3 py-2.5 text-sm font-semibold text-black shadow-[0_8px_18px_rgba(0,0,0,0.18)] transition hover:bg-neutral-200 sm:px-3.5"><Plus size={17} /><span className="hidden sm:inline">Add resources</span><span className="sm:hidden">Add</span></Link>
+              <Link href="/upload" aria-label="Add resources" className="hidden items-center gap-2 rounded-xl bg-white px-3.5 py-2.5 text-sm font-semibold text-black shadow-[0_8px_18px_rgba(0,0,0,0.18)] transition hover:bg-neutral-200 lg:flex"><Plus size={17} />Add resources</Link>
               <div className="mx-1 hidden h-8 w-px bg-white/10 sm:block" />
               <Link href="/profile" aria-label={`Open ${profileName} profile`} title={profileName} className="group flex shrink-0 items-center gap-1 rounded-xl px-1.5 py-1 text-neutral-300 transition hover:bg-white/[0.06] hover:text-white">
                 <span className="grid size-9 place-items-center overflow-hidden rounded-full border border-white/35 bg-gradient-to-br from-zinc-100 to-zinc-400 text-xs font-bold text-zinc-900">{profileImage ? <Image src={profileImage} alt="" width={36} height={36} unoptimized className="size-full object-cover" /> : profileInitials}</span><ChevronDown size={14} className="hidden sm:block" />
               </Link>
             </div>
           </header>
-          <div className="p-5 sm:p-8">{children}</div>
+          <div className="p-4 pb-[calc(6.75rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(6.75rem+env(safe-area-inset-bottom))] lg:p-8 lg:pb-8">{children}</div>
         </section>
+        {!mobileMenuOpen && <>
+          {mobileMoreOpen && <button type="button" aria-label="Close more navigation" onClick={() => setMobileMoreOpen(false)} className="fixed inset-0 z-40 bg-black/45 lg:hidden" />}
+          <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.09] bg-[#111214]/95 px-2 pt-2 shadow-[0_-12px_40px_rgba(0,0,0,0.4)] backdrop-blur-2xl [padding-bottom:env(safe-area-inset-bottom)] lg:hidden">
+            {mobileMoreOpen && <div role="menu" aria-label="More workspace links" className="absolute bottom-[calc(100%+0.75rem)] right-3 z-50 w-[min(18rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-white/10 bg-[#191a1d] p-2 shadow-2xl">
+              <p className="px-3 pb-2 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-500">Your workspace</p>
+              <Link role="menuitem" href="/resources" onClick={() => setMobileMoreOpen(false)} className="flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm text-neutral-200 hover:bg-white/[0.07]"><FolderKanban size={18} />Resources{resourceCount !== null && <span className="ml-auto rounded-md bg-white/[0.08] px-2 py-0.5 text-xs text-neutral-300">{resourceCount}</span>}</Link>
+              <Link role="menuitem" href="/profile" onClick={() => setMobileMoreOpen(false)} className="flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm text-neutral-200 hover:bg-white/[0.07]"><UserRound size={18} />Profile</Link>
+              <Link role="menuitem" href="/settings" onClick={() => setMobileMoreOpen(false)} className="flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm text-neutral-200 hover:bg-white/[0.07]"><Settings size={18} />Settings</Link>
+              <div className="my-1 border-t border-white/[0.07]" />
+              <button role="menuitem" onClick={() => void handleSignOut()} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm text-neutral-400 hover:bg-white/[0.07] hover:text-white"><LogOut size={18} />Sign out</button>
+            </div>}
+            <nav aria-label="Mobile navigation" className="mx-auto grid max-w-lg grid-cols-5 items-end gap-1">
+              <MobileNavLink href="/dashboard" label="Home" icon={Home} active={pathname === "/dashboard"} onNavigate={() => setMobileMoreOpen(false)} />
+              <MobileNavLink href="/tasks" label="Tasks" icon={ListTodo} active={pathname.startsWith("/tasks")} badge={activeTaskCount || undefined} onNavigate={() => setMobileMoreOpen(false)} />
+              <Link href="/upload" onClick={() => setMobileMoreOpen(false)} aria-label="Add a resource" className="group flex min-h-[58px] flex-col items-center justify-end gap-1 pb-1 text-[10px] font-medium text-neutral-400">
+                <span className="-mt-6 grid size-12 place-items-center rounded-2xl border border-white/20 bg-white text-zinc-950 shadow-[0_8px_26px_rgba(255,255,255,0.18)] transition group-hover:-translate-y-0.5 group-hover:bg-neutral-200"><Plus size={23} strokeWidth={2.2} /></span>
+                <span>Add</span>
+              </Link>
+              <MobileNavLink href="/calendar" label="Calendar" icon={CalendarDays} active={pathname.startsWith("/calendar")} onNavigate={() => setMobileMoreOpen(false)} />
+              <button type="button" aria-haspopup="menu" aria-expanded={mobileMoreOpen} onClick={() => setMobileMoreOpen((open) => !open)} className={`flex min-h-[58px] flex-col items-center justify-end gap-1 rounded-xl pb-1 text-[10px] font-medium transition ${mobileMoreOpen || pathname.startsWith("/resources") || pathname.startsWith("/profile") || pathname.startsWith("/settings") ? "text-white" : "text-neutral-500 hover:text-neutral-200"}`}><Ellipsis size={21} strokeWidth={2} /><span>More</span></button>
+            </nav>
+          </div>
+        </>}
       </div>
     </main>
   );

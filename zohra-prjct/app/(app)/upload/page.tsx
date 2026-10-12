@@ -262,8 +262,8 @@ export default function UploadPage() {
     <div className="mx-auto max-w-6xl pb-8 text-white">
       <section>
         <p className="text-sm font-medium text-neutral-400">Resource library</p>
-        <h1 className="mt-3 text-3xl font-bold tracking-[-0.045em] sm:text-4xl">Upload your learning materials</h1>
-        <p className="mt-3 text-base text-neutral-400">Add notes, PDFs, documents, presentations, or videos to keep everything together.</p>
+        <h1 className="mt-3 text-3xl font-bold leading-tight tracking-[-0.045em] sm:text-4xl">Upload your learning materials</h1>
+        <p className="mt-2 text-sm leading-6 text-neutral-400 sm:mt-3 sm:text-base">Add notes, PDFs, documents, presentations, or videos to keep everything together.</p>
       </section>
 
       {validationErrors.length > 0 && <div role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-left text-sm text-red-200"><p className="font-medium">Some files were not accepted</p><ul className="mt-2 text-xs"><li>{validationErrors.join("\n")}</li></ul></div>}
@@ -272,15 +272,15 @@ export default function UploadPage() {
         onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={(event) => { event.preventDefault(); setDragging(false); addFiles(event.dataTransfer.files); }}
-        className={`mt-8 grid min-h-[374px] place-items-center rounded-2xl border border-dashed px-6 py-12 text-center transition sm:px-10 ${dragging ? "border-white bg-white/[0.07]" : "border-zinc-800 bg-zinc-900/10"}`}
+        className={`mt-5 grid min-h-[280px] place-items-center rounded-2xl border border-dashed px-4 py-8 text-center transition sm:mt-8 sm:min-h-[374px] sm:px-10 sm:py-12 ${dragging ? "border-white bg-white/[0.07]" : "border-zinc-800 bg-zinc-900/10"}`}
       >
         <div>
-          <div className="mx-auto grid size-24 place-items-center rounded-full bg-zinc-800/80 text-white shadow-[inset_0_1px_rgba(255,255,255,0.06)]"><UploadCloud size={35} strokeWidth={1.8} /></div>
-          <h2 className="mt-5 text-xl font-semibold tracking-tight">Drop your files here</h2>
+          <div className="mx-auto grid size-16 place-items-center rounded-full bg-zinc-800/80 text-white shadow-[inset_0_1px_rgba(255,255,255,0.06)] sm:size-24"><UploadCloud size={28} strokeWidth={1.8} className="sm:size-[35px]" /></div>
+          <h2 className="mt-4 text-lg font-semibold tracking-tight sm:mt-5 sm:text-xl">Choose what you want to study</h2>
           <p className="mt-2 text-sm text-neutral-400">or choose files from your device</p>
           <input ref={inputRef} onChange={(event) => { if (event.target.files) addFiles(event.target.files); event.target.value = ""; }} type="file" accept={acceptedTypes} multiple className="hidden" />
-          <button onClick={() => inputRef.current?.click()} className="mt-6 inline-flex h-12 items-center gap-3 rounded-xl bg-white px-7 text-sm font-semibold text-black shadow-sm transition hover:bg-neutral-200">Choose files</button>
-          <p className="mt-6 text-xs leading-6 text-neutral-400">Supported: PDF, DOCX, PPTX, TXT, MD, JPG, PNG, MP4, MOV, WEBM<br />(Max size: 100 MB per file)</p>
+          <button onClick={() => inputRef.current?.click()} className="mt-5 inline-flex h-12 w-full items-center justify-center gap-3 rounded-xl bg-white px-7 text-sm font-semibold text-black shadow-sm transition hover:bg-neutral-200 sm:mt-6 sm:w-auto">Browse files</button>
+          <p className="mx-auto mt-5 max-w-md text-[11px] leading-5 text-neutral-400 sm:mt-6 sm:text-xs sm:leading-6">PDF, DOCX, PPTX, TXT, MD, JPG, PNG, MP4, MOV, WEBM<br />Up to 100 MB per file</p>
         </div>
       </section>
 

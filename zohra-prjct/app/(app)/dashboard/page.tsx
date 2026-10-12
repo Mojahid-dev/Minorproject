@@ -52,22 +52,22 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-[1440px] pb-8 text-white">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-end">
         <div><p className="mb-2 text-sm font-medium text-neutral-400">{todayLabel}</p><h1 className="text-3xl font-bold tracking-[-0.045em] sm:text-[30px]">{greeting}, {userName} <span aria-hidden="true" className="text-neutral-300">✦</span></h1><p className="mt-2 text-sm text-neutral-300">Here&apos;s a focused view of what needs your attention today.</p></div>
-        <Link href="/resources" className="flex items-center gap-2 rounded-xl border border-white/15 px-3.5 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-white/25 hover:bg-white/[0.06]"><Compass size={17} /> Explore workspace</Link>
+        <Link href="/resources" className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 px-3.5 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-white/25 hover:bg-white/[0.06] sm:flex-none"><Compass size={17} /> Explore workspace</Link>
       </div>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {cards.map(({ icon: Icon, eyebrow, title, href, tone }) => <Link key={eyebrow} href={href} className="group relative isolate flex min-h-[132px] overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#242529] to-[#17181b] p-5 transition hover:border-white/20 hover:from-[#2a2b30]">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+        {cards.map(({ icon: Icon, eyebrow, title, href, tone }) => <Link key={eyebrow} href={href} className="group relative isolate flex min-h-[122px] overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#242529] to-[#17181b] p-4 sm:min-h-[132px] sm:p-5 transition hover:border-white/20 hover:from-[#2a2b30]">
           <div aria-hidden="true" className="pointer-events-none absolute -right-4 -top-9 size-36 rotate-45 rounded-[28px] border border-white/[0.07] bg-gradient-to-br from-white/[0.08] to-transparent" />
           <div className="relative z-10 flex w-full min-w-0 flex-col items-start"><span className={`grid size-9 place-items-center rounded-lg shadow-inner ${tone === "light" ? "bg-gradient-to-br from-white to-neutral-300 text-zinc-900" : "border border-white/10 bg-white/[0.08] text-white"}`}><Icon size={20} /></span><p className="mt-4 text-sm text-neutral-300">{eyebrow}</p><p className="mt-0.5 max-w-full truncate text-lg font-semibold tracking-[-0.025em] text-white">{title}</p></div>
           <span className="absolute bottom-4 right-4 grid size-8 place-items-center rounded-full bg-white/10 text-neutral-100 transition group-hover:bg-white/20"><ArrowRight size={17} /></span>
         </Link>)}
       </div>
 
-      <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.5fr)]">
+      <div className="mt-5 grid gap-3 sm:gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.5fr)]">
         <section className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#151619] to-[#101114] p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-4"><div><div className="flex items-center gap-2 text-sm font-medium text-neutral-300"><Clock3 size={17} /> Recently added</div><h2 className="mt-1.5 text-xl font-semibold tracking-[-0.03em] text-white">Your resource library</h2></div><Link href="/resources" className="inline-flex items-center gap-2 rounded-xl bg-white/[0.08] px-3.5 py-2 text-xs font-semibold text-neutral-200 transition hover:bg-white/[0.14]">View all <ArrowRight size={15} /></Link></div>
+          <div className="flex items-center justify-between gap-3"><div className="min-w-0"><div className="flex items-center gap-2 text-sm font-medium text-neutral-300"><Clock3 size={17} /> Recently added</div><h2 className="mt-1.5 text-lg font-semibold tracking-[-0.03em] text-white sm:text-xl">Your resource library</h2></div><Link href="/resources" className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl bg-white/[0.08] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:bg-white/[0.14]">View all <ArrowRight size={15} /></Link></div>
           <div className="mt-3 space-y-1">
             {resourcesLoading ? <div className="space-y-2 py-2" aria-label="Loading resources"><div className="h-12 animate-pulse rounded-xl bg-white/[0.04]" /><div className="h-12 animate-pulse rounded-xl bg-white/[0.04]" /></div>
               : resourceError ? <div className="rounded-xl border border-white/[0.06] px-3 py-5 text-sm text-red-200" role="alert">{resourceError}</div>

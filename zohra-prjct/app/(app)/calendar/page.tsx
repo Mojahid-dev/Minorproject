@@ -75,11 +75,11 @@ export default function CalendarPage() {
     <div className="mx-auto max-w-[1440px] pb-10 text-white">
       <header className="relative isolate flex flex-wrap items-end justify-between gap-4 overflow-hidden rounded-[28px] border border-sky-200/[0.12] bg-gradient-to-br from-[#142027] via-[#12171c] to-[#101114] p-5 sm:p-7">
         <div aria-hidden="true" className="absolute -right-20 -top-36 -z-10 size-96 rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.17),transparent_68%)]" />
-        <div><p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.17em] text-sky-200"><Sparkles size={14} /> Your time, at a glance</p><h1 className="mt-2 text-4xl font-semibold tracking-[-0.055em] sm:text-5xl">Calendar</h1><p className="mt-2 text-sm text-neutral-300">Make a little space for what matters this month.</p></div>
+        <div><p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.17em] text-sky-200"><Sparkles size={14} /> Your time, at a glance</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.055em] sm:text-5xl">Calendar</h1><p className="mt-2 text-sm text-neutral-300">Make a little space for what matters this month.</p></div>
         <Link href="/tasks" className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-black/15 px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:bg-white/10"><ArrowLeft size={16} /> All tasks</Link>
       </header>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
         <CalendarMetric icon={CalendarDays} label="Scheduled this month" value={monthTasks.length} />
         <CalendarMetric icon={Clock3} label="Still to do" value={monthOpen} />
         <CalendarMetric icon={CheckCircle2} label="Selected day" value={selectedOpen.length} suffix="open" />
@@ -87,12 +87,12 @@ export default function CalendarPage() {
 
       <div className="mt-7 grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
         <section className="rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#171a1d] to-[#101114] p-4 sm:p-6" aria-label="Monthly task calendar">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
             <div><div className="flex items-center gap-2 text-sm text-sky-200"><CalendarDays size={17} /> Monthly view</div><h2 className="mt-1 text-2xl font-semibold tracking-tight">{monthName(month)}</h2></div>
             <div className="flex items-center gap-2">
-              <button onClick={() => { const now = new Date(); setMonth(new Date(now.getFullYear(), now.getMonth(), 1)); setSelectedDate(localDateString()); }} className="rounded-lg border border-zinc-700 px-3 py-2 text-xs font-medium text-neutral-200 hover:bg-white/10">Today</button>
-              <button aria-label="Previous month" onClick={() => setMonth((value) => new Date(value.getFullYear(), value.getMonth() - 1, 1))} className="grid size-9 place-items-center rounded-lg border border-zinc-700 text-neutral-300 hover:bg-white/10"><ChevronLeft size={18} /></button>
-              <button aria-label="Next month" onClick={() => setMonth((value) => new Date(value.getFullYear(), value.getMonth() + 1, 1))} className="grid size-9 place-items-center rounded-lg border border-zinc-700 text-neutral-300 hover:bg-white/10"><ChevronRight size={18} /></button>
+              <button onClick={() => { const now = new Date(); setMonth(new Date(now.getFullYear(), now.getMonth(), 1)); setSelectedDate(localDateString()); }} className="min-h-10 rounded-lg border border-zinc-700 px-2.5 py-2 text-xs font-medium text-neutral-200 hover:bg-white/10 sm:px-3">Today</button>
+              <button aria-label="Previous month" onClick={() => setMonth((value) => new Date(value.getFullYear(), value.getMonth() - 1, 1))} className="grid size-10 place-items-center rounded-lg border border-zinc-700 text-neutral-300 hover:bg-white/10"><ChevronLeft size={18} /></button>
+              <button aria-label="Next month" onClick={() => setMonth((value) => new Date(value.getFullYear(), value.getMonth() + 1, 1))} className="grid size-10 place-items-center rounded-lg border border-zinc-700 text-neutral-300 hover:bg-white/10"><ChevronRight size={18} /></button>
             </div>
           </div>
           {isLoading ? <p className="py-16 text-center text-sm text-neutral-500">Loading your calendar…</p>
@@ -105,7 +105,7 @@ export default function CalendarPage() {
                     const openCount = dayTasks.filter((task) => !task.completedAt).length;
                     const isSelected = key === selectedDate;
                     const isToday = key === today;
-                    return <button key={key} onClick={() => { setSelectedDate(key); if (!inMonth) setMonth(new Date(date.getFullYear(), date.getMonth(), 1)); }} aria-label={`${formatTaskDate(key)}${dayTasks.length ? `, ${dayTasks.length} task${dayTasks.length === 1 ? "" : "s"}` : ""}`} aria-pressed={isSelected} className={`relative flex min-h-[62px] flex-col items-center justify-start gap-1 rounded-xl py-2 text-sm transition sm:min-h-[86px] ${inMonth ? "text-neutral-200" : "text-neutral-700"} ${isSelected ? "bg-sky-200/[0.12] ring-1 ring-sky-100/25" : "hover:bg-white/[0.05]"}`}>
+                    return <button key={key} onClick={() => { setSelectedDate(key); if (!inMonth) setMonth(new Date(date.getFullYear(), date.getMonth(), 1)); }} aria-label={`${formatTaskDate(key)}${dayTasks.length ? `, ${dayTasks.length} task${dayTasks.length === 1 ? "" : "s"}` : ""}`} aria-pressed={isSelected} className={`relative flex min-h-[52px] flex-col items-center justify-start gap-1 rounded-lg py-1.5 text-xs transition sm:min-h-[86px] sm:rounded-xl sm:py-2 sm:text-sm ${inMonth ? "text-neutral-200" : "text-neutral-700"} ${isSelected ? "bg-sky-200/[0.12] ring-1 ring-sky-100/25" : "hover:bg-white/[0.05]"}`}>
                       <span className={`grid size-7 place-items-center rounded-full ${isToday ? "bg-sky-100 font-semibold text-zinc-950 shadow-[0_0_20px_rgba(186,230,253,0.22)]" : isSelected ? "text-sky-100" : ""}`}>{date.getDate()}</span>
                       {dayTasks.length > 0 && <span className="flex h-2 items-center gap-0.5" aria-hidden="true">{dayTasks.slice(0, 3).map((task) => <i key={task.id} className={`size-1 rounded-full ${task.completedAt ? "bg-emerald-300/70" : "bg-sky-200"}`} />)}{dayTasks.length > 3 && <b className="ml-0.5 text-[8px] font-medium text-neutral-400">+{dayTasks.length - 3}</b>}</span>}
                       {dayTasks.length > 0 && <span className="hidden max-w-full truncate px-1 text-[9px] text-neutral-500 sm:block">{openCount ? `${openCount} open` : "Done"}</span>}
@@ -132,5 +132,5 @@ export default function CalendarPage() {
 }
 
 function CalendarMetric({ icon: Icon, label, value, suffix }: { icon: typeof CalendarDays; label: string; value: number; suffix?: string }) {
-  return <div className="flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-[#15181b] p-4"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-sky-200/[0.09] text-sky-100"><Icon size={18} /></span><div><p className="text-xs text-neutral-400">{label}</p><p className="mt-0.5 text-xl font-semibold text-white">{value}{suffix && <span className="ml-1.5 text-xs font-normal text-neutral-500">{suffix}</span>}</p></div></div>;
+  return <div className="min-w-0 rounded-2xl border border-white/[0.07] bg-[#15181b] p-2.5 sm:flex sm:items-center sm:gap-3 sm:p-4"><span className="hidden size-10 shrink-0 place-items-center rounded-xl bg-sky-200/[0.09] text-sky-100 sm:grid"><Icon size={18} /></span><div className="min-w-0"><p className="min-h-7 text-[10px] leading-3 text-neutral-400 sm:min-h-0 sm:text-xs sm:leading-normal">{label}</p><p className="mt-0.5 text-xl font-semibold text-white sm:text-xl">{value}{suffix && <span className="ml-1.5 text-[10px] font-normal text-neutral-500 sm:text-xs">{suffix}</span>}</p></div></div>;
 }

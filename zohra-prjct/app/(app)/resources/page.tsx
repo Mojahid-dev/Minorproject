@@ -210,7 +210,7 @@ export default function ResourcesPage() {
 
   return (
     <div className="mx-auto max-w-[1440px] pb-8 text-white">
-      <header className="flex flex-wrap items-start justify-between gap-5">
+      <header className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-start sm:gap-5">
         <div>
           <h1 className="font-serif text-4xl font-medium tracking-[-0.055em] sm:text-6xl">
             Resources
@@ -222,19 +222,19 @@ export default function ResourcesPage() {
         </div>
         <Link
           href="/upload"
-          className="inline-flex h-10 items-center gap-3 rounded-xl bg-white px-4 text-sm font-semibold text-black shadow-sm transition hover:bg-neutral-200"
+          className="inline-flex min-h-11 items-center justify-center gap-3 rounded-xl bg-white px-4 text-sm font-semibold text-black shadow-sm transition hover:bg-neutral-200 sm:flex-none"
         >
           <Upload size={15} />
           Add resources
         </Link>
       </header>
 
-      <nav className="mt-7 flex flex-wrap items-center gap-1 rounded-xl border border-zinc-800 bg-zinc-950/30 p-1.5">
+      <nav aria-label="Resource views" className="-mx-4 mt-5 flex gap-1 overflow-x-auto border-y border-zinc-800 bg-zinc-950/30 px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:mt-7 sm:flex-wrap sm:rounded-xl sm:border sm:p-1.5">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
-            className={`${activeTab === id ? "bg-white text-black shadow-sm" : "text-neutral-400 hover:bg-white/10 hover:text-white"} inline-flex h-11 items-center gap-3 rounded-lg px-5 text-sm font-medium transition`}
+            className={`${activeTab === id ? "bg-white text-black shadow-sm" : "text-neutral-400 hover:bg-white/10 hover:text-white"} inline-flex h-10 shrink-0 items-center gap-2 rounded-lg px-3 text-xs font-medium transition sm:h-11 sm:gap-3 sm:px-5 sm:text-sm`}
           >
             <Icon size={19} />
             {label}
@@ -285,7 +285,7 @@ export default function ResourcesPage() {
             </div>
           </div>
           {activeTab === "subjects" && (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
               {isLoading
                 ? Array.from({ length: 4 }).map((_, index) => (
                     <Skeleton
@@ -296,7 +296,7 @@ export default function ResourcesPage() {
                 : collections.map((collection) => (
                     <article
                       key={collection.kind}
-                      className="group min-h-56 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-5 transition hover:border-zinc-600 hover:bg-zinc-900"
+                      className="group min-h-48 rounded-2xl border border-zinc-800 bg-zinc-900/45 p-4 transition hover:border-zinc-600 hover:bg-zinc-900 sm:min-h-56 sm:p-5"
                     >
                       <div className="flex items-start justify-between">
                         <div className="grid size-13 place-items-center rounded-xl bg-zinc-800 text-neutral-100">
@@ -343,7 +343,7 @@ export default function ResourcesPage() {
           {activeTab === "subjects" && (
             <Link
               href="/upload"
-              className="mt-4 flex min-h-16 max-w-sm items-center gap-4 rounded-xl border border-zinc-700 px-6 text-sm transition hover:border-zinc-500 hover:bg-white/[0.03]"
+              className="mt-3 flex min-h-16 w-full items-center gap-4 rounded-xl border border-zinc-700 px-4 text-sm transition hover:border-zinc-500 hover:bg-white/[0.03] sm:mt-4 sm:max-w-sm sm:px-6"
             >
               <Plus size={25} />
               <span>

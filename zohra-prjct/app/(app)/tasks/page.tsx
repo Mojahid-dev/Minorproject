@@ -80,13 +80,13 @@ export default function TasksPage() {
         <div aria-hidden="true" className="absolute -right-16 -top-32 -z-10 size-80 rounded-full bg-[radial-gradient(circle,rgba(196,181,253,0.16),transparent_68%)]" />
         <div>
           <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.17em] text-violet-200"><Sparkles size={14} /> Your planner</p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-[-0.055em] sm:text-5xl">Make room for focus.</h1>
+          <h1 className="mt-2 text-3xl font-semibold leading-tight tracking-[-0.055em] sm:text-5xl">Make room for focus.</h1>
           <p className="mt-2 text-sm text-neutral-300">Today, {formatTaskDate(today)} <span className="px-1 text-neutral-600">·</span> Keep your next step clear and your week in reach.</p>
         </div>
         <Link href="/calendar" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-violet-100"><CalendarDays size={17} /> Open calendar <ArrowRight size={15} /></Link>
       </header>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
         <TaskMetric icon={CalendarDays} label="Due today" value={dueToday.length} detail={dueToday.length ? `${dueToday.filter((task) => task.completedAt).length} completed` : "Nothing on the list"} tone="violet" />
         <TaskMetric icon={CircleAlert} label="Overdue" value={overdue.length} detail={overdue.length ? "Bring these back into focus" : "You’re up to date"} tone={overdue.length ? "rose" : "neutral"} />
         <TaskMetric icon={CheckCheck} label="Completed" value={completed.length} detail={tasks.length ? `${completionRate}% of all tasks` : "Your first win is waiting"} tone="emerald" />
@@ -94,11 +94,11 @@ export default function TasksPage() {
 
       <form onSubmit={createTask} className="mt-7 rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#191a1d] to-[#111214] p-4 sm:p-5">
         <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-neutral-200"><Plus size={17} /> Quick add a task</div>
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_190px_auto]">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2.5 sm:gap-3 md:grid-cols-[minmax(0,1fr)_190px_auto]">
           <label className="sr-only" htmlFor="new-task-title">Task title</label>
-          <input id="new-task-title" required maxLength={180} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="What do you need to do?" className="h-11 min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 text-sm text-white outline-none placeholder:text-neutral-500 focus:border-neutral-400" />
+          <input id="new-task-title" required maxLength={180} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="What do you need to do?" className="col-span-2 h-11 min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 text-sm text-white outline-none placeholder:text-neutral-500 focus:border-neutral-400 md:col-span-1" />
           <label className="sr-only" htmlFor="new-task-date">Due date</label>
-          <input id="new-task-date" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className="h-11 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-neutral-200 outline-none focus:border-neutral-400" />
+          <input id="new-task-date" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className="h-11 min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-2 text-xs text-neutral-200 outline-none focus:border-neutral-400 sm:px-3 sm:text-sm" />
           <button disabled={isSaving || !title.trim()} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50">{isSaving ? "Adding…" : "Add task"}<ArrowRight size={16} /></button>
         </div>
         <label className="mt-3 block text-xs text-neutral-500">Notes (optional)
@@ -113,8 +113,8 @@ export default function TasksPage() {
           <div><div className="flex items-center gap-2 text-sm text-neutral-400"><ListTodo size={17} /> {view === "date" ? "Selected day" : "Personal tasks"}</div><h2 className="mt-1.5 text-xl font-semibold">{view === "date" ? formatTaskDate(selectedDate) : "Your tasks"}</h2></div>
           {view === "date" && <button onClick={() => { setView("today"); setSelectedDate(today); }} className="rounded-lg px-3 py-2 text-xs text-neutral-300 hover:bg-white/10">Back to today</button>}
         </div>
-        <div className="mt-4 flex flex-wrap gap-2 border-b border-zinc-800 pb-4">
-          {tabs.map((tab) => <button key={tab.id} onClick={() => setView(tab.id)} aria-pressed={view === tab.id} className={`rounded-lg px-3 py-2 text-sm transition ${view === tab.id ? "bg-white text-black" : "text-neutral-400 hover:bg-white/10 hover:text-white"}`}>{tab.label}<span className={`ml-2 rounded-md px-1.5 py-0.5 text-xs ${view === tab.id ? "bg-black/10" : "bg-white/[0.07]"}`}>{tab.count}</span></button>)}
+        <div className="-mx-1 mt-4 flex gap-1.5 overflow-x-auto border-b border-zinc-800 px-1 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:gap-2 sm:pb-4">
+          {tabs.map((tab) => <button key={tab.id} onClick={() => setView(tab.id)} aria-pressed={view === tab.id} className={`shrink-0 rounded-lg px-3 py-2 text-xs transition sm:text-sm ${view === tab.id ? "bg-white text-black" : "text-neutral-400 hover:bg-white/10 hover:text-white"}`}>{tab.label}<span className={`ml-1.5 rounded-md px-1.5 py-0.5 text-[10px] sm:ml-2 sm:text-xs ${view === tab.id ? "bg-black/10" : "bg-white/[0.07]"}`}>{tab.count}</span></button>)}
         </div>
         {isLoading ? <p className="py-8 text-center text-sm text-neutral-500">Loading your tasks…</p>
           : error ? <div className="py-8 text-center"><p role="alert" className="text-sm text-red-300">{error}</p><button onClick={() => void refresh()} className="mt-3 rounded-lg bg-white/[0.08] px-3 py-2 text-sm">Try again</button></div>
@@ -145,7 +145,7 @@ export default function TasksPage() {
 
 function TaskMetric({ icon: Icon, label, value, detail, tone }: { icon: typeof CalendarDays; label: string; value: number; detail: string; tone: "violet" | "rose" | "emerald" | "neutral" }) {
   const accents = { violet: "bg-violet-300/10 text-violet-200", rose: "bg-rose-300/10 text-rose-200", emerald: "bg-emerald-300/10 text-emerald-200", neutral: "bg-white/[0.07] text-neutral-200" };
-  return <div className="flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-[#151619] p-4"><span className={`grid size-10 shrink-0 place-items-center rounded-xl ${accents[tone]}`}><Icon size={18} /></span><div className="min-w-0 flex-1"><p className="text-xs text-neutral-400">{label}</p><div className="mt-0.5 flex items-baseline justify-between gap-2"><span className="text-2xl font-semibold text-white">{value}</span><span className="truncate text-[11px] text-neutral-500">{detail}</span></div></div></div>;
+  return <div className="min-w-0 rounded-2xl border border-white/[0.07] bg-[#151619] p-2.5 sm:flex sm:items-center sm:gap-3 sm:p-4"><span className={`hidden size-10 shrink-0 place-items-center rounded-xl sm:grid ${accents[tone]}`}><Icon size={18} /></span><div className="min-w-0"><p className="truncate text-[10px] text-neutral-400 sm:text-xs">{label}</p><div className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 sm:justify-between sm:gap-2"><span className="text-xl font-semibold text-white sm:text-2xl">{value}</span><span className="hidden truncate text-[11px] text-neutral-500 sm:block">{detail}</span></div></div></div>;
 }
 
 function EmptyTasks({ message }: { message: string }) {
