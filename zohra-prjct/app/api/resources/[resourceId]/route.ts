@@ -21,6 +21,9 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Unable to remove resource:", error);
-    return NextResponse.json({ error: "Unable to remove this resource." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Unable to finish deleting this resource. Please retry." },
+      { status: 500 },
+    );
   }
 }
