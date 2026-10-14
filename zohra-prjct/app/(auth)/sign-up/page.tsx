@@ -20,6 +20,7 @@ type signUpFormData = z.infer<typeof signUpSchema>;
 export default function SignUpPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [verificationSent, setVerificationSent] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const {
@@ -54,6 +55,7 @@ export default function SignUpPage() {
       return;
     }
 
+    setVerificationEmail(data.email.trim());
     setVerificationSent(true);
     toast.add({
       type: "success",
@@ -93,7 +95,9 @@ export default function SignUpPage() {
           </div>
           {verificationSent ? (
             <div role="status" className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.08] p-4 text-sm leading-6 text-emerald-100">
-              We sent a verification link to your email address. Open that link to activate your account, then sign in.
+              <p>We sent a verification link to:</p>
+              <p className="mt-1 break-all font-semibold text-white">{verificationEmail}</p>
+              <p className="mt-3">Check that inbox, including its Spam or Junk folder. Open the link to activate your account, then sign in.</p>
               <Link href="/login" className="mt-4 inline-flex font-semibold text-yellow-300 transition hover:text-yellow-200">Go to sign in <ArrowRight size={15} className="ml-1" /></Link>
             </div>
           ) : <>
