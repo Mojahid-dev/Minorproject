@@ -31,7 +31,7 @@ Supported uploads: PDF, DOC/DOCX, PPT/PPTX, TXT, Markdown, JPEG/PNG, and MP4/MOV
 - A PostgreSQL database
 - A Vercel Blob store and its read/write token for resource uploads
 
-Google OAuth and SMTP are optional. Google credentials enable Google sign-in. SMTP credentials enable the configured sign-up notification email; without SMTP, the app logs a warning and skips sending it.
+Email/password registration signs users in immediately after account creation. Google OAuth is optional; Google sign-in appears only when both Google credentials are configured.
 
 ## Getting started
 
@@ -53,10 +53,10 @@ Google OAuth and SMTP are optional. Google credentials enable Google sign-in. SM
 3. Create a local environment file from the template:
 
    ```bash
-   cp .env.example .env
+   cp .env.example .env.local
    ```
 
-   On Windows PowerShell, use `Copy-Item .env.example .env`.
+   On Windows PowerShell, use `Copy-Item .env.example .env.local`.
 
 4. Set the environment variables described below. For local development, both database URLs can point to the same PostgreSQL database.
 
@@ -79,7 +79,7 @@ Google OAuth and SMTP are optional. Google credentials enable Google sign-in. SM
 
 ## Environment variables
 
-Put local values in `.env` at the project root. `.env*` files are ignored by Git; do not commit secrets.
+Put local values in `.env.local` at the project root. `.env*` files are ignored by Git; do not commit secrets.
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
@@ -87,18 +87,13 @@ Put local values in `.env` at the project root. `.env*` files are ignored by Git
 | `DIRECT_URL` | Yes for Prisma CLI operations | Direct PostgreSQL connection used by `prisma.config.ts` for migrations and other Prisma CLI operations. It can be the same value as `DATABASE_URL` if the provider has no pooled/direct connection distinction. |
 | `BETTER_AUTH_SECRET` | Yes | Secret used by Better Auth to sign and protect sessions. Use a long, random value. |
 | `BETTER_AUTH_URL` | Yes | Server-side base URL for Better Auth, such as `http://localhost:3000` locally or the deployed app URL. |
-| `NEXT_PUBLIC_BETTER_AUTH_URL` | Recommended | Client-side auth base URL. Defaults to `http://localhost:3000`; set it to the deployed app URL in production. |
+| `NEXT_PUBLIC_BETTER_AUTH_URL` | Recommended | Client-side auth base URL. If omitted, the auth client uses the current site origin. Set it explicitly in production if needed. |
 | `BLOB_READ_WRITE_TOKEN` | Yes for uploads and PDF extraction | Read/write token for the Vercel Blob store. It is required by the upload flow and private PDF extraction. |
 | `GOOGLE_CLIENT_ID` | Optional | Google OAuth client ID. |
 | `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth client secret. Set both Google values to enable Google sign-in. |
-| `SMTP_HOST` | Optional | SMTP host for configured email notifications. |
-| `SMTP_PORT` | Optional | SMTP port; defaults to `587`. Port `465` enables TLS. |
-| `SMTP_USER` | Optional | SMTP username and default sender address. |
-| `SMTP_PASS` or `SMTP_PASSWORD` | Optional | SMTP password. `SMTP_PASS` takes precedence. |
-| `SMTP_FROM` | Optional | Sender address; defaults to `SMTP_USER`. |
 | `ZOHRA_RECOGNITION_REVIEWER_IDS` | Optional | Comma-separated Better Auth user IDs allowed to review recognition requests. If unset, no account can access the reviewer page or decision API. |
 
-The checked-in `.env.example` currently contains the Blob token placeholder. Add the other values locally based on the table above. A minimal local configuration looks like this:
+Copy `.env.example` to `.env.local` and replace each placeholder with credentials from your database and (if enabled) Google OAuth client. A minimal configuration looks like this:
 
 ```dotenv
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?schema=public"
@@ -107,9 +102,14 @@ BETTER_AUTH_SECRET="replace-with-a-long-random-secret"
 BETTER_AUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_BETTER_AUTH_URL="http://localhost:3000"
 BLOB_READ_WRITE_TOKEN="your-vercel-blob-read-write-token"
+# Optional: set both Google OAuth values to enable Google sign-in
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
 # Optional: comma-separated Better Auth user IDs allowed to review recognition requests
 ZOHRA_RECOGNITION_REVIEWER_IDS="your-user-id"
 ```
+
+For Google OAuth, register `http://localhost:3000/api/auth/callback/google` as an authorized redirect URI for local development. For production, register `https://your-domain.com/api/auth/callback/google` and set `BETTER_AUTH_URL` and `NEXT_PUBLIC_BETTER_AUTH_URL` to the production origin. Google credentials must come from a Web application OAuth client. A Google OAuth consent screen configured for a restricted audience can also prevent some accounts from authorizing the app.
 
 ## Commands
 
@@ -174,7 +174,7 @@ The generated Prisma client is written to `lib/generated/prisma` and is ignored 
    pnpm vercel-build
    ```
 
-4. Add production environment values in **Project Settings → Environment Variables**. At minimum, configure `DATABASE_URL`, `DIRECT_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_BETTER_AUTH_URL`, and `BLOB_READ_WRITE_TOKEN`. Add Google and SMTP credentials if those integrations are used.
+4. Add production environment values in **Project Settings → Environment Variables**. Configure `DATABASE_URL`, `DIRECT_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, and `BLOB_READ_WRITE_TOKEN`. Add both Google credentials plus the authorized callback URI to enable Google sign-in.
 5. Apply committed database migrations to the production database before or as part of release operations:
 
    ```bash
@@ -195,7 +195,7 @@ app/
   api/               Auth, resource, upload, and account API routes
 components/          Shared app shell, theme provider, and UI components
 hooks/               Shared React hooks
-lib/                 Auth, Prisma client, validation, email, PDF helpers
+  lib/                 Auth, Prisma client, validation, PDF helpers
 prisma/              Prisma schema and SQL migrations
 public/              App icons, logos, and manifest assets
 ```

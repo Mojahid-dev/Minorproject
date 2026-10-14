@@ -20,12 +20,18 @@ pnpm install
 
 (Or leave blank if Vercel detects pnpm automatically.)
 
-3) Environment variables (required)
+3) Environment variables
 
 Add these to Vercel → Project → Settings → Environment Variables:
 
 - `DATABASE_URL` — your Postgres connection string (required)
 - `DIRECT_URL` — only if `prisma.config.ts` uses it (optional)
+- `BETTER_AUTH_URL` and `NEXT_PUBLIC_BETTER_AUTH_URL` — the production site origin
+- `BETTER_AUTH_SECRET` — a long, random secret
+- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` — optional; configure both to enable Google sign-in
+- `BLOB_READ_WRITE_TOKEN` — required for uploads
+
+For Google sign-in, add `https://your-domain.com/api/auth/callback/google` as an authorized redirect URI in the Google OAuth web client. For local development, use `http://localhost:3000/api/auth/callback/google`.
 
 Make sure values are correct for the target environment (production).
 
