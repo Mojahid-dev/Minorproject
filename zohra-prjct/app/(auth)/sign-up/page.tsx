@@ -10,6 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeftIcon, ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { FcGoogle } from "react-icons/fc";
@@ -18,9 +19,8 @@ import z from "zod";
 type signUpFormData = z.infer<typeof signUpSchema>;
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [verificationSent, setVerificationSent] = useState(false);
-  const [verificationEmail, setVerificationEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const {
@@ -55,12 +55,11 @@ export default function SignUpPage() {
       return;
     }
 
-    setVerificationEmail(data.email.trim());
-    setVerificationSent(true);
     toast.add({
       type: "success",
-      description: "Check your inbox for a link to verify your email.",
+      description: "Account created. Redirecting to your dashboard...",
     });
+    router.replace("/dashboard");
   };
 
   const signInWithGoogle = async () => {
@@ -93,14 +92,6 @@ export default function SignUpPage() {
             <h1 className="text-2xl font-semibold tracking-tight text-white">Create your account</h1>
             <p className="mt-2 text-sm text-zinc-400">Start using Zohra in a few simple steps.</p>
           </div>
-          {verificationSent ? (
-            <div role="status" className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.08] p-4 text-sm leading-6 text-emerald-100">
-              <p>We sent a verification link to:</p>
-              <p className="mt-1 break-all font-semibold text-white">{verificationEmail}</p>
-              <p className="mt-3">Check that inbox, including its Spam or Junk folder. Open the link to activate your account, then sign in.</p>
-              <Link href="/login" className="mt-4 inline-flex font-semibold text-yellow-300 transition hover:text-yellow-200">Go to sign in <ArrowRight size={15} className="ml-1" /></Link>
-            </div>
-          ) : <>
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="grid gap-4">
               <div className="grid gap-2">
@@ -184,7 +175,6 @@ export default function SignUpPage() {
             </button>
           </form>
           <p className="mt-6 text-center text-sm text-zinc-500">Already have an account? <Link href="/login" className="font-medium text-yellow-400 transition hover:text-yellow-300">Sign in</Link></p>
-          </>}
         </div>
       </section>
     </main>
