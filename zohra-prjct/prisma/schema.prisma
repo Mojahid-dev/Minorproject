@@ -30,6 +30,7 @@ model User {
   tasks         Task[]
   preferences   UserPreference?
   recognitionRequests RecognitionRequest[] @relation("RecognitionApplicant")
+  aiConversations AIConversation[]
 
   @@unique([email])
   @@map("user")
@@ -217,6 +218,37 @@ model RecognitionRequest {
   @@index([userId, createdAt])
   @@index([status, createdAt])
   @@map("recognition_request")
+}
+
+enum AIMessageRole {
+  USER
+  ASSISTANT
+}
+
+model AIConversation {
+  id        String       @id @default(cuid())
+  userId    String
+  title     String       @db.VarChar(120)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  AIMessage[]
+
+  @@index([userId, updatedAt])
+  @@map("ai_conversation")
+}
+
+model AIMessage {
+  id             String        @id @default(cuid())
+  conversationId String
+  role           AIMessageRole
+  content        String        @db.Text
+  position       Int
+  createdAt      DateTime      @default(now())
+  conversation  AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, position])
+  @@map("ai_message")
 }
 
 model Session {

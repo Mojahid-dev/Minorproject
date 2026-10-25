@@ -42,6 +42,7 @@ const navigation = [
   },
   { label: "Tasks", href: "/tasks", icon: LayoutGrid, badge: "tasks" },
   { label: "Calendar", href: "/calendar", icon: CalendarDays },
+  { label: "Zohra AI", href: "/ai-test", icon: MessageCircle },
   { label: "Team", icon: UsersRound, unavailable: true },
   { label: "Upload", href: "/upload", icon: Upload },
 ];
@@ -524,6 +525,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <p className="px-3 pb-2 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
                   Your workspace
                 </p>
+                <Link
+                  role="menuitem"
+                  href="/ai-test"
+                  onClick={() => setMobileMoreOpen(false)}
+                  aria-current={pathname.startsWith("/ai-test") ? "page" : undefined}
+                  className={`mb-2 flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium ${pathname.startsWith("/ai-test") ? "bg-violet-200/10 text-violet-100" : "text-neutral-300 hover:bg-white/[0.07] hover:text-white"}`}
+                >
+                  <MessageCircle size={18} /> Zohra AI
+                </Link>
                 <section
                   aria-label="Today tasks"
                   className="mb-2 rounded-xl border border-white/[0.07] bg-black/25 p-3"

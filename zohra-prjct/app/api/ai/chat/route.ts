@@ -1,192 +1,105 @@
-
+import { ApiError, GoogleGenAI } from "@google/genai";
+import { auth } from "@/lib/auth";
+import {
+  MAX_CHAT_CONTEXT_MESSAGES,
+  parseChatMessages,
+  toChatRole,
+  type ChatMessage,
+} from "@/lib/ai-conversations";
+import { prisma } from "@/lib/prisma";
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const MAX_MESSAGES = 12;
-const MAX_MESSAGE_LENGTH = 4000;
-
-type ChatMessage = {
-  role: "user" | "assistant";
-  content: string;
-};
-
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const messages: unknown = body.messages;
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
+    if (!userId) return NextResponse.json({ error: "Please sign in to use Zohra AI." }, { status: 401 });
 
-    if (
-      !Array.isArray(messages) ||
-      messages.length === 0 ||
-      messages.length > MAX_MESSAGES
-    ) {
-      return NextResponse.json(
-        { error: "Invalid conversation." },
-        { status: 400 }
-      );
+    const body = await request.json().catch(() => null);
+    const messages = parseChatMessages(body?.messages);
+    if (!messages || messages.at(-1)?.role !== "user") {
+      return NextResponse.json({ error: "Invalid conversation. The last message must be from you." }, { status: 400 });
     }
 
-    const validMessages: ChatMessage[] = [];
-
-    for (const message of messages) {
-      if (
-        !message ||
-        typeof message.content !== "string" ||
-        !["user", "assistant"].includes(message.role) ||
-        message.content.trim().length === 0 ||
-        message.content.length > MAX_MESSAGE_LENGTH
-      ) {
-        return NextResponse.json(
-          { error: "Invalid message." },
-          { status: 400 }
-        );
-      }
-
-      validMessages.push({
-        role: message.role,
-        content: message.content.trim(),
+    const conversationId = typeof body?.conversationId === "string" ? body.conversationId : null;
+    let history: ChatMessage[] = messages;
+    if (conversationId) {
+      const conversation = await prisma.aIConversation.findFirst({
+        where: { id: conversationId, userId },
+        include: { messages: { orderBy: { position: "asc" } } },
       });
-    }
-
-    if (validMessages.at(-1)?.role !== "user") {
-      return NextResponse.json(
-        { error: "The last message must be from the user." },
-        { status: 400 }
-      );
+      if (!conversation) return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
+      history = conversation.messages.map((message) => ({
+        role: toChatRole(message.role),
+        content: message.content,
+      }));
+      history.push(messages[messages.length - 1]);
+      if (history.length > 100) history = history.slice(-100);
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
-
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "Gemini is not configured. Add GEMINI_API_KEY to the server environment." },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: "Gemini is not configured. Add GEMINI_API_KEY to the server environment." }, { status: 503 });
     }
 
-    const conversationInput = validMessages.map((message) => ({
-      type: message.role === "assistant" ? "model_output" : "user_input",
-      content: [{ type: "text", text: message.content }],
+    const conversationInput = history.slice(-MAX_CHAT_CONTEXT_MESSAGES).map((message) => ({
+      type: message.role === "assistant" ? ("model_output" as const) : ("user_input" as const),
+      content: [{ type: "text" as const, text: message.content }],
     }));
     const models = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
-    const requestModel = (model: string) =>
-      fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          model,
-          system_instruction:
-            "You are Zohra, a helpful academic assistant. " +
-            "Explain concepts clearly, use examples, and " +
-            "help students understand rather than memorize.",
-          input: conversationInput,
-          generation_config: {
-            temperature: 0.4,
-            max_output_tokens: 512,
-          },
-        }),
-        signal: AbortSignal.timeout(120_000),
-      });
-    let response: Response | undefined;
-
+    const ai = new GoogleGenAI({ apiKey });
+    let reply = "";
     for (const [index, model] of models.entries()) {
-      response = await requestModel(model);
-
-      if (index === 0 && response.status === 503) {
-        console.warn(`Gemini ${model} returned 503; retrying once.`);
-        await new Promise((resolve) => setTimeout(resolve, 1_000));
-        response = await requestModel(model);
+      try {
+        const interaction = await ai.interactions.create({
+          model,
+          system_instruction: "You are Zohra, a helpful and conversational assistant. Answer the user's request naturally, explain clearly, and give examples when useful. Do not assume every request is academic.",
+          input: conversationInput,
+          generation_config: { temperature: 0.4, max_output_tokens: 1024 },
+        });
+        reply = interaction.output_text?.trim() ?? "";
+        break;
+      } catch (error) {
+        const fallback = index === 0 && error instanceof ApiError && [429, 503].includes(error.status);
+        if (!fallback) throw error;
+        console.warn(`Gemini ${model} returned ${error.status}; trying the Flash-Lite fallback.`);
       }
-
-      const canTryFreeFallback =
-        index === 0 && [429, 503].includes(response.status);
-      if (response.ok || !canTryFreeFallback) break;
-
-      console.warn(
-        `Gemini ${model} returned ${response.status}; trying the free Flash-Lite fallback.`
-      );
     }
+    if (!reply) return NextResponse.json({ error: "Gemini returned an empty reply. Please try again." }, { status: 502 });
 
-    if (!response) {
-      throw new Error("No Gemini model was requested.");
-    }
-
-    if (!response.ok) {
-      const providerError = await response.json().catch(() => null);
-      const providerMessage =
-        typeof providerError?.error?.message === "string"
-          ? providerError.error.message
-          : "";
-      console.error("Gemini request failed:", {
-        status: response.status,
-        message: providerMessage,
+    if (conversationId) {
+      const conversation = await prisma.aIConversation.findFirst({
+        where: { id: conversationId, userId },
+        select: { id: true, _count: { select: { messages: true } } },
       });
-
-      const errorMessage =
-        response.status === 401 || response.status === 403
-          ? "Gemini rejected the API key. Check GEMINI_API_KEY in your Vercel environment settings."
-          : response.status === 404
-            ? "Gemini could not find the requested model or API endpoint. Check the model access for your API key."
-            : response.status === 429
-              ? "Gemini's rate limit or quota was reached. Check your Google AI Studio usage and try again."
-              : response.status >= 500
-                ? `Google Gemini is temporarily unavailable (HTTP ${response.status}). Please try again shortly.`
-                : providerMessage
-                  ? `Gemini request failed: ${providerMessage}`
-                  : `Gemini request failed (HTTP ${response.status}).`;
-
-      return NextResponse.json(
-        { error: errorMessage },
-        { status: response.status === 429 ? 429 : 502 }
-      );
+      if (!conversation) return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
+      const position = conversation._count.messages;
+      await prisma.$transaction([
+        prisma.aIMessage.create({ data: { conversationId, role: "USER", content: messages.at(-1)!.content, position } }),
+        prisma.aIMessage.create({ data: { conversationId, role: "ASSISTANT", content: reply, position: position + 1 } }),
+        prisma.aIConversation.update({ where: { id: conversationId }, data: { updatedAt: new Date() } }),
+      ]);
     }
-
-    const data = await response.json();
-    const modelOutputSteps = Array.isArray(data.steps)
-      ? data.steps.filter(
-          (step: { type?: string }) => step.type === "model_output"
-        )
-      : [];
-    const lastModelOutput = modelOutputSteps.at(-1);
-    const reply = Array.isArray(lastModelOutput?.content)
-      ? lastModelOutput.content
-          .map((part: { type?: string; text?: unknown }) =>
-            part.type === "text" && typeof part.text === "string"
-              ? part.text
-              : ""
-          )
-          .join("")
-          .trim()
-      : "";
-
-    if (!reply) {
-      console.error(
-        "Gemini returned no text. Interaction status:",
-        data.status ?? "unknown"
-      );
-      return NextResponse.json(
-        { error: "Gemini returned an empty reply. Please try asking again." },
-        { status: 502 }
-      );
-    }
-
     return NextResponse.json({ reply });
   } catch (error) {
     console.error("AI chat request failed:", error);
-
+    const geminiError = error instanceof ApiError
+      ? error.status === 401 || error.status === 403
+        ? "Gemini rejected the API key. Check GEMINI_API_KEY in your Vercel environment settings."
+        : error.status === 404
+          ? "Gemini could not find the requested model. Check model access for your API key."
+          : error.status === 429
+            ? "Gemini's rate limit or free quota was reached. Try again later."
+            : error.status >= 500
+              ? `Google Gemini is temporarily unavailable (HTTP ${error.status}). Please try again shortly.`
+              : `Gemini request failed (HTTP ${error.status}).`
+      : null;
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error &&
-          error.name === "TimeoutError"
-            ? "The AI took too long to respond."
-            : "Unable to generate a response.",
-      },
-      { status: 502 }
+      { error: geminiError ?? (error instanceof Error && error.name === "TimeoutError" ? "The AI took too long to respond." : "Unable to generate a response.") },
+      { status: error instanceof ApiError ? error.status : 502 },
     );
   }
 }
