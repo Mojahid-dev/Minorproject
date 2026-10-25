@@ -120,7 +120,7 @@ export default function AIChat() {
       </form>
 
       <p className="text-xs text-neutral-500">
-        Powered by Llama 3.2:3B running locally.
+        Powered by Google Gemini.
       </p>
     </section>
   );

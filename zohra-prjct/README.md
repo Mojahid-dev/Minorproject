@@ -89,6 +89,7 @@ Put local values in `.env.local` at the project root. `.env*` files are ignored 
 | `BETTER_AUTH_URL` | Yes | Server-side base URL for Better Auth, such as `http://localhost:3000` locally or the deployed app URL. |
 | `NEXT_PUBLIC_BETTER_AUTH_URL` | Recommended | Client-side auth base URL. If omitted, the auth client uses the current site origin. Set it explicitly in production if needed. |
 | `BLOB_READ_WRITE_TOKEN` | Yes for uploads and PDF extraction | Read/write token for the Vercel Blob store. It is required by the upload flow and private PDF extraction. |
+| `GEMINI_API_KEY` | Yes for `/ai-test` | Google Gemini API key used by the server-side academic assistant. Create a key in Google AI Studio. |
 | `GOOGLE_CLIENT_ID` | Optional | Google OAuth client ID. |
 | `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth client secret. Set both Google values to enable Google sign-in. |
 | `ZOHRA_RECOGNITION_REVIEWER_IDS` | Optional | Comma-separated Better Auth user IDs allowed to review recognition requests. If unset, no account can access the reviewer page or decision API. |
@@ -102,6 +103,7 @@ BETTER_AUTH_SECRET="replace-with-a-long-random-secret"
 BETTER_AUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_BETTER_AUTH_URL="http://localhost:3000"
 BLOB_READ_WRITE_TOKEN="your-vercel-blob-read-write-token"
+GEMINI_API_KEY="your-gemini-api-key"
 # Optional: set both Google OAuth values to enable Google sign-in
 GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"

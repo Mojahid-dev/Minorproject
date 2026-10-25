@@ -56,34 +56,39 @@ export async function POST(request: Request) {
       );
     }
 
-    const baseUrl =
-      process.env.OLLAMA_BASE_URL ??
-      "http://127.0.0.1:11434";
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Gemini is not configured. Add GEMINI_API_KEY to the server environment." },
+        { status: 503 }
+      );
+    }
 
     const response = await fetch(
-      `${baseUrl}/api/chat`,
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
         },
         body: JSON.stringify({
-          model:
-            process.env.OLLAMA_MODEL ?? "llama3.2:3b",
-          messages: [
-            {
-              role: "system",
-              content:
+          systemInstruction: {
+            parts: [{
+              text:
                 "You are Zohra, a helpful academic assistant. " +
                 "Explain concepts clearly, use examples, and " +
                 "help students understand rather than memorize.",
-            },
-            ...validMessages,
-          ],
-          stream: false,
-          options: {
+            }],
+          },
+          contents: validMessages.map((message) => ({
+            role: message.role === "assistant" ? "model" : "user",
+            parts: [{ text: message.content }],
+          })),
+          generationConfig: {
             temperature: 0.4,
-            num_predict: 512,
+            maxOutputTokens: 512,
           },
         }),
         signal: AbortSignal.timeout(120_000),
@@ -91,16 +96,18 @@ export async function POST(request: Request) {
     );
 
     if (!response.ok) {
-      console.error("Ollama returned status:", response.status);
+      console.error("Gemini returned status:", response.status);
 
       return NextResponse.json(
-        { error: "The local AI service is unavailable." },
+        { error: "Gemini is unavailable right now. Please try again." },
         { status: 502 }
       );
     }
 
     const data = await response.json();
-    const reply = data.message?.content;
+    const reply = data.candidates?.[0]?.content?.parts
+      ?.map((part: { text?: string }) => part.text ?? "")
+      .join("");
 
     if (typeof reply !== "string") {
       return NextResponse.json(
