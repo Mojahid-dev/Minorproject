@@ -65,32 +65,55 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/interactions",
-      {
+    const conversationInput = validMessages.map((message) => ({
+      type: message.role === "assistant" ? "model_output" : "user_input",
+      content: [{ type: "text", text: message.content }],
+    }));
+    const models = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
+    const requestModel = (model: string) =>
+      fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-goog-api-key": apiKey,
         },
         body: JSON.stringify({
-          model: "gemini-3.8-flash",
+          model,
           system_instruction:
             "You are Zohra, a helpful academic assistant. " +
             "Explain concepts clearly, use examples, and " +
             "help students understand rather than memorize.",
-          input: validMessages.map((message) => ({
-            type: message.role === "assistant" ? "model_output" : "user_input",
-            content: [{ type: "text", text: message.content }],
-          })),
+          input: conversationInput,
           generation_config: {
             temperature: 0.4,
             max_output_tokens: 512,
           },
         }),
         signal: AbortSignal.timeout(120_000),
+      });
+    let response: Response | undefined;
+
+    for (const [index, model] of models.entries()) {
+      response = await requestModel(model);
+
+      if (index === 0 && response.status === 503) {
+        console.warn(`Gemini ${model} returned 503; retrying once.`);
+        await new Promise((resolve) => setTimeout(resolve, 1_000));
+        response = await requestModel(model);
       }
-    );
+
+      const canTryFreeFallback =
+        index === 0 && [429, 503].includes(response.status);
+      if (response.ok || !canTryFreeFallback) break;
+
+      console.warn(
+        `Gemini ${model} returned ${response.status}; trying the free Flash-Lite fallback.`
+      );
+    }
+
+    if (!response) {
+      throw new Error("No Gemini model was requested.");
+    }
 
     if (!response.ok) {
       const providerError = await response.json().catch(() => null);
