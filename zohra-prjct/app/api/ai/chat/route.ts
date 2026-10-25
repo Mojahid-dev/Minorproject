@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     }
 
     const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/interactions",
       {
         method: "POST",
         headers: {
@@ -74,21 +74,18 @@ export async function POST(request: Request) {
           "x-goog-api-key": apiKey,
         },
         body: JSON.stringify({
-          systemInstruction: {
-            parts: [{
-              text:
-                "You are Zohra, a helpful academic assistant. " +
-                "Explain concepts clearly, use examples, and " +
-                "help students understand rather than memorize.",
-            }],
-          },
-          contents: validMessages.map((message) => ({
-            role: message.role === "assistant" ? "model" : "user",
-            parts: [{ text: message.content }],
+          model: "gemini-3.8-flash",
+          system_instruction:
+            "You are Zohra, a helpful academic assistant. " +
+            "Explain concepts clearly, use examples, and " +
+            "help students understand rather than memorize.",
+          input: validMessages.map((message) => ({
+            type: message.role === "assistant" ? "model_output" : "user_input",
+            content: [{ type: "text", text: message.content }],
           })),
-          generationConfig: {
+          generation_config: {
             temperature: 0.4,
-            maxOutputTokens: 512,
+            max_output_tokens: 512,
           },
         }),
         signal: AbortSignal.timeout(120_000),
@@ -96,16 +93,28 @@ export async function POST(request: Request) {
     );
 
     if (!response.ok) {
-      console.error("Gemini returned status:", response.status);
+      const providerError = await response.json().catch(() => null);
+      const providerMessage =
+        typeof providerError?.error?.message === "string"
+          ? providerError.error.message
+          : "";
+      console.error("Gemini request failed:", {
+        status: response.status,
+        message: providerMessage,
+      });
 
       const errorMessage =
-        response.status === 400
-          ? "Gemini rejected the request. Check that your API key is valid and enabled for the Gemini API."
-          : response.status === 401 || response.status === 403
-            ? "Gemini rejected the API key. Check GEMINI_API_KEY in your server environment."
+        response.status === 401 || response.status === 403
+          ? "Gemini rejected the API key. Check GEMINI_API_KEY in your Vercel environment settings."
+          : response.status === 404
+            ? "Gemini could not find the requested model or API endpoint. Check the model access for your API key."
             : response.status === 429
               ? "Gemini's rate limit or quota was reached. Check your Google AI Studio usage and try again."
-              : "Gemini is unavailable right now. Please try again.";
+              : response.status >= 500
+                ? `Google Gemini is temporarily unavailable (HTTP ${response.status}). Please try again shortly.`
+                : providerMessage
+                  ? `Gemini request failed: ${providerMessage}`
+                  : `Gemini request failed (HTTP ${response.status}).`;
 
       return NextResponse.json(
         { error: errorMessage },
@@ -114,10 +123,18 @@ export async function POST(request: Request) {
     }
 
     const data = await response.json();
-    const reply = Array.isArray(data.candidates?.[0]?.content?.parts)
-      ? data.candidates[0].content.parts
-          .map((part: { text?: unknown }) =>
-            typeof part.text === "string" ? part.text : ""
+    const modelOutputSteps = Array.isArray(data.steps)
+      ? data.steps.filter(
+          (step: { type?: string }) => step.type === "model_output"
+        )
+      : [];
+    const lastModelOutput = modelOutputSteps.at(-1);
+    const reply = Array.isArray(lastModelOutput?.content)
+      ? lastModelOutput.content
+          .map((part: { type?: string; text?: unknown }) =>
+            part.type === "text" && typeof part.text === "string"
+              ? part.text
+              : ""
           )
           .join("")
           .trim()
@@ -125,8 +142,8 @@ export async function POST(request: Request) {
 
     if (!reply) {
       console.error(
-        "Gemini returned no text. Finish reason:",
-        data.candidates?.[0]?.finishReason ?? "unknown"
+        "Gemini returned no text. Interaction status:",
+        data.status ?? "unknown"
       );
       return NextResponse.json(
         { error: "Gemini returned an empty reply. Please try asking again." },
