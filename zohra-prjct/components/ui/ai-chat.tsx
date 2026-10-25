@@ -115,8 +115,14 @@ export default function AIChat() {
           ...(conversationId ? { conversationId } : {}),
         }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Could not get an AI response.");
+      const responseText = await response.text();
+      let data: { error?: string; reply?: string } | null = null;
+      try { data = JSON.parse(responseText) as { error?: string; reply?: string }; } catch { /* Vercel and proxies can return a plain-text error page. */ }
+      if (!response.ok) {
+        const statusText = response.statusText ? ` ${response.statusText}` : "";
+        throw new Error(data?.error ?? `The AI service returned HTTP ${response.status}${statusText}. Check the deployment's function logs.`);
+      }
+      if (!data) throw new Error("The AI service returned an unreadable response. Check the deployment's function logs.");
       if (typeof data.reply !== "string" || !data.reply.trim()) throw new Error("Gemini returned an empty reply. Please try again.");
       setMessages([...nextMessages, { role: "assistant", content: data.reply.trim() }]);
       if (conversationId) void loadList();
