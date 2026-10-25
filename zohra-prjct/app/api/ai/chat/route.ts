@@ -98,20 +98,38 @@ export async function POST(request: Request) {
     if (!response.ok) {
       console.error("Gemini returned status:", response.status);
 
+      const errorMessage =
+        response.status === 400
+          ? "Gemini rejected the request. Check that your API key is valid and enabled for the Gemini API."
+          : response.status === 401 || response.status === 403
+            ? "Gemini rejected the API key. Check GEMINI_API_KEY in your server environment."
+            : response.status === 429
+              ? "Gemini's rate limit or quota was reached. Check your Google AI Studio usage and try again."
+              : "Gemini is unavailable right now. Please try again.";
+
       return NextResponse.json(
-        { error: "Gemini is unavailable right now. Please try again." },
-        { status: 502 }
+        { error: errorMessage },
+        { status: response.status === 429 ? 429 : 502 }
       );
     }
 
     const data = await response.json();
-    const reply = data.candidates?.[0]?.content?.parts
-      ?.map((part: { text?: string }) => part.text ?? "")
-      .join("");
+    const reply = Array.isArray(data.candidates?.[0]?.content?.parts)
+      ? data.candidates[0].content.parts
+          .map((part: { text?: unknown }) =>
+            typeof part.text === "string" ? part.text : ""
+          )
+          .join("")
+          .trim()
+      : "";
 
-    if (typeof reply !== "string") {
+    if (!reply) {
+      console.error(
+        "Gemini returned no text. Finish reason:",
+        data.candidates?.[0]?.finishReason ?? "unknown"
+      );
       return NextResponse.json(
-        { error: "Invalid response from AI." },
+        { error: "Gemini returned an empty reply. Please try asking again." },
         { status: 502 }
       );
     }

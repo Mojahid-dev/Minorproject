@@ -48,11 +48,15 @@ export default function AIChat() {
         );
       }
 
+      if (typeof data.reply !== "string" || !data.reply.trim()) {
+        throw new Error("Gemini returned an empty reply. Please try again.");
+      }
+
       setMessages([
         ...nextMessages,
         {
           role: "assistant",
-          content: data.reply,
+          content: data.reply.trim(),
         },
       ]);
     } catch (err) {
