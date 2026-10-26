@@ -8,10 +8,10 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
-import rehypeSanitize, { defaultSchema, type Schema } from "rehype-sanitize";
+import rehypeSanitize, { defaultSchema, type Options } from "rehype-sanitize";
 
 import {
-  
+
   ArrowRight,
   ArrowUp,
   Check,
@@ -35,7 +35,7 @@ const promptSuggestions = [
   "Explore an idea with me",
 ];
 
-const markdownSanitizeSchema: Schema = {
+const markdownSanitizeSchema: Options = {
   ...defaultSchema,
   attributes: {
     ...defaultSchema.attributes,
