@@ -22,6 +22,9 @@
 .chat-markdown li > p { margin: 0.35rem 0; }
 .chat-markdown hr { margin: 1.25rem 0; border-color: #e4e4e7; }
 .dark .chat-markdown hr { border-color: rgb(255 255 255 / 12%); }
+.zohra-ai-mark { background: #17171a; border: 1px solid rgb(24 24 27 / 10%); }
+.dark .zohra-ai-mark { border-color: rgb(255 255 255 / 10%); }
+.light .workspace-shell .zohra-ai-mark.zohra-ai-mark { background-color: #17171a !important; border-color: rgb(24 24 27 / 16%) !important; }
 
 @custom-variant dark (&:is(.dark *));
 

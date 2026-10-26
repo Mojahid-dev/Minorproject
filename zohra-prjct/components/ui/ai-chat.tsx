@@ -1,43 +1,68 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
-  ArrowUp, Check, Clock3, LoaderCircle,
-  Menu, MessageCircle, Pencil, Plus, RefreshCw, Save,
-  Sparkles, Trash2, X,
+  ArrowRight,
+  ArrowUp,
+  Check,
+  Copy,
+  LoaderCircle,
+  Menu,
+  MessageSquarePlus,
+  Pencil,
+  Save,
+  Trash2,
+  X,
 } from "lucide-react";
 
 type Message = { role: "user" | "assistant"; content: string };
 type Conversation = { id: string; title: string; updatedAt: string; _count?: { messages: number } };
 type Dialog = { kind: "dirty" } | { kind: "delete"; id: string } | null;
 
-const prompts = [
-  "Explain a difficult topic in simple terms",
-  "Help me make a study plan for this week",
-  "Quiz me on a topic I’m learning",
+const promptSuggestions = [
+  "Explain a difficult idea simply",
+  "Help me think through a plan",
+  "Explore an idea with me",
 ];
 
-function AssistantMark({ small = false }: { small?: boolean }) {
-  return <span className={`relative grid shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-700 text-white shadow-lg shadow-violet-900/20 ${small ? "size-9 rounded-xl" : "size-12"}`}><Sparkles size={small ? 17 : 23} /><span className="absolute -bottom-1 -right-1 size-3 rounded-full border-2 border-white bg-emerald-400 dark:border-[#16151d]" /></span>;
+function ZohraMark({ size = "regular" }: { size?: "regular" | "large" }) {
+  const dimensions = size === "large" ? 45 : 30;
+  return (
+    <span className={`zohra-ai-mark inline-grid shrink-0 place-items-center ${size === "large" ? "size-[66px] rounded-[20px]" : "size-10 rounded-xl"}`}>
+      <Image src="/Logo.svg" alt="" width={dimensions} height={dimensions} priority={size === "large"} className="h-[76%] w-[76%] object-contain" />
+    </span>
+  );
 }
 
 function FormattedReply({ content }: { content: string }) {
-  return <div className="chat-markdown min-w-0 text-[14px] leading-7 text-zinc-700 dark:text-zinc-200 sm:text-[15px]">
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
-      a: ({ children, href }) => <a href={href} target="_blank" rel="noreferrer" className="font-medium text-violet-700 underline decoration-violet-300 underline-offset-4 hover:text-violet-900 dark:text-violet-300 dark:decoration-violet-500 dark:hover:text-violet-200">{children}</a>,
-      pre: ({ children }) => <pre className="my-4 max-w-full overflow-x-auto rounded-2xl border border-zinc-800 bg-[#111116] p-4 text-[13px] leading-6 text-zinc-100">{children}</pre>,
-      code: ({ children, className }) => className
-        ? <code className="font-mono text-[12px]">{children}</code>
-        : <code className="rounded-md bg-violet-100 px-1.5 py-0.5 font-mono text-[0.88em] text-violet-900 dark:bg-violet-400/15 dark:text-violet-200">{children}</code>,
-      table: ({ children }) => <div className="my-4 max-w-full overflow-x-auto"><table className="w-full border-collapse text-left text-sm">{children}</table></div>,
-      th: ({ children }) => <th className="border border-zinc-200 bg-zinc-100 px-3 py-2 font-semibold dark:border-white/10 dark:bg-white/5">{children}</th>,
-      td: ({ children }) => <td className="border border-zinc-200 px-3 py-2 dark:border-white/10">{children}</td>,
-      blockquote: ({ children }) => <blockquote className="my-3 border-l-2 border-violet-400 pl-4 text-zinc-600 dark:text-zinc-300">{children}</blockquote>,
-    }}>{content}</ReactMarkdown>
-  </div>;
+  return (
+    <div className="chat-markdown min-w-0 text-[14px] leading-7 text-zinc-700 dark:text-zinc-200 sm:text-[15px]">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          a: ({ children, href }) => (
+            <a href={href} target="_blank" rel="noreferrer" className="font-medium text-violet-700 underline decoration-violet-300 underline-offset-4 hover:text-violet-900 dark:text-violet-300 dark:decoration-violet-500 dark:hover:text-violet-200">{children}</a>
+          ),
+          pre: ({ children }) => (
+            <pre className="my-4 max-w-full overflow-x-auto rounded-xl border border-zinc-800 bg-[#111116] p-4 text-[13px] leading-6 text-zinc-100">{children}</pre>
+          ),
+          code: ({ children, className }) => className
+            ? <code className="font-mono text-[12px]">{children}</code>
+            : <code className="rounded bg-violet-100 px-1.5 py-0.5 font-mono text-[0.88em] text-violet-900 dark:bg-violet-400/15 dark:text-violet-200">{children}</code>,
+          table: ({ children }) => <div className="my-4 max-w-full overflow-x-auto"><table className="w-full border-collapse text-left text-sm">{children}</table></div>,
+          th: ({ children }) => <th className="border border-zinc-200 bg-zinc-100 px-3 py-2 font-semibold dark:border-white/10 dark:bg-white/5">{children}</th>,
+          td: ({ children }) => <td className="border border-zinc-200 px-3 py-2 dark:border-white/10">{children}</td>,
+          blockquote: ({ children }) => <blockquote className="my-3 border-l-2 border-violet-400 pl-4 text-zinc-600 dark:text-zinc-300">{children}</blockquote>,
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
 }
 
 export default function AIChat() {
@@ -56,8 +81,11 @@ export default function AIChat() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [notice, setNotice] = useState("");
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const dirty = messages.length > 0 && (!conversationId || (messages.at(-1)?.role === "user" && Boolean(error)));
+  const activeTitle = conversations.find((item) => item.id === conversationId)?.title ?? "New conversation";
 
   const loadList = useCallback(async () => {
     try {
@@ -65,14 +93,21 @@ export default function AIChat() {
       if (!response.ok) return;
       const data = await response.json();
       setConversations(Array.isArray(data.conversations) ? data.conversations : []);
-    } catch { /* A later save or visit will load the list again. */ }
+    } catch { /* The list will load again on the next visit or save. */ }
   }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => { void loadList(); }, 0);
     return () => window.clearTimeout(timer);
   }, [loadList]);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages, loading]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, loading]);
+
+  useEffect(() => {
+    if (input === "" && composerRef.current) composerRef.current.style.height = "48px";
+  }, [input]);
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -89,6 +124,7 @@ export default function AIChat() {
       event.preventDefault();
       event.stopPropagation();
       setPendingHref(destination.pathname + destination.search + destination.hash);
+      setPendingOpenId(null);
       setDialog({ kind: "dirty" });
     };
     window.addEventListener("beforeunload", onBeforeUnload);
@@ -103,13 +139,18 @@ export default function AIChat() {
     if (!content || loading) return;
     const base = retry ? messages : messages.at(-1)?.role === "user" && error ? messages.slice(0, -1) : messages;
     const nextMessages = retry ? base : [...base, { role: "user" as const, content }];
-    if (!retry) { setMessages(nextMessages); setInput(""); }
+    if (!retry) {
+      setMessages(nextMessages);
+      setInput("");
+    }
     setLoading(true);
     setError("");
     setNotice("");
+
     try {
       const response = await fetch("/api/ai/chat", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: conversationId ? [nextMessages.at(-1)] : nextMessages.slice(-100),
           ...(conversationId ? { conversationId } : {}),
@@ -117,22 +158,33 @@ export default function AIChat() {
       });
       const responseText = await response.text();
       let data: { error?: string; reply?: string } | null = null;
-      try { data = JSON.parse(responseText) as { error?: string; reply?: string }; } catch { /* Vercel and proxies can return a plain-text error page. */ }
+      try { data = JSON.parse(responseText) as { error?: string; reply?: string }; } catch { /* A proxy may return a plain-text error page. */ }
       if (!response.ok) {
         const statusText = response.statusText ? ` ${response.statusText}` : "";
         throw new Error(data?.error ?? `The AI service returned HTTP ${response.status}${statusText}. Check the deployment's function logs.`);
       }
       if (!data) throw new Error("The AI service returned an unreadable response. Check the deployment's function logs.");
       if (typeof data.reply !== "string" || !data.reply.trim()) throw new Error("Gemini returned an empty reply. Please try again.");
+
       setMessages([...nextMessages, { role: "assistant", content: data.reply.trim() }]);
       if (conversationId) void loadList();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }
 
   function startNew() {
-    setMessages([]); setInput(""); setError(""); setNotice(""); setConversationId(null); setHistoryOpen(false); setDialog(null); setPendingHref(null); setPendingOpenId(null);
+    setMessages([]);
+    setInput("");
+    setError("");
+    setNotice("");
+    setConversationId(null);
+    setHistoryOpen(false);
+    setDialog(null);
+    setPendingHref(null);
+    setPendingOpenId(null);
   }
 
   async function saveConversation() {
@@ -140,7 +192,9 @@ export default function AIChat() {
     setSaving(true);
     try {
       const response = await fetch("/api/ai/conversations", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not save this conversation.");
@@ -151,7 +205,9 @@ export default function AIChat() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save this conversation.");
       return false;
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function saveAndContinue() {
@@ -161,8 +217,11 @@ export default function AIChat() {
     const openId = pendingOpenId;
     setPendingOpenId(null);
     if (destination) router.push(destination);
-    else if (openId) { setPendingHref(null); setDialog(null); void openConversation(openId, true); }
-    else startNew();
+    else if (openId) {
+      setPendingHref(null);
+      setDialog(null);
+      void openConversation(openId, true);
+    } else startNew();
   }
 
   function discardAndContinue() {
@@ -171,30 +230,46 @@ export default function AIChat() {
     setDialog(null);
     setPendingOpenId(null);
     if (destination) router.push(destination);
-    else if (openId) { setPendingHref(null); void openConversation(openId, true); }
-    else startNew();
+    else if (openId) {
+      setPendingHref(null);
+      void openConversation(openId, true);
+    } else startNew();
   }
 
   async function openConversation(id: string, force = false) {
-    if (dirty && !force) { setPendingOpenId(id); setPendingHref(null); setDialog({ kind: "dirty" }); return; }
-    setHistoryOpen(false); setError(""); setNotice("");
+    if (dirty && !force) {
+      setPendingOpenId(id);
+      setPendingHref(null);
+      setDialog({ kind: "dirty" });
+      return;
+    }
+    setHistoryOpen(false);
+    setError("");
+    setNotice("");
     try {
       const response = await fetch(`/api/ai/conversations/${encodeURIComponent(id)}`, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not open this conversation.");
       setConversationId(id);
       setMessages(data.conversation.messages.map((message: Message) => ({ role: message.role, content: message.content })));
-    } catch (err) { setError(err instanceof Error ? err.message : "Could not open this conversation."); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not open this conversation.");
+    }
   }
 
   async function renameConversation(id: string) {
     const title = renameValue.trim();
     if (!title || title.length > 120) return;
     const response = await fetch(`/api/ai/conversations/${encodeURIComponent(id)}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title }),
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
     });
     const data = await response.json();
-    if (!response.ok) { setError(data.error ?? "Could not rename conversation."); return; }
+    if (!response.ok) {
+      setError(data.error ?? "Could not rename conversation.");
+      return;
+    }
     setConversations((items) => items.map((item) => item.id === id ? { ...item, title } : item));
     setRenamingId(null);
     setNotice("Conversation renamed.");
@@ -202,58 +277,231 @@ export default function AIChat() {
 
   async function deleteConversation(id: string) {
     const response = await fetch(`/api/ai/conversations/${encodeURIComponent(id)}`, { method: "DELETE" });
-    if (!response.ok) { setError("Could not delete conversation."); return; }
+    if (!response.ok) {
+      setError("Could not delete conversation.");
+      return;
+    }
     setConversations((items) => items.filter((item) => item.id !== id));
     if (conversationId === id) startNew();
     setDialog(null);
   }
 
-  const sidebar = <div className="flex h-full min-h-0 flex-col">
-    <div className="flex items-center justify-between px-4 pb-3 pt-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-500 dark:text-zinc-400">Your conversations</p>
-      <button type="button" onClick={() => setHistoryOpen(false)} aria-label="Close chat history" className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 lg:hidden"><X size={17} /></button>
-    </div>
-    <button type="button" onClick={() => { setPendingHref(null); setPendingOpenId(null); if (dirty) setDialog({ kind: "dirty" }); else startNew(); }} className="mx-3 flex h-10 items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 text-sm font-semibold text-violet-800 transition hover:bg-violet-100 dark:border-violet-300/20 dark:bg-violet-400/10 dark:text-violet-200 dark:hover:bg-violet-400/15">
-      <Plus size={16} /> New chat
-    </button>
-    <div className="mt-4 flex-1 space-y-1 overflow-y-auto px-2 pb-3">
-      {conversations.length === 0 ? <div className="px-3 py-6 text-center text-xs leading-5 text-zinc-500">Saved chats will appear here.</div> : conversations.map((item) => <div key={item.id} className={`group rounded-xl border px-2 py-2 ${conversationId === item.id ? "border-violet-200 bg-violet-50 dark:border-violet-300/20 dark:bg-violet-400/10" : "border-transparent hover:bg-zinc-100 dark:hover:bg-white/[0.05]"}`}>
-        {renamingId === item.id ? <form className="flex gap-1" onSubmit={(event) => { event.preventDefault(); void renameConversation(item.id); }}><input autoFocus maxLength={120} value={renameValue} onChange={(event) => setRenameValue(event.target.value)} className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-violet-400 dark:border-white/10 dark:bg-[#17161e]" /><button aria-label="Save title" className="rounded-md p-1.5 text-violet-700 hover:bg-violet-100 dark:text-violet-200"><Check size={15} /></button></form> : <>
-          <button type="button" onClick={() => void openConversation(item.id)} className="block w-full truncate text-left text-[13px] font-medium text-zinc-700 dark:text-zinc-200">{item.title}</button>
-          <div className="mt-1.5 flex items-center justify-between"><span className="flex items-center gap-1 text-[10px] text-zinc-500"><Clock3 size={11} />{new Date(item.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span><div className="flex gap-0.5 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100"><button type="button" aria-label={`Rename ${item.title}`} onClick={() => { setRenamingId(item.id); setRenameValue(item.title); }} className="rounded-md p-1 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-white/10"><Pencil size={13} /></button><button type="button" aria-label={`Delete ${item.title}`} onClick={() => setDialog({ kind: "delete", id: item.id })} className="rounded-md p-1 text-zinc-500 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-400/10 dark:hover:text-red-300"><Trash2 size={13} /></button></div></div>
-        </>}
-      </div>)}
-    </div>
-    <div className="border-t border-zinc-200 px-4 py-3 text-[10px] text-zinc-500 dark:border-white/10">Chats are private to your account</div>
-  </div>;
+  async function copyReply(content: string, index: number) {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedIndex(index);
+      window.setTimeout(() => setCopiedIndex(null), 1500);
+    } catch {
+      setNotice("Could not copy this response.");
+    }
+  }
 
-  return <section className="relative flex h-[calc(100dvh-11.5rem-env(safe-area-inset-bottom))] min-h-[380px] w-full overflow-hidden rounded-[26px] border border-zinc-200 bg-white shadow-[0_18px_60px_rgba(38,28,72,0.08)] dark:border-white/10 dark:bg-[#14131a] dark:shadow-[0_24px_80px_rgba(0,0,0,0.25)] lg:h-[calc(100dvh-8.5rem)]">
-    <aside className="hidden w-[248px] shrink-0 border-r border-zinc-200 bg-zinc-50/70 dark:border-white/10 dark:bg-[#111016] lg:block">{sidebar}</aside>
-    {historyOpen && <div className="absolute inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setHistoryOpen(false)}><aside onClick={(event) => event.stopPropagation()} className="h-full w-[min(84vw,310px)] border-r border-zinc-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#14131a]">{sidebar}</aside></div>}
+  function dismissDialog() {
+    setDialog(null);
+    setPendingHref(null);
+    setPendingOpenId(null);
+  }
 
-    <div className="flex min-w-0 flex-1 flex-col">
-      <header className="flex h-[62px] shrink-0 items-center justify-between border-b border-zinc-200 px-3 dark:border-white/10 sm:px-5">
-        <div className="flex min-w-0 items-center gap-2.5"><button type="button" aria-label="Open saved conversations" onClick={() => setHistoryOpen(true)} className="grid size-9 shrink-0 place-items-center rounded-xl text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 lg:hidden"><Menu size={19} /></button><AssistantMark small /><div className="min-w-0"><p className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-100">Zohra AI</p><p className="text-[10px] text-zinc-500">Your thoughtful AI companion</p></div></div>
-        <div className="flex shrink-0 items-center gap-1.5">{conversationId && <span className="hidden items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-medium text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300 sm:inline-flex"><Check size={12} /> Saved</span>}{dirty && messages.at(-1)?.role === "assistant" && <button type="button" disabled={saving} onClick={() => void saveConversation()} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-violet-600 px-2.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-60 sm:px-3"><Save size={13} />{saving ? "Saving" : "Save"}</button>}{conversationId && <button type="button" onClick={() => dirty ? setDialog({ kind: "dirty" }) : startNew()} className="hidden h-8 items-center gap-1 rounded-lg border border-zinc-200 px-2.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-white/10 dark:text-zinc-300 dark:hover:bg-white/5 sm:inline-flex"><Plus size={14} /> New</button>}</div>
-      </header>
-
-      <div className="flex-1 overflow-y-auto px-3 py-5 sm:px-6 sm:py-7 lg:px-10">
-        {messages.length === 0 ? <div className="mx-auto flex min-h-full max-w-2xl flex-col justify-center pb-5">
-          <div className="mb-6 flex items-center gap-4"><span className="grid size-[58px] place-items-center rounded-[20px] bg-gradient-to-br from-violet-500 via-violet-600 to-indigo-700 text-white shadow-xl shadow-violet-800/20"><Sparkles size={28} /></span><div><p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-violet-600 dark:text-violet-300">A little clarity goes a long way</p><h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white sm:text-[32px]">Hi, I’m Zohra.</h1></div></div>
-          <p className="max-w-xl text-[15px] leading-7 text-zinc-600 dark:text-zinc-400 sm:text-base">Bring me a question, a tricky concept, or a half-formed idea. We’ll work through it together.</p>
-          <div className="mt-8 grid gap-2.5 sm:grid-cols-3">{prompts.map((prompt, index) => <button type="button" key={prompt} onClick={() => setInput(prompt)} className="group min-h-[92px] rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4 text-left transition hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50 dark:border-white/10 dark:bg-white/[0.025] dark:hover:border-violet-300/30 dark:hover:bg-violet-400/[0.06]"><span className="mb-3 grid size-7 place-items-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-400/10 dark:text-violet-300">{index === 0 ? <MessageCircle size={15} /> : index === 1 ? <Clock3 size={15} /> : <Sparkles size={15} />}</span><span className="text-xs font-medium leading-5 text-zinc-700 group-hover:text-violet-900 dark:text-zinc-300 dark:group-hover:text-violet-100">{prompt}</span></button>)}</div>
-          <p className="mt-6 text-[11px] text-zinc-400">Powered by Google Gemini · Responses can make mistakes</p>
-        </div> : <div className="mx-auto max-w-3xl space-y-7 pb-4">{messages.map((message, index) => message.role === "user" ? <div key={`${index}-user`} className="flex justify-end"><div className="max-w-[88%] rounded-[21px] rounded-br-md bg-violet-600 px-4 py-3 text-[14px] leading-6 text-white shadow-sm shadow-violet-900/10 sm:max-w-[78%] sm:px-5 sm:py-3.5">{message.content}</div></div> : <article key={`${index}-assistant`} className="flex items-start gap-3 sm:gap-4"><AssistantMark small /><div className="min-w-0 flex-1 pt-0.5"><div className="mb-1 text-xs font-semibold text-zinc-800 dark:text-zinc-100">Zohra</div><FormattedReply content={message.content} /></div></article>)}
-          {loading && <div className="flex items-center gap-3"><AssistantMark small /><div className="flex items-center gap-2 rounded-2xl bg-zinc-100 px-4 py-3 text-sm text-zinc-500 dark:bg-white/[0.05] dark:text-zinc-400"><LoaderCircle size={15} className="animate-spin text-violet-500" />Thinking through it…</div></div>}
-          {error && <div role="alert" className="ml-11 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-400/20 dark:bg-red-400/[0.07] dark:text-red-200"><div className="flex items-start justify-between gap-3"><p>{error}</p>{messages.at(-1)?.role === "user" && <button type="button" disabled={loading} onClick={() => void sendMessage(messages.at(-1)!.content, true)} className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-red-300/70 px-2.5 py-1.5 text-xs font-semibold hover:bg-red-100 dark:border-red-300/20 dark:hover:bg-red-400/10"><RefreshCw size={12} /> Retry</button>}</div></div>}
-          {notice && <p role="status" className="ml-11 text-xs text-emerald-700 dark:text-emerald-300">{notice}</p>}
-          <div ref={bottomRef} />
-        </div>}
+  const sidebar = (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center gap-3 px-5 pb-5 pt-5">
+        <ZohraMark />
+        <div className="min-w-0">
+          <p className="text-[15px] font-semibold tracking-[-0.02em] text-zinc-900 dark:text-zinc-100">Zohra</p>
+          <p className="text-[11px] text-zinc-500 dark:text-zinc-400">AI workspace</p>
+        </div>
+        <button type="button" onClick={() => setHistoryOpen(false)} aria-label="Close chat history" className="ml-auto rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 lg:hidden"><X size={17} /></button>
       </div>
 
-      <div className="shrink-0 border-t border-zinc-200 bg-white/95 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3 dark:border-white/10 dark:bg-[#14131a]/95 sm:px-6 sm:pb-4 lg:px-10"><form onSubmit={(event) => { event.preventDefault(); void sendMessage(); }} className="mx-auto max-w-3xl"><div className="flex items-end gap-2 rounded-[20px] border border-zinc-300 bg-white p-2 shadow-[0_4px_18px_rgba(38,28,72,0.06)] transition focus-within:border-violet-400 focus-within:ring-4 focus-within:ring-violet-500/10 dark:border-white/15 dark:bg-[#1a1921] dark:focus-within:border-violet-400/50"><textarea value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void sendMessage(); } }} placeholder="Ask anything…" aria-label="Message Zohra AI" rows={1} maxLength={4000} disabled={loading} className="max-h-32 min-h-10 flex-1 resize-y bg-transparent px-2.5 py-2 text-sm leading-6 text-zinc-800 outline-none placeholder:text-zinc-400 disabled:opacity-60 dark:text-zinc-100" /><button type="submit" disabled={loading || !input.trim()} aria-label="Send message" className="grid size-10 shrink-0 place-items-center rounded-[14px] bg-violet-600 text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400 dark:disabled:bg-white/10 dark:disabled:text-zinc-500">{loading ? <LoaderCircle size={17} className="animate-spin" /> : <ArrowUp size={19} />}</button></div><div className="mt-1.5 flex items-center justify-between px-1"><span className="text-[10px] text-zinc-400">Enter to send · Shift + Enter for a new line</span><span className="text-[10px] text-zinc-400">{input.length}/4000</span></div></form></div>
-    </div>
+      <button
+        type="button"
+        onClick={() => {
+          setPendingHref(null);
+          setPendingOpenId(null);
+          if (dirty) setDialog({ kind: "dirty" });
+          else startNew();
+        }}
+        className="mx-4 flex h-10 items-center justify-center gap-2 rounded-xl border border-zinc-300 bg-white text-[13px] font-medium text-zinc-800 transition hover:bg-zinc-50 dark:border-white/15 dark:bg-white/[0.04] dark:text-zinc-100 dark:hover:bg-white/[0.08]"
+      >
+        <MessageSquarePlus size={16} strokeWidth={1.8} /> New chat
+      </button>
 
-    {dialog && <div className="absolute inset-0 z-40 grid place-items-center bg-zinc-950/45 p-4 backdrop-blur-[2px]" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDialog(null); }}><div role="dialog" aria-modal="true" aria-labelledby="chat-dialog-title" className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#1c1a24]"><div className="mb-3 flex items-start justify-between"><span className="grid size-10 place-items-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-400/10 dark:text-violet-200">{dialog.kind === "delete" ? <Trash2 size={18} /> : <Save size={18} />}</span><button type="button" aria-label="Close dialog" onClick={() => { setDialog(null); setPendingHref(null); }} className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10"><X size={17} /></button></div>{dialog.kind === "dirty" ? <><h2 id="chat-dialog-title" className="text-lg font-semibold text-zinc-900 dark:text-white">Save this conversation?</h2><p className="mt-1.5 text-sm leading-6 text-zinc-600 dark:text-zinc-400">You can keep it in your chat list or discard it before moving on.</p><div className="mt-5 grid grid-cols-2 gap-2"><button type="button" onClick={() => setDialog(null)} className="h-10 rounded-xl border border-zinc-200 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-white/10 dark:text-zinc-300 dark:hover:bg-white/5">Stay here</button><button type="button" onClick={discardAndContinue} className="h-10 rounded-xl text-sm font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/5">Discard</button><button type="button" disabled={saving || messages.at(-1)?.role !== "assistant"} onClick={() => void saveAndContinue()} className="col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"><Save size={15} />{saving ? "Saving…" : "Save & continue"}</button></div>{messages.at(-1)?.role !== "assistant" && <p className="mt-2 text-center text-[11px] text-zinc-500">Finish or retry the current reply before saving.</p>}</> : <><h2 id="chat-dialog-title" className="text-lg font-semibold text-zinc-900 dark:text-white">Delete this chat?</h2><p className="mt-1.5 text-sm leading-6 text-zinc-600 dark:text-zinc-400">This conversation and its messages will be permanently removed.</p><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setDialog(null)} className="h-10 rounded-xl border border-zinc-200 px-4 text-sm font-medium text-zinc-700 dark:border-white/10 dark:text-zinc-300">Cancel</button><button type="button" onClick={() => void deleteConversation(dialog.id)} className="h-10 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-700">Delete chat</button></div></>}</div></div>}
-  </section>;
+      <div className="mt-7 flex items-center justify-between px-5 pb-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-zinc-500">Recent</p>
+        <span className="text-[10px] tabular-nums text-zinc-400 dark:text-zinc-600">{conversations.length || ""}</span>
+      </div>
+      <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-3">
+        {conversations.length === 0 ? (
+          <p className="px-3 py-4 text-xs leading-5 text-zinc-500">Your saved conversations will appear here.</p>
+        ) : conversations.map((item) => (
+          <div key={item.id} className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 ${conversationId === item.id ? "bg-zinc-200/70 dark:bg-white/[0.08]" : "hover:bg-zinc-100 dark:hover:bg-white/[0.045]"}`}>
+            {renamingId === item.id ? (
+              <form className="flex min-w-0 flex-1 gap-1" onSubmit={(event) => { event.preventDefault(); void renameConversation(item.id); }}>
+                <input autoFocus maxLength={120} value={renameValue} onChange={(event) => setRenameValue(event.target.value)} className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs outline-none focus:border-violet-500 dark:border-white/10 dark:bg-[#18171c]" />
+                <button type="submit" aria-label="Save title" className="rounded-md p-1.5 text-violet-700 hover:bg-violet-100 dark:text-violet-200 dark:hover:bg-violet-400/10"><Check size={14} /></button>
+              </form>
+            ) : (
+              <>
+                <button type="button" onClick={() => void openConversation(item.id)} className="min-w-0 flex-1 truncate py-1 text-left text-[12px] font-medium text-zinc-700 dark:text-zinc-300">{item.title}</button>
+                <div className="flex shrink-0 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
+                  <button type="button" aria-label={`Rename ${item.title}`} onClick={() => { setRenamingId(item.id); setRenameValue(item.title); }} className="rounded-md p-1.5 text-zinc-500 hover:bg-white hover:text-zinc-800 dark:hover:bg-white/10 dark:hover:text-zinc-100"><Pencil size={12} /></button>
+                  <button type="button" aria-label={`Delete ${item.title}`} onClick={() => setDialog({ kind: "delete", id: item.id })} className="rounded-md p-1.5 text-zinc-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-400/10 dark:hover:text-red-300"><Trash2 size={12} /></button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="border-t border-zinc-200 px-5 py-3 dark:border-white/[0.08]">
+        <p className="text-[10px] text-zinc-500">Private to your account</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <section className="zohra-ai relative flex h-[calc(100dvh-11.5rem-env(safe-area-inset-bottom))] min-h-[380px] w-full overflow-hidden rounded-2xl border border-zinc-200 bg-white text-zinc-900 shadow-[0_12px_50px_rgba(28,25,38,0.06)] dark:border-white/[0.09] dark:bg-[#141417] dark:text-zinc-100 dark:shadow-[0_24px_80px_rgba(0,0,0,0.22)] lg:h-[calc(100dvh-8.5rem)]">
+      <aside className="hidden w-[256px] shrink-0 border-r border-zinc-200 bg-zinc-50/70 dark:border-white/[0.08] dark:bg-[#111113] lg:block">{sidebar}</aside>
+
+      {historyOpen && (
+        <div className="absolute inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setHistoryOpen(false)}>
+          <aside role="dialog" aria-modal="true" aria-label="Saved conversations" onClick={(event) => event.stopPropagation()} className="h-full w-[min(86vw,310px)] border-r border-zinc-200 bg-white shadow-2xl dark:border-white/10 dark:bg-[#141417]">{sidebar}</aside>
+        </div>
+      )}
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-[58px] shrink-0 items-center justify-between border-b border-zinc-200 px-3 dark:border-white/[0.08] sm:px-5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <button type="button" aria-label="Open saved conversations" onClick={() => setHistoryOpen(true)} className="grid size-9 shrink-0 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/[0.07] lg:hidden"><Menu size={18} /></button>
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-semibold text-zinc-800 dark:text-zinc-100">{conversationId ? activeTitle : "New chat"}</p>
+              <p className="mt-0.5 text-[10px] text-zinc-500">Google Gemini <span className="mx-1 text-zinc-300 dark:text-zinc-700">·</span> General assistant</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {conversationId && <span className="hidden items-center gap-1.5 text-[10px] text-zinc-500 sm:inline-flex"><span className="size-1.5 rounded-full bg-emerald-500" /> Saved</span>}
+            {dirty && messages.at(-1)?.role === "assistant" && <button type="button" disabled={saving} onClick={() => void saveConversation()} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 text-[11px] font-medium text-white transition hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"><Save size={13} />{saving ? "Saving…" : "Save chat"}</button>}
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-8 lg:px-12">
+          {messages.length === 0 ? (
+            <div className="mx-auto flex min-h-full max-w-[720px] flex-col justify-center pb-7">
+              <ZohraMark size="large" />
+              <p className="mt-7 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">A clear place to start</p>
+              <h1 className="mt-2 max-w-[620px] text-[30px] font-semibold leading-[1.12] tracking-[-0.045em] text-zinc-900 dark:text-zinc-50 sm:text-[42px]">What would you like to work through?</h1>
+              <p className="mt-3 max-w-lg text-[14px] leading-6 text-zinc-500 dark:text-zinc-400">Ask a question, untangle an idea, or get help finding your next step.</p>
+              <div className="mt-8 flex flex-wrap gap-2">
+                {promptSuggestions.map((prompt) => (
+                  <button key={prompt} type="button" onClick={() => { setInput(prompt); composerRef.current?.focus(); }} className="group inline-flex min-h-10 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3.5 text-[11px] font-medium text-zinc-600 transition hover:border-zinc-400 hover:text-zinc-900 dark:border-white/[0.12] dark:bg-white/[0.025] dark:text-zinc-300 dark:hover:border-white/25 dark:hover:text-white">
+                    {prompt}<ArrowRight size={12} className="text-zinc-400 transition-transform group-hover:translate-x-0.5" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="mx-auto max-w-[760px] space-y-8 pb-6 pt-2 sm:space-y-10">
+              {messages.map((message, index) => message.role === "user" ? (
+                <div key={`${index}-user`} className="flex justify-end">
+                  <div className="max-w-[88%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-[#eeebf5] px-4 py-3 text-[13px] leading-6 text-zinc-800 dark:bg-[#282530] dark:text-zinc-100 sm:max-w-[78%] sm:px-5">{message.content}</div>
+                </div>
+              ) : (
+                <article key={`${index}-assistant`} className="group/reply flex items-start gap-3.5 sm:gap-4">
+                  <ZohraMark />
+                  <div className="min-w-0 flex-1 pt-1">
+                    <div className="mb-2 text-[11px] font-semibold tracking-wide text-zinc-800 dark:text-zinc-200">Zohra</div>
+                    <FormattedReply content={message.content} />
+                    <button type="button" onClick={() => void copyReply(message.content, index)} className="mt-2 inline-flex items-center gap-1.5 rounded-md py-1 text-[10px] text-zinc-400 opacity-100 transition hover:text-zinc-700 dark:hover:text-zinc-200 sm:opacity-0 sm:group-hover/reply:opacity-100 sm:focus:opacity-100">
+                      {copiedIndex === index ? <Check size={12} /> : <Copy size={12} />}{copiedIndex === index ? "Copied" : "Copy"}
+                    </button>
+                  </div>
+                </article>
+              ))}
+
+              {loading && (
+                <div className="flex items-center gap-3.5" role="status" aria-live="polite">
+                  <ZohraMark />
+                  <div className="flex items-center gap-2 text-[12px] text-zinc-500"><LoaderCircle size={14} className="animate-spin" /> Zohra is thinking</div>
+                </div>
+              )}
+
+              {error && (
+                <div role="alert" className="ml-[54px] rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12px] leading-5 text-red-800 dark:border-red-400/20 dark:bg-red-400/[0.06] dark:text-red-200">
+                  <p>{error}</p>
+                  {messages.at(-1)?.role === "user" && <button type="button" disabled={loading} onClick={() => void sendMessage(messages.at(-1)!.content, true)} className="mt-2 inline-flex items-center gap-1.5 font-semibold underline underline-offset-2"><ArrowRight size={12} /> Try again</button>}
+                </div>
+              )}
+              {notice && <p role="status" className="ml-[54px] text-[11px] text-zinc-500">{notice}</p>}
+              <div ref={bottomRef} />
+            </div>
+          )}
+        </div>
+
+        <footer className="shrink-0 border-t border-zinc-200 bg-white px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3 dark:border-white/[0.08] dark:bg-[#141417] sm:px-6 sm:pb-4 lg:px-10">
+          <form onSubmit={(event) => { event.preventDefault(); void sendMessage(); }} className="mx-auto max-w-[760px]">
+            <div className="flex items-end gap-2 rounded-2xl border border-zinc-300 bg-white px-2.5 py-2 transition focus-within:border-zinc-500 focus-within:ring-2 focus-within:ring-zinc-900/[0.04] dark:border-white/[0.14] dark:bg-[#1b1a1f] dark:focus-within:border-white/25 dark:focus-within:ring-white/[0.04]">
+              <textarea
+                ref={composerRef}
+                value={input}
+                onChange={(event) => {
+                  setInput(event.target.value);
+                  event.currentTarget.style.height = "48px";
+                  event.currentTarget.style.height = `${Math.min(event.currentTarget.scrollHeight, 160)}px`;
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    void sendMessage();
+                  }
+                }}
+                placeholder="Message Zohra…"
+                aria-label="Message Zohra AI"
+                rows={1}
+                maxLength={4000}
+                disabled={loading}
+                className="max-h-40 min-h-12 flex-1 resize-none overflow-y-auto bg-transparent px-2.5 py-3 text-[13px] leading-5 text-zinc-800 outline-none placeholder:text-zinc-400 disabled:opacity-60 dark:text-zinc-100"
+              />
+              <button type="submit" disabled={loading || !input.trim()} aria-label="Send message" className="grid size-9 shrink-0 place-items-center rounded-xl bg-zinc-900 text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-400 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white dark:disabled:bg-white/10 dark:disabled:text-zinc-500">
+                {loading ? <LoaderCircle size={15} className="animate-spin" /> : <ArrowUp size={17} />}
+              </button>
+            </div>
+            <div className="mt-2 flex items-center justify-between px-1">
+              <span className="text-[10px] text-zinc-400">Enter to send <span className="mx-1 text-zinc-300 dark:text-zinc-700">·</span> Shift + Enter for a new line</span>
+              <span className="text-[10px] tabular-nums text-zinc-400">{input.length}/4000</span>
+            </div>
+            <p className="mt-1 text-center text-[9px] text-zinc-400">Gemini may make mistakes. Check important details.</p>
+          </form>
+        </footer>
+      </div>
+
+      {dialog && (
+        <div className="absolute inset-0 z-40 grid place-items-center bg-zinc-950/40 p-4 backdrop-blur-[2px]" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) dismissDialog(); }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="chat-dialog-title" className="w-full max-w-[360px] rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#1d1c21]">
+            <div className="mb-4 flex items-start justify-between">
+              <div><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">Zohra AI</p><h2 id="chat-dialog-title" className="mt-1 text-[16px] font-semibold text-zinc-900 dark:text-white">{dialog.kind === "delete" ? "Delete this conversation?" : "Keep this conversation?"}</h2></div>
+              <button type="button" aria-label="Close dialog" onClick={dismissDialog} className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10"><X size={16} /></button>
+            </div>
+            {dialog.kind === "dirty" ? (
+              <>
+                <p className="text-[12px] leading-5 text-zinc-500 dark:text-zinc-400">Save it to your history before moving on, or discard this unsaved chat.</p>
+                <div className="mt-5 flex flex-wrap justify-end gap-2">
+                  <button type="button" onClick={dismissDialog} className="h-9 rounded-lg px-3 text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/5">Stay here</button>
+                  <button type="button" onClick={discardAndContinue} className="h-9 rounded-lg border border-zinc-200 px-3 text-[11px] font-medium text-zinc-600 hover:bg-zinc-50 dark:border-white/10 dark:text-zinc-300 dark:hover:bg-white/5">Discard</button>
+                  <button type="button" disabled={saving || messages.at(-1)?.role !== "assistant"} onClick={() => void saveAndContinue()} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 text-[11px] font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"><Save size={13} />{saving ? "Saving…" : "Save & continue"}</button>
+                </div>
+                {messages.at(-1)?.role !== "assistant" && <p className="mt-3 text-right text-[10px] text-zinc-500">Retry the current reply before saving.</p>}
+              </>
+            ) : (
+              <>
+                <p className="text-[12px] leading-5 text-zinc-500 dark:text-zinc-400">Its messages will be permanently removed from your saved chats.</p>
+                <div className="mt-5 flex justify-end gap-2">
+                  <button type="button" onClick={() => setDialog(null)} className="h-9 rounded-lg px-3 text-[11px] font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/5">Cancel</button>
+                  <button type="button" onClick={() => void deleteConversation(dialog.id)} className="h-9 rounded-lg bg-red-600 px-3 text-[11px] font-medium text-white hover:bg-red-700">Delete</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }
