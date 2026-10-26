@@ -527,10 +527,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </p>
                 <Link
                   role="menuitem"
-                  href="/ai-test"
+                  href="/zohra-ai"
                   onClick={() => setMobileMoreOpen(false)}
-                  aria-current={pathname.startsWith("/ai-test") ? "page" : undefined}
-                  className={`mb-2 flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium ${pathname.startsWith("/ai-test") ? "bg-violet-200/10 text-violet-100" : "text-neutral-300 hover:bg-white/[0.07] hover:text-white"}`}
+                  aria-current={pathname.startsWith("/zohra-ai") ? "page" : undefined}
+                  className={`mb-2 flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium ${pathname.startsWith("/zohra-ai") ? "bg-violet-200/10 text-violet-100" : "text-neutral-300 hover:bg-white/[0.07] hover:text-white"}`}
                 >
                   <MessageCircle size={18} /> Zohra AI
                 </Link>
