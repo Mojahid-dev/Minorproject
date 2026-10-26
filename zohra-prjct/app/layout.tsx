@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
+  
   title: "Zohra",
   description: "Your workspace for organizing projects and resources.",
 };
