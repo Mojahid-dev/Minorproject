@@ -42,7 +42,7 @@ const navigation = [
   },
   { label: "Tasks", href: "/tasks", icon: LayoutGrid, badge: "tasks" },
   { label: "Calendar", href: "/calendar", icon: CalendarDays },
-  { label: "Zohra AI", href: "/ai-test", icon: MessageCircle },
+  { label: "Zohra AI", href: "/zohra-ai", icon: MessageCircle },
   { label: "Team", icon: UsersRound, unavailable: true },
   { label: "Upload", href: "/upload", icon: Upload },
 ];
