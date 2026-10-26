@@ -11,6 +11,7 @@
 .chat-markdown h2,
 .chat-markdown h3 { margin: 1.4rem 0 0.55rem; color: #272435; font-weight: 650; letter-spacing: -0.025em; line-height: 1.35; }
 .dark .chat-markdown h1,
+
 .dark .chat-markdown h2,
 .dark .chat-markdown h3 { color: #f4f2fa; }
 .chat-markdown h1 { font-size: 1.45rem; }

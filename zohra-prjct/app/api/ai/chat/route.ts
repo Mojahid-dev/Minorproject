@@ -14,7 +14,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  
+
 
   try {
 
@@ -134,6 +134,7 @@ export async function POST(request: Request) {
         break;
       } catch (error) {
         lastGeminiError = error;
+        
         const fallback =
           index === 0 &&
           error instanceof ApiError &&

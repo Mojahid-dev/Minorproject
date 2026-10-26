@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
-  
+
   title: "Zohra",
   description: "Your workspace for organizing projects and resources.",
 };
@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">

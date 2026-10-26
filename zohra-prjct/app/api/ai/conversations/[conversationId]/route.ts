@@ -50,11 +50,12 @@ export async function GET(_request: Request, context: RouteContext) {
 
 export async function PATCH(request: Request, context: RouteContext) {
   const userId = await currentUserId();
-  
+
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json().catch(() => null);
+  
   const title = typeof body?.title === "string" ? body.title.trim() : "";
   if (!title || title.length > 120) {
     return NextResponse.json(

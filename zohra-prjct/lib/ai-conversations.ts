@@ -20,7 +20,9 @@ export function parseChatMessages(value: unknown): ChatMessage[] | null {
     return null;
   }
 
+
   const messages: ChatMessage[] = [];
+  
   let totalLength = 0;
 
   for (const message of value) {
