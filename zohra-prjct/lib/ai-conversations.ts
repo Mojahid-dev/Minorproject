@@ -11,6 +11,7 @@ export const MAX_CHAT_CONTEXT_MESSAGES = 24;
 export const MAX_CHAT_TOTAL_LENGTH = 120_000;
 
 export function parseChatMessages(value: unknown): ChatMessage[] | null {
+
   if (
     !Array.isArray(value) ||
     value.length === 0 ||
@@ -23,9 +24,10 @@ export function parseChatMessages(value: unknown): ChatMessage[] | null {
   let totalLength = 0;
 
   for (const message of value) {
+
     if (
-      !message ||
-      typeof message.content !== "string" ||
+      
+      !message ||typeof message.content !== "string" ||
       !["user", "assistant"].includes(message.role) ||
       message.content.trim().length === 0 ||
       message.content.length > MAX_CHAT_MESSAGE_LENGTH
@@ -47,6 +49,7 @@ export function parseChatMessages(value: unknown): ChatMessage[] | null {
 }
 
 export function titleFromMessages(messages: ChatMessage[]) {
+  
   const firstPrompt =
     messages.find((message) => message.role === "user")?.content ??
     "New conversation";

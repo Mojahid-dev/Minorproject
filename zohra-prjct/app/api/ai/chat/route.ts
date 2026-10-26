@@ -14,9 +14,12 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
+
   try {
+
     const session = await auth.api.getSession({ headers: await headers() });
     const userId = session?.user?.id;
+
     if (!userId)
       return NextResponse.json(
         { error: "Please sign in to use Zohra AI." },
@@ -24,7 +27,9 @@ export async function POST(request: Request) {
       );
 
     const body = await request.json().catch(() => null);
+
     const messages = parseChatMessages(body?.messages);
+
     if (!messages || messages.at(-1)?.role !== "user") {
       return NextResponse.json(
         { error: "Invalid conversation. The last message must be from you." },
@@ -32,51 +37,66 @@ export async function POST(request: Request) {
       );
     }
 
-    const conversationId =
-      typeof body?.conversationId === "string" ? body.conversationId : null;
+    const conversationId = typeof body?.conversationId === "string" ? body.conversationId : null;
+
     let history: ChatMessage[] = messages;
+
     if (conversationId) {
       const conversation = await prisma.aIConversation.findFirst({
         where: { id: conversationId, userId },
         include: { messages: { orderBy: { position: "asc" } } },
       });
+
       if (!conversation)
         return NextResponse.json(
           { error: "Conversation not found." },
           { status: 404 },
         );
+
       history = conversation.messages.map((message) => ({
         role: toChatRole(message.role),
         content: message.content,
       }));
+
       history.push(messages[messages.length - 1]);
+
       if (history.length > 100) history = history.slice(-100);
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
+
     if (!apiKey) {
       return NextResponse.json(
         {
           error:
-            "Gemini is not configured. Add GEMINI_API_KEY to the server environment.",
+            "Gemini is not configured.",
         },
         { status: 503 },
       );
     }
 
     let context = history.slice(-MAX_CHAT_CONTEXT_MESSAGES);
+
     if (context[0]?.role === "assistant") context = context.slice(1);
+
     const contents = context.map((message) => ({
       role:
         message.role === "assistant" ? ("model" as const) : ("user" as const),
       parts: [{ text: message.content }],
     }));
+
     const models = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
+
     const ai = new GoogleGenAI({ apiKey });
+
     let reply = "";
+
     let lastGeminiError: unknown;
+
     for (const [index, model] of models.entries()) {
+
       try {
+
         const response = await ai.models.generateContent({
           model,
           contents,
@@ -88,7 +108,9 @@ export async function POST(request: Request) {
             httpOptions: { timeout: 24_000 },
           },
         });
+
         reply = response.text?.trim() ?? "";
+
         if (!reply) {
           const blockReason = response.promptFeedback?.blockReason;
           const finishReason = response.candidates?.[0]?.finishReason;
@@ -97,6 +119,7 @@ export async function POST(request: Request) {
             blockReason,
             finishReason,
           });
+
           if (blockReason || finishReason === "SAFETY") {
             return NextResponse.json(
               {
@@ -120,6 +143,7 @@ export async function POST(request: Request) {
         );
       }
     }
+
     if (
       lastGeminiError &&
       !reply &&
@@ -130,6 +154,7 @@ export async function POST(request: Request) {
     ) {
       throw lastGeminiError;
     }
+
     if (!reply)
       return NextResponse.json(
         { error: "Gemini returned an empty reply. Please try again." },
@@ -141,12 +166,15 @@ export async function POST(request: Request) {
         where: { id: conversationId, userId },
         select: { id: true, _count: { select: { messages: true } } },
       });
+
       if (!conversation)
         return NextResponse.json(
           { error: "Conversation not found." },
           { status: 404 },
         );
+
       const position = conversation._count.messages;
+
       await prisma.$transaction([
         prisma.aIMessage.create({
           data: {
@@ -156,6 +184,7 @@ export async function POST(request: Request) {
             position,
           },
         }),
+
         prisma.aIMessage.create({
           data: {
             conversationId,
@@ -164,6 +193,7 @@ export async function POST(request: Request) {
             position: position + 1,
           },
         }),
+
         prisma.aIConversation.update({
           where: { id: conversationId },
           data: { updatedAt: new Date() },
@@ -176,6 +206,7 @@ export async function POST(request: Request) {
       "AI chat request failed:",
       error instanceof Error ? error.message : error,
     );
+    
     const geminiError =
       error instanceof ApiError
         ? error.status === 401 || error.status === 403

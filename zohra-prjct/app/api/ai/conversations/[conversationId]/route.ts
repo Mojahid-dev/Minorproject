@@ -14,8 +14,10 @@ type RouteContext = {
 };
 
 export async function GET(_request: Request, context: RouteContext) {
+  
   const userId = await currentUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { conversationId } = await context.params;
   const conversation = await prisma.aIConversation.findFirst({
@@ -29,7 +31,10 @@ export async function GET(_request: Request, context: RouteContext) {
   });
 
   if (!conversation) {
-    return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
+    return NextResponse.json(
+      { error: "Conversation not found." },
+      { status: 404 },
+    );
   }
 
   return NextResponse.json({
@@ -45,14 +50,15 @@ export async function GET(_request: Request, context: RouteContext) {
 
 export async function PATCH(request: Request, context: RouteContext) {
   const userId = await currentUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json().catch(() => null);
   const title = typeof body?.title === "string" ? body.title.trim() : "";
   if (!title || title.length > 120) {
     return NextResponse.json(
       { error: "A title between 1 and 120 characters is required." },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -63,7 +69,10 @@ export async function PATCH(request: Request, context: RouteContext) {
   });
 
   if (result.count === 0) {
-    return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
+    return NextResponse.json(
+      { error: "Conversation not found." },
+      { status: 404 },
+    );
   }
 
   const conversation = await prisma.aIConversation.findFirst({
@@ -76,7 +85,8 @@ export async function PATCH(request: Request, context: RouteContext) {
 
 export async function DELETE(_request: Request, context: RouteContext) {
   const userId = await currentUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { conversationId } = await context.params;
   const result = await prisma.aIConversation.deleteMany({
@@ -84,7 +94,10 @@ export async function DELETE(_request: Request, context: RouteContext) {
   });
 
   if (result.count === 0) {
-    return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
+    return NextResponse.json(
+      { error: "Conversation not found." },
+      { status: 404 },
+    );
   }
 
   return NextResponse.json({ success: true });

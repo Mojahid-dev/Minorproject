@@ -5,6 +5,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema, type Schema } from "rehype-sanitize";
 import {
   ArrowRight,
   ArrowUp,
@@ -29,6 +33,17 @@ const promptSuggestions = [
   "Explore an idea with me",
 ];
 
+const markdownSanitizeSchema: Schema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    code: [
+      ...(defaultSchema.attributes?.code ?? []),
+      ["className", "language-math", "math-inline", "math-display"],
+    ],
+  },
+};
+
 function ZohraMark({ size = "regular" }: { size?: "regular" | "large" }) {
   const dimensions = size === "large" ? 45 : 30;
   return (
@@ -42,7 +57,8 @@ function FormattedReply({ content }: { content: string }) {
   return (
     <div className="chat-markdown min-w-0 text-[14px] leading-7 text-zinc-700 dark:text-zinc-200 sm:text-[15px]">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, markdownSanitizeSchema], rehypeKatex]}
         components={{
           a: ({ children, href }) => (
             <a href={href} target="_blank" rel="noreferrer" className="font-medium text-violet-700 underline decoration-violet-300 underline-offset-4 hover:text-violet-900 dark:text-violet-300 dark:decoration-violet-500 dark:hover:text-violet-200">{children}</a>

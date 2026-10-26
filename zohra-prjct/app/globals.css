@@ -4,6 +4,7 @@
 
 .chat-markdown > :first-child { margin-top: 0; }
 .chat-markdown > :last-child { margin-bottom: 0; }
+.chat-markdown .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: 0.25rem 0; }
 .chat-markdown p { margin: 0.75rem 0; }
 .chat-markdown h1,
 .chat-markdown h2,

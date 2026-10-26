@@ -13,6 +13,7 @@ async function currentUserId() {
 }
 
 export async function GET() {
+
   const userId = await currentUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -45,6 +46,7 @@ export async function POST(request: Request) {
   }
 
   const conversation = await prisma.aIConversation.create({
+
     data: {
       userId,
       title: titleFromMessages(messages),
@@ -56,6 +58,7 @@ export async function POST(request: Request) {
         })),
       },
     },
+    
     select: {
       id: true,
       title: true,
