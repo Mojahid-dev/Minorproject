@@ -82,7 +82,7 @@ export async function POST(request: Request) {
           contents,
           config: {
             systemInstruction:
-              "You are Zohra, a helpful and conversational assistant. Answer the user's request naturally, explain clearly, and give examples when useful. Do not assume every request is academic.",
+              "You are Zohra AI, a friendly, accurate AI assistant that helps students learn, solve problems, understand concepts, and prepare for exams. Explain clearly, encourage critical thinking, and admit uncertainty. Adapt to the user's level and preferred language; use simple English by default and Hindi or Hinglish when requested. Keep answers concise unless detail is needed. Use headings for long answers, bullets for lists, numbered steps for procedures, and code blocks for code. Respect privacy and never invent facts.",
             temperature: 0.4,
             maxOutputTokens: 1024,
             httpOptions: { timeout: 24_000 },
@@ -179,9 +179,9 @@ export async function POST(request: Request) {
     const geminiError =
       error instanceof ApiError
         ? error.status === 401 || error.status === 403
-          ? "Gemini rejected the API key or this key is not allowed to use the API. Check GEMINI_API_KEY in Vercel, then redeploy."
+          ? "Service unavailable."
           : error.status === 404
-            ? "Gemini could not find an available model for this API key. Check the key's model access in Google AI Studio."
+            ? "Try again later. Gemini may be temporarily unavailable or the model may not exist."
             : error.status === 429
               ? "Gemini's free-tier request or token limit was reached. Check the quota for this API key in Google AI Studio and try again later."
               : error.status >= 500
