@@ -1,341 +1,269 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import {
-  ArrowRight,
-  BadgeCheck,
-  BookOpen,
-  CalendarDays,
-  CheckCircle2,
-  Clock3,
-  Compass,
-  FileText,
-  Folder,
-  Plus,
-  UploadCloud,
-} from "lucide-react";
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
+import { BadgeCheck, UploadCloud } from "lucide-react";
+import { toast } from "sonner";
 import { useSession } from "@/lib/auth-client";
 import { useTasks } from "@/hooks/use-tasks";
-import { localDateString } from "@/lib/task-utils";
+import { useJson } from "@/hooks/use-json";
+import { localDateString, notifyTasksChanged, type TaskRecord } from "@/lib/task-utils";
+import {
+  groupTasks,
+  isProcessing,
+  needsAttention,
+  plural,
+  type DashboardResource,
+} from "@/lib/dashboard-utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { primaryButton } from "@/components/dashboard/shared";
+import { TodayPanel } from "@/components/dashboard/today-panel";
+import { WeekStrip } from "@/components/dashboard/week-strip";
+import { LibraryPanel } from "@/components/dashboard/library-panel";
+import {
+  AskZohraCard,
+  type ConversationSummary,
+} from "@/components/dashboard/ask-zohra-card";
+import {
+  OnboardingChecklist,
+  type OnboardingStep,
+} from "@/components/dashboard/onboarding-checklist";
 
-type Resource = {
-  id: string;
-  originalName: string;
-  mimeType: string;
-  createdAt: string;
+// Module-level selectors keep useJson's request identity stable.
+const selectResources = (payload: unknown): DashboardResource[] => {
+  const list = (payload as { resources?: unknown } | null)?.resources;
+  return Array.isArray(list) ? (list as DashboardResource[]) : [];
 };
+const selectConversations = (payload: unknown): ConversationSummary[] => {
+  const list = (payload as { conversations?: unknown } | null)?.conversations;
+  return Array.isArray(list) ? (list as ConversationSummary[]) : [];
+};
+const selectRecognized = (payload: unknown): boolean =>
+  (payload as { request?: { status?: string } | null } | null)?.request?.status ===
+  "APPROVED";
 
-function formatRecent(date: string) {
-  const hours = Math.max(
-    0,
-    Math.floor((Date.now() - new Date(date).getTime()) / 3_600_000),
-  );
-  if (hours < 1) return "Just now";
-  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.floor(hours / 24);
-  return `${days} day${days === 1 ? "" : "s"} ago`;
+const EMPTY_RESOURCES: DashboardResource[] = [];
+const EMPTY_CONVERSATIONS: ConversationSummary[] = [];
+
+/**
+ * Current time to the minute. The server snapshot is `null`, so anything that
+ * depends on the clock (greeting, "today", relative times) renders identically
+ * on the server and on first client paint, then fills in without a hydration
+ * mismatch. It also rolls "today" over at midnight if the tab stays open.
+ */
+function subscribeToClock(callback: () => void) {
+  const id = window.setInterval(callback, 60_000);
+  return () => window.clearInterval(id);
 }
+const clockSnapshot = () => Math.floor(Date.now() / 60_000) * 60_000;
+const clockServerSnapshot = () => null;
 
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const { tasks, isLoading: tasksLoading, error: taskError } = useTasks();
+  const now = useSyncExternalStore<number | null>(
+    subscribeToClock,
+    clockSnapshot,
+    clockServerSnapshot,
+  );
 
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [resourcesLoading, setResourcesLoading] = useState(true);
-  const [resourceError, setResourceError] = useState("");
+  const {
+    tasks,
+    setTasks,
+    refresh: refreshTasks,
+    isLoading: tasksLoading,
+    error: taskError,
+  } = useTasks();
+  const resourcesState = useJson("/api/resources", selectResources, EMPTY_RESOURCES, "Unable to load your files.");
+  const chatsState = useJson("/api/ai/conversations", selectConversations, EMPTY_CONVERSATIONS);
+  const recognizedState = useJson("/api/recognition-request", selectRecognized, false);
 
-  const [isRecognized, setIsRecognized] = useState(false);
+  const resources = resourcesState.data;
+  const conversations = chatsState.data;
+  const isRecognized = recognizedState.data;
 
-  const today = localDateString();
+  const today = now ? localDateString(new Date(now)) : null;
+  const clock = now ? new Date(now) : null;
 
-  const todaysTasks = useMemo(
-    () => tasks.filter((task) => task.dueDate === today),
+  // Keep in sync when the sidebar (or another tab of the app) changes tasks.
+  useEffect(() => {
+    const onChanged = () => void refreshTasks();
+    window.addEventListener("zohra:tasks-updated", onChanged);
+    return () => window.removeEventListener("zohra:tasks-updated", onChanged);
+  }, [refreshTasks]);
+
+  const groups = useMemo(
+    () => (today ? groupTasks(tasks, today) : { overdue: [], today: [], upcoming: [] }),
     [tasks, today],
   );
 
-  const openToday = todaysTasks.filter((task) => !task.completedAt).length;
-  const userName = session?.user?.name?.trim().split(/\s+/)[0] || "there";
-  const hour = new Date().getHours();
+  const toggleTask = useCallback(
+    async (task: TaskRecord) => {
+      const completing = !task.completedAt;
+      const apply = (completedAt: string | null) =>
+        setTasks((current) =>
+          current.map((item) => (item.id === task.id ? { ...item, completedAt } : item)),
+        );
 
-  const greeting =
-    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  const todayLabel = new Intl.DateTimeFormat(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  }).format(new Date());
+      apply(completing ? new Date().toISOString() : null); // optimistic
+      try {
+        const response = await fetch(`/api/tasks/${task.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ completed: completing }),
+        });
+        if (!response.ok) throw new Error();
+        notifyTasksChanged();
+      } catch {
+        apply(task.completedAt); // roll back
+        toast.error("Couldn't update that task. Please try again.");
+      }
+    },
+    [setTasks],
+  );
 
-  useEffect(() => {
-    let active = true;
-    fetch("/api/resources", { cache: "no-store" })
-      .then(async (response) => {
-        const payload = await response.json();
-        if (!response.ok)
-          throw new Error(payload.error || "Unable to load resources.");
-        if (active && Array.isArray(payload.resources))
-          setResources(payload.resources.slice(0, 5));
-      })
-
-      .catch((caught) => {
-        if (active)
-          setResourceError(
-            caught instanceof Error
-              ? caught.message
-              : "Unable to load resources.",
-          );
-      })
-
-      .finally(() => {
-        if (active) setResourcesLoading(false);
+  const addTask = useCallback(
+    async (title: string) => {
+      if (!today) return;
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, dueDate: today }),
       });
-    return () => {
-      active = false;
-    };
-    
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    fetch("/api/recognition-request", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) return;
-        const payload = await response.json();
-        if (active) setIsRecognized(payload.request?.status === "APPROVED");
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const cards = [
-    {
-      icon: CheckCircle2,
-      eyebrow: "Your focus today",
-      title: tasksLoading
-        ? "Loading tasks…"
-        : taskError
-          ? "Tasks unavailable"
-          : openToday === 0
-            ? "You’re all caught up"
-            : `${openToday} task${openToday === 1 ? "" : "s"} due today`,
-      href: `/tasks?date=${today}`,
-      tone: "light",
+      const payload: unknown = await response.json().catch(() => null);
+      const created = (payload as { task?: TaskRecord } | null)?.task;
+      if (!response.ok || !created) {
+        const message = (payload as { error?: string } | null)?.error;
+        throw new Error(message || "Unable to add task.");
+      }
+      setTasks((current) => [...current, created]);
+      notifyTasksChanged();
     },
+    [setTasks, today],
+  );
+
+  // ---- header copy -------------------------------------------------------
+  const userName = session?.user?.name?.trim().split(/\s+/)[0] || "there";
+  const hour = clock?.getHours() ?? 12;
+  const greeting =
+    !clock ? "Welcome back" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const dateLabel = clock
+    ? new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(clock)
+    : "";
+
+  const openToday = groups.today.filter((task) => !task.completedAt).length;
+  const processing = resources.filter(isProcessing).length;
+  const attention = resources.filter(needsAttention).length;
+  const summaryReady = Boolean(today) && !tasksLoading && !resourcesState.isLoading;
+
+  const summaryParts = [
+    groups.overdue.length > 0 ? `${groups.overdue.length} overdue` : null,
+    openToday > 0 ? `${plural(openToday, "task")} left today` : null,
+    processing > 0 ? `${plural(processing, "file")} processing` : null,
+    attention > 0 ? `${attention} to review` : null,
+  ].filter(Boolean);
+
+  const summary = taskError
+    ? ""
+    : summaryParts.length
+      ? summaryParts.join(" · ")
+      : groups.today.length > 0
+        ? "Today's plan is complete."
+        : "Nothing urgent right now.";
+
+  // ---- onboarding --------------------------------------------------------
+  const loadedAll =
+    !tasksLoading &&
+    !resourcesState.isLoading &&
+    !chatsState.isLoading &&
+    !taskError &&
+    !resourcesState.error &&
+    !chatsState.error;
+
+  const steps: OnboardingStep[] = [
     {
-      icon: BookOpen,
-      eyebrow: "Recently added",
-      title: resourcesLoading
-        ? "Loading resources…"
-        : (resources[0]?.originalName ?? "Add your first resource"),
-      href: resources[0] ? "/resources" : "/upload",
-      tone: "dark",
-    },
-    {
-      icon: Plus,
-      eyebrow: "Turn ideas into progress",
-      title: "Add learning materials",
+      id: "upload",
+      title: "Upload a resource",
+      hint: "Notes, slides or a PDF",
       href: "/upload",
-      tone: "light",
+      done: resources.length > 0,
+    },
+    {
+      id: "task",
+      title: "Plan a task",
+      hint: "Pick one thing for today",
+      href: today ? `/tasks?date=${today}` : "/tasks",
+      done: tasks.length > 0,
+    },
+    {
+      id: "ai",
+      title: "Ask Zohra AI",
+      hint: "Try a question about a topic",
+      href: "/zohra-ai",
+      done: conversations.length > 0,
     },
   ];
+  const showOnboarding = loadedAll && steps.some((step) => !step.done);
 
   return (
-    <div className="mx-auto max-w-[1440px] pb-8 text-white">
-      <div className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <p className="mb-2 text-sm font-medium text-neutral-400">
-            {todayLabel}
-          </p>
-          <h1 className="text-3xl font-bold tracking-[-0.045em] sm:text-[30px]">
-            {greeting}, {userName}{" "}
-            <span aria-hidden="true" className="text-neutral-300">
-              ✦
-            </span>
-          </h1>
-          {isRecognized && (
-            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-violet-200/25 bg-violet-200/10 px-2.5 py-1 text-xs font-semibold text-violet-100">
-              <BadgeCheck size={15} />
-              Zohra Recognized
-            </p>
-          )}
-          <p className="mt-2 text-sm text-neutral-300">
-            Here&apos;s a focused view of what needs your attention today.
-          </p>
-        </div>
-        <Link
-          href="/resources"
-          className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 px-3.5 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-white/25 hover:bg-white/[0.06] sm:flex-none"
-        >
-          <Compass size={17} /> Explore workspace
-        </Link>
-      </div>
-
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
-        {cards.map(({ icon: Icon, eyebrow, title, href, tone }) => (
-          <Link
-            key={eyebrow}
-            href={href}
-            className="group relative isolate flex min-h-[122px] overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#242529] to-[#17181b] p-4 sm:min-h-[132px] sm:p-5 transition hover:border-white/20 hover:from-[#2a2b30]"
-          >
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute -right-4 -top-9 size-36 rotate-45 rounded-[28px] border border-white/[0.07] bg-gradient-to-br from-white/[0.08] to-transparent"
-            />
-            <div className="relative z-10 flex w-full min-w-0 flex-col items-start">
-              <span
-                className={`grid size-9 place-items-center rounded-lg shadow-inner ${tone === "light" ? "bg-gradient-to-br from-white to-neutral-300 text-zinc-900" : "border border-white/10 bg-white/[0.08] text-white"}`}
-              >
-                <Icon size={20} />
+    <div className="mx-auto w-full min-w-0 max-w-[1200px] space-y-5 pb-8 sm:space-y-6">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex min-h-6 flex-wrap items-center gap-2">
+            <p className="text-sm font-medium text-muted-foreground">{dateLabel}</p>
+            {isRecognized && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-xs font-semibold text-violet-700 dark:text-violet-300">
+                <BadgeCheck size={14} aria-hidden="true" /> Zohra Recognized
               </span>
-              <p className="mt-4 text-sm text-neutral-300">{eyebrow}</p>
-              <p className="mt-0.5 max-w-full truncate text-lg font-semibold tracking-[-0.025em] text-white">
-                {title}
-              </p>
-            </div>
-            <span className="absolute bottom-4 right-4 grid size-8 place-items-center rounded-full bg-white/10 text-neutral-100 transition group-hover:bg-white/20">
-              <ArrowRight size={17} />
-            </span>
-          </Link>
-        ))}
-      </div>
-
-      <div className="mt-5 grid gap-3 sm:gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.5fr)]">
-        <section className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#151619] to-[#101114] p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 text-sm font-medium text-neutral-300">
-                <Clock3 size={17} /> Recently added
-              </div>
-              <h2 className="mt-1.5 text-lg font-semibold tracking-[-0.03em] text-white sm:text-xl">
-                Your resource library
-              </h2>
-            </div>
-            <Link
-              href="/resources"
-              className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl bg-white/[0.08] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:bg-white/[0.14]"
-            >
-              View all <ArrowRight size={15} />
-            </Link>
-          </div>
-          <div className="mt-3 space-y-1">
-            {resourcesLoading ? (
-              <div className="space-y-2 py-2" aria-label="Loading resources">
-                <div className="h-12 animate-pulse rounded-xl bg-white/[0.04]" />
-                <div className="h-12 animate-pulse rounded-xl bg-white/[0.04]" />
-              </div>
-            ) : resourceError ? (
-              <div
-                className="rounded-xl border border-white/[0.06] px-3 py-5 text-sm text-red-200"
-                role="alert"
-              >
-                {resourceError}
-              </div>
-            ) : resources.length ? (
-              resources.map((resource) => {
-                const Icon =
-                  resource.mimeType.includes("pdf") ||
-                  resource.mimeType.includes("text")
-                    ? FileText
-                    : Folder;
-                return (
-                  <Link
-                    href="/resources"
-                    key={resource.id}
-                    className="group flex min-h-[54px] items-center gap-4 rounded-xl border border-white/[0.06] bg-white/[0.015] px-3 transition hover:bg-white/[0.05]"
-                  >
-                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#34363b] to-[#24262a] text-neutral-100">
-                      <Icon size={18} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-neutral-100">
-                        {resource.originalName}
-                      </span>
-                      <span className="mt-0.5 block text-xs text-neutral-400">
-                        Added {formatRecent(resource.createdAt)}
-                      </span>
-                    </span>
-                    <span className="hidden text-xs text-neutral-400 sm:block">
-                      {formatRecent(resource.createdAt)}
-                    </span>
-                    <ArrowRight
-                      size={15}
-                      className="text-neutral-500 transition group-hover:translate-x-0.5 group-hover:text-white"
-                    />
-                  </Link>
-                );
-              })
-            ) : (
-              <div className="flex min-h-[76px] min-w-0 flex-wrap items-center gap-3 rounded-xl border border-white/[0.06] px-3 py-3 text-sm text-neutral-300">
-                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/[0.06] text-neutral-300">
-                  <Folder size={18} />
-                </span>
-                <span className="min-w-0 flex-1 text-xs leading-5 sm:text-sm">
-                  Your recent resources will appear here.
-                </span>
-                <Link
-                  href="/upload"
-                  className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-white hover:text-neutral-200"
-                >
-                  <UploadCloud size={15} /> Add resources
-                </Link>
-              </div>
             )}
           </div>
-        </section>
-
-        <section className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#151619] to-[#101114] p-4 sm:p-5">
-          <div className="flex items-center gap-2 text-sm font-medium text-neutral-300">
-            <CalendarDays size={17} /> Today
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            {greeting}, {userName}
+          </h1>
+          <div className="mt-1.5 min-h-5 text-sm text-muted-foreground" aria-live="polite">
+            {summaryReady ? (
+              summary
+            ) : (
+              <Skeleton className="h-4 w-56 rounded-md" aria-hidden="true" />
+            )}
           </div>
-          <h2 className="mt-1.5 text-xl font-semibold">Your plan</h2>
-          {tasksLoading ? (
-            <p className="mt-4 text-sm text-neutral-400">Loading tasks…</p>
-          ) : taskError ? (
-            <p role="alert" className="mt-4 text-sm text-red-200">
-              {taskError}
-            </p>
-          ) : todaysTasks.length ? (
-            <div className="mt-3 space-y-2">
-              {todaysTasks.slice(0, 3).map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-center gap-2 rounded-lg bg-white/[0.035] px-3 py-2.5"
-                >
-                  <span
-                    className={`size-2 shrink-0 rounded-full ${task.completedAt ? "bg-emerald-300" : "bg-neutral-400"}`}
-                  />
-                  <span
-                    className={`min-w-0 flex-1 truncate text-sm ${task.completedAt ? "text-neutral-500 line-through" : "text-neutral-200"}`}
-                  >
-                    {task.title}
-                  </span>
-                </div>
-              ))}
-              <p className="text-xs text-neutral-400">
-                {todaysTasks.filter((task) => task.completedAt).length} of{" "}
-                {todaysTasks.length} complete
-              </p>
-            </div>
-          ) : (
-            <p className="mt-4 text-sm text-neutral-400">
-              No tasks due today. Add something you want to remember.
-            </p>
-          )}
-          <Link
-            href={`/tasks?date=${today}`}
-            className="mt-4 flex items-center justify-between rounded-xl bg-white/[0.08] px-3.5 py-3 text-sm font-medium text-neutral-200 transition hover:bg-white/[0.13]"
-          >
-            Open today&apos;s tasks <ArrowRight size={16} />
-          </Link>
-          <Link
-            href="/calendar"
-            className="mt-2 flex items-center justify-between rounded-xl px-3.5 py-2 text-xs text-neutral-400 transition hover:bg-white/[0.05] hover:text-white"
-          >
-            Plan your calendar <ArrowRight size={14} />
-          </Link>
-        </section>
+        </div>
+        <Link href="/upload" className={`${primaryButton} w-full sm:w-auto`}>
+          <UploadCloud size={18} aria-hidden="true" /> Upload resource
+        </Link>
+      </header>
+
+      {showOnboarding && <OnboardingChecklist steps={steps} />}
+
+      {/* Mobile: a single column, today's plan first. Desktop: 2/3 + 1/3. */}
+      <div className="grid grid-cols-1 gap-5 sm:gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
+        <div className="min-w-0 space-y-5 sm:space-y-6">
+          <TodayPanel
+            groups={groups}
+            today={today}
+            loading={tasksLoading}
+            error={taskError}
+            onRetry={() => void refreshTasks()}
+            onToggle={toggleTask}
+            onAdd={addTask}
+          />
+          <LibraryPanel
+            resources={resources}
+            loading={resourcesState.isLoading}
+            error={resourcesState.error}
+            now={now}
+            onRetry={resourcesState.retry}
+          />
+        </div>
+
+        <div className="min-w-0 space-y-5 sm:space-y-6">
+          <AskZohraCard last={conversations[0]} />
+          <WeekStrip
+            tasks={tasks}
+            upcoming={groups.upcoming}
+            today={today}
+            loading={tasksLoading}
+          />
+        </div>
       </div>
     </div>
   );
