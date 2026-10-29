@@ -1,156 +1,127 @@
 import type { TaskRecord } from "@/lib/task-utils";
-import { localDateString } from "@/lib/task-utils";
 
+/** The fields of /api/resources that the dashboard uses. */
 export type DashboardResource = {
   id: string;
   originalName: string;
   mimeType: string;
-  sizeBytes: number;
   status: "PENDING" | "PROCESSING" | "READY" | "FAILED";
-  textExtractionStatus: string;
-  organizationStatus:
-    | "PENDING"
-    | "PROCESSING"
-    | "ORGANIZED"
-    | "NEEDS_REVIEW"
-    | "FAILED";
-  subject: { id: string; name: string } | null;
+  textExtractionStatus: "NOT_STARTED" | "EXTRACTING" | "EXTRACTED" | "NO_TEXT" | "FAILED" | "NOT_APPLICABLE";
+  pageCount: number | null;
+  organizationStatus: "PENDING" | "PROCESSING" | "ORGANIZED" | "NEEDS_REVIEW" | "FAILED";
+  awaitingOrganizationInput: boolean;
   createdAt: string;
+  updatedAt: string;
 };
 
-export type ResourceKind =
-  | "pdf"
-  | "image"
-  | "video"
-  | "slides"
-  | "document"
-  | "text"
-  | "file";
+export type ResourceTone = "ok" | "info" | "warn" | "error";
 
-export function resourceKind(mimeType: string, name: string): ResourceKind {
-  const mime = mimeType.toLowerCase();
-  const ext = name.split(".").pop()?.toLowerCase() ?? "";
-  if (mime.includes("pdf") || ext === "pdf") return "pdf";
-  if (mime.startsWith("image/")) return "image";
-  if (mime.startsWith("video/")) return "video";
-  if (mime.includes("presentation") || ["ppt", "pptx"].includes(ext))
-    return "slides";
-  if (mime.includes("word") || ["doc", "docx"].includes(ext)) return "document";
-  if (mime.startsWith("text/") || ["txt", "md"].includes(ext)) return "text";
-  return "file";
-}
-
-export type ResourceBadge = {
+export type ResourceState = {
   label: string;
-  tone: "info" | "warn" | "danger";
+  tone: ResourceTone;
+  /** Work is still running, so the dashboard keeps checking for updates. */
+  busy: boolean;
+  /** The student should look at this file. */
+  attention: boolean;
 };
 
-/** The one status worth interrupting a scan of the list for, if any. */
-export function resourceBadge(resource: DashboardResource): ResourceBadge | null {
-  if (resource.status === "FAILED" || resource.organizationStatus === "FAILED")
-    return { label: "Failed", tone: "danger" };
-  if (
-    resource.status === "PROCESSING" ||
-    resource.textExtractionStatus === "EXTRACTING" ||
-    resource.organizationStatus === "PROCESSING"
-  )
-    return { label: "Processing", tone: "info" };
-  if (resource.organizationStatus === "NEEDS_REVIEW")
-    return { label: "Needs review", tone: "warn" };
-  return null;
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+
+export function fileKind(mimeType: string): "pdf" | "text" | "image" | "video" | "other" {
+  const type = mimeType.toLowerCase();
+  if (type.includes("pdf")) return "pdf";
+  if (type.startsWith("text/")) return "text";
+  if (type.startsWith("image/")) return "image";
+  if (type.startsWith("video/")) return "video";
+  return "other";
 }
 
-export function isProcessing(resource: DashboardResource) {
-  return resourceBadge(resource)?.label === "Processing";
-}
+/** Turns the many status fields of a file into one short label for the student. */
+export function describeResource(resource: DashboardResource, nowMs: number): ResourceState {
+  const age = nowMs - new Date(resource.createdAt).getTime();
+  const idle = nowMs - new Date(resource.updatedAt).getTime();
+  const kind = fileKind(resource.mimeType);
 
-export function needsAttention(resource: DashboardResource) {
-  const label = resourceBadge(resource)?.label;
-  return label === "Needs review" || label === "Failed";
-}
+  if (resource.status === "FAILED") return { label: "Upload failed", tone: "error", busy: false, attention: true };
+  if (resource.status === "PENDING") {
+    return age > HOUR
+      ? { label: "Upload incomplete", tone: "warn", busy: false, attention: true }
+      : { label: "Uploading", tone: "info", busy: true, attention: false };
+  }
+  if (resource.status === "PROCESSING") return { label: "Processing", tone: "info", busy: true, attention: false };
 
-/** "Just now", "3 hours ago", "yesterday", then a plain date after a week. */
-export function formatRelative(iso: string, now: number): string {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return "";
-  const minutes = Math.max(0, Math.floor((now - then) / 60_000));
-  if (minutes < 1) return "Just now";
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
-  if (minutes < 60) return rtf.format(-minutes, "minute");
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return rtf.format(-hours, "hour");
-  const days = Math.floor(hours / 24);
-  if (days < 7) return rtf.format(-days, "day");
-  const date = new Date(then);
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    year: date.getFullYear() === new Date(now).getFullYear() ? undefined : "numeric",
-  }).format(date);
-}
-
-/** Parse a YYYY-MM-DD string as a local calendar date. */
-export function parseDateOnly(value: string): Date {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
-export function addDays(value: string, amount: number): string {
-  const date = parseDateOnly(value);
-  date.setDate(date.getDate() + amount);
-  return localDateString(date);
-}
-
-export function daysBetween(from: string, to: string): number {
-  const a = parseDateOnly(from);
-  const b = parseDateOnly(to);
-  return Math.round(
-    (Date.UTC(b.getFullYear(), b.getMonth(), b.getDate()) -
-      Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) /
-      86_400_000,
-  );
-}
-
-export function overdueLabel(dueDate: string, today: string): string {
-  const days = daysBetween(dueDate, today);
-  return days === 1 ? "Due yesterday" : `${days} days overdue`;
-}
-
-export type TaskGroups = {
-  overdue: TaskRecord[];
-  today: TaskRecord[];
-  upcoming: TaskRecord[];
-};
-
-/**
- * Overdue tasks used to disappear from the dashboard because only
- * `dueDate === today` was shown. They now get their own group.
- */
-export function groupTasks(tasks: TaskRecord[], today: string): TaskGroups {
-  const weekEnd = addDays(today, 7);
-  const overdue: TaskRecord[] = [];
-  const todays: TaskRecord[] = [];
-  const upcoming: TaskRecord[] = [];
-
-  for (const task of tasks) {
-    if (!task.dueDate) continue;
-    if (task.dueDate === today) todays.push(task);
-    else if (task.dueDate < today && !task.completedAt) overdue.push(task);
-    else if (task.dueDate > today && task.dueDate <= weekEnd && !task.completedAt)
-      upcoming.push(task);
+  if (resource.textExtractionStatus === "EXTRACTING") {
+    return idle > 5 * MINUTE
+      ? { label: "Reading stalled", tone: "warn", busy: false, attention: true }
+      : { label: "Reading text", tone: "info", busy: true, attention: false };
+  }
+  if (resource.textExtractionStatus === "NOT_STARTED" && (kind === "pdf" || kind === "text")) {
+    return age > 10 * MINUTE
+      ? { label: "Text not read", tone: "warn", busy: false, attention: true }
+      : { label: "Reading text", tone: "info", busy: true, attention: false };
+  }
+  if (resource.textExtractionStatus === "FAILED") {
+    return { label: "Couldn’t read text", tone: "error", busy: false, attention: true };
   }
 
-  const byDate = (a: TaskRecord, b: TaskRecord) =>
-    (a.dueDate ?? "").localeCompare(b.dueDate ?? "");
+  if (resource.organizationStatus === "FAILED") return { label: "Sorting failed", tone: "error", busy: false, attention: true };
+  if (resource.organizationStatus === "NEEDS_REVIEW") return { label: "Check sorting", tone: "warn", busy: false, attention: true };
+  if (resource.awaitingOrganizationInput) return { label: "Not sorted yet", tone: "warn", busy: false, attention: true };
+  if (resource.organizationStatus === "PROCESSING" || resource.organizationStatus === "PENDING") {
+    return idle > 3 * MINUTE
+      ? { label: "Sorting stalled", tone: "warn", busy: false, attention: true }
+      : { label: "Sorting", tone: "info", busy: true, attention: false };
+  }
 
-  overdue.sort(byDate);
-  upcoming.sort(byDate);
-  // Open tasks first so finished ones sink instead of jumping around the list.
-  todays.sort((a, b) => Number(Boolean(a.completedAt)) - Number(Boolean(b.completedAt)));
-
-  return { overdue, today: todays, upcoming };
+  if (resource.textExtractionStatus === "NO_TEXT") {
+    return { label: "No readable text", tone: "warn", busy: false, attention: false };
+  }
+  return { label: "Ready", tone: "ok", busy: false, attention: false };
 }
 
-export function plural(count: number, one: string, many = `${one}s`) {
-  return `${count} ${count === 1 ? one : many}`;
+/** Can Zohra AI read this file? */
+export function isReadyForAi(resource: DashboardResource) {
+  return resource.status === "READY" && resource.textExtractionStatus === "EXTRACTED";
+}
+
+export function relativeTime(iso: string, nowMs: number) {
+  const then = new Date(iso).getTime();
+  const minutes = Math.max(0, Math.floor((nowMs - then) / MINUTE));
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
+
+  const date = new Date(then);
+  const sameYear = date.getFullYear() === new Date(nowMs).getFullYear();
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }) }).format(date);
+}
+
+export function greetingFor(hour: number) {
+  return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+}
+
+/** Adds days to a YYYY-MM-DD string without any time zone surprises. */
+export function addDays(dateOnly: string, days: number) {
+  const [year, month, day] = dateOnly.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+/** Splits tasks into what is late, what is due today and what is coming this week. */
+export function groupTasks(tasks: TaskRecord[], today: string, upcomingDays = 7) {
+  const byDate = (a: TaskRecord, b: TaskRecord) => (a.dueDate ?? "").localeCompare(b.dueDate ?? "");
+  const horizon = addDays(today, upcomingDays);
+  const open = tasks.filter((task) => !task.completedAt);
+
+  return {
+    overdue: open.filter((task) => task.dueDate && task.dueDate < today).sort(byDate),
+    // Completed tasks stay visible today, below the open ones, so ticking one off feels finished.
+    today: tasks
+      .filter((task) => task.dueDate === today)
+      .sort((a, b) => Number(Boolean(a.completedAt)) - Number(Boolean(b.completedAt))),
+    upcoming: open.filter((task) => task.dueDate && task.dueDate > today && task.dueDate <= horizon).sort(byDate),
+  };
 }

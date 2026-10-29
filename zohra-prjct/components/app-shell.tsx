@@ -26,7 +26,6 @@ import {
   Moon,
   Upload,
   UserRound,
-  UsersRound,
 } from "lucide-react";
 import { signOutAndClearCookies, useSession } from "@/lib/auth-client";
 import { localDateString, type TaskRecord } from "@/lib/task-utils";
@@ -40,11 +39,10 @@ const navigation = [
     icon: FolderKanban,
     badge: "resources",
   },
+  { label: "Upload", href: "/upload", icon: Upload },
   { label: "Tasks", href: "/tasks", icon: LayoutGrid, badge: "tasks" },
   { label: "Calendar", href: "/calendar", icon: CalendarDays },
   { label: "Zohra AI", href: "/zohra-ai", icon: MessageCircle },
-  { label: "Team", icon: UsersRound, unavailable: true },
-  { label: "Upload", href: "/upload", icon: Upload },
 ];
 
 function MobileNavLink({
@@ -244,7 +242,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
             <nav aria-label="Workspace navigation" className="space-y-1.5">
               {navigation.map(
-                ({ label, href, icon: Icon, badge, unavailable }) => {
+                ({ label, href, icon: Icon, badge }) => {
                   const isActive = Boolean(
                     href &&
                     (href === "/dashboard"
@@ -257,18 +255,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       : badge === "tasks"
                         ? activeTaskCount
                         : null;
-                  const className = `flex h-11 w-full items-center rounded-xl border px-3 text-sm font-medium transition ${isActive ? "relative isolate overflow-hidden border-white/15 bg-white/[0.09] text-white shadow-[0_8px_24px_rgba(0,0,0,0.24)]" : "border-transparent text-neutral-500 hover:bg-white/[0.06] hover:text-neutral-200"} ${unavailable ? "cursor-not-allowed opacity-60" : ""}`;
+                  const className = `flex h-11 w-full items-center rounded-xl border px-3 text-sm font-medium transition ${isActive ? "relative isolate overflow-hidden border-white/15 bg-white/[0.09] text-white shadow-[0_8px_24px_rgba(0,0,0,0.24)]" : "border-transparent text-neutral-400 hover:bg-white/[0.06] hover:text-neutral-200"}`;
                   const content = (
                     <>
                       <Icon size={19} strokeWidth={isActive ? 2.4 : 2} />
                       <span className="ml-3 flex-1 text-left">
                         {!collapsed && label}
                       </span>
-                      {!collapsed && unavailable && (
-                        <span className="rounded-md bg-zinc-800 px-1.5 py-0.5 text-[10px] text-neutral-400">
-                          Soon
-                        </span>
-                      )}
                       {!collapsed && badge && count !== null && (
                         <span className="rounded-md bg-zinc-800 px-1.5 py-0.5 text-[11px] font-semibold text-neutral-300">
                           {count}
@@ -276,17 +269,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       )}
                     </>
                   );
-                  if (unavailable || !href)
-                    return (
-                      <div
-                        key={label}
-                        aria-disabled="true"
-                        title="Team collaboration is coming soon"
-                        className={className}
-                      >
-                        {content}
-                      </div>
-                    );
                   return (
                     <Link
                       key={label}

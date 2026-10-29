@@ -104,10 +104,10 @@ function FormattedReply({ content }: { content: string }) {
   );
 }
 
-export default function AIChat({ initialResourceId }: { initialResourceId?: string }) {
+export default function AIChat({ initialResourceId, initialPrompt }: { initialResourceId?: string; initialPrompt?: string }) {
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(initialPrompt ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -186,6 +186,20 @@ export default function AIChat({ initialResourceId }: { initialResourceId?: stri
   }, [messages, loading]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Arriving from the dashboard with a question: size the box to fit it and put the cursor there.
+  useEffect(() => {
+    if (!initialPrompt) return;
+    const timer = window.setTimeout(() => {
+      const box = composerRef.current;
+      if (!box) return;
+      box.style.height = "48px";
+      box.style.height = `${Math.min(box.scrollHeight, 160)}px`;
+      box.focus();
+      box.setSelectionRange(box.value.length, box.value.length);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [initialPrompt]);
 
   useEffect(() => {
     if (input === "" && composerRef.current) composerRef.current.style.height = "48px";
