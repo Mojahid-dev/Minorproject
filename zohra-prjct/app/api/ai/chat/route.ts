@@ -7,6 +7,7 @@ import {
   type ChatMessage,
 } from "@/lib/ai-conversations";
 import { prisma } from "@/lib/prisma";
+import { enforceRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -26,6 +27,9 @@ export async function POST(request: Request) {
         { error: "Please sign in to use Zohra AI." },
         { status: 401 },
       );
+
+    const limited = await enforceRateLimit(userId, "ai-chat", RATE_LIMITS.aiChat);
+    if (limited) return limited;
 
     const body = await request.json().catch(() => null);
 

@@ -31,6 +31,7 @@ model User {
   preferences   UserPreference?
   recognitionRequests RecognitionRequest[] @relation("RecognitionApplicant")
   aiConversations AIConversation[]
+  rateLimits    RateLimit[]
 
   @@unique([email])
   @@map("user")
@@ -218,6 +219,19 @@ model RecognitionRequest {
   @@index([userId, createdAt])
   @@index([status, createdAt])
   @@map("recognition_request")
+}
+
+model RateLimit {
+  id          String   @id @default(cuid())
+  userId      String
+  bucket      String   @db.VarChar(80)
+  windowStart DateTime
+  count       Int      @default(0)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bucket, windowStart])
+  @@index([windowStart])
+  @@map("rate_limit")
 }
 
 enum AIMessageRole {
