@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
@@ -16,16 +17,27 @@ import {
   ArrowUp,
   Check,
   Copy,
+  FileText,
   LoaderCircle,
   Menu,
   MessageSquarePlus,
+  Paperclip,
   Pencil,
   Save,
   Trash2,
   X,
 } from "lucide-react";
 
-type Message = { role: "user" | "assistant"; content: string };
+import { MAX_ATTACHED_DOCUMENTS } from "@/lib/document-context";
+
+type Message = { role: "user" | "assistant"; content: string; note?: string };
+type LibraryFile = { id: string; originalName: string; pageCount: number | null; status: string; textExtractionStatus: string };
+type ChatSource = { id: string; name: string; truncated: boolean };
+/** One line of the streamed reply sent by /api/ai/chat. */
+type StreamEvent =
+  | { type: "delta"; text: string }
+  | { type: "done"; sources?: ChatSource[] }
+  | { type: "error"; error?: string };
 type Conversation = { id: string; title: string; updatedAt: string; _count?: { messages: number } };
 type Dialog = { kind: "dirty" } | { kind: "delete"; id: string } | null;
 
@@ -34,6 +46,15 @@ const promptSuggestions = [
   "Help me think through a plan",
   "Explore an idea with me",
 ];
+
+const fileSuggestions = [
+  "Summarize this file",
+  "Make 10 practice questions from it",
+  "Explain the hardest part simply",
+];
+
+/** The server only needs role and content; extra fields such as notes stay in the browser. */
+const toPayload = ({ role, content }: Message) => ({ role, content });
 
 const markdownSanitizeSchema: Options = {
   ...defaultSchema,
@@ -83,7 +104,7 @@ function FormattedReply({ content }: { content: string }) {
   );
 }
 
-export default function AIChat() {
+export default function AIChat({ initialResourceId }: { initialResourceId?: string }) {
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -100,6 +121,14 @@ export default function AIChat() {
   const [renameValue, setRenameValue] = useState("");
   const [notice, setNotice] = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [files, setFiles] = useState<LibraryFile[]>([]);
+  const [attachedIds, setAttachedIds] = useState<string[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const initialApplied = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const runRef = useRef(0);
+  const stickRef = useRef(true);
+  const formRef = useRef<HTMLFormElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const dirty = messages.length > 0 && (!conversationId || (messages.at(-1)?.role === "user" && Boolean(error)));
@@ -114,14 +143,49 @@ export default function AIChat() {
     } catch { /* The list will load again on the next visit or save. */ }
   }, []);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => { void loadList(); }, 0);
-    return () => window.clearTimeout(timer);
-  }, [loadList]);
+  const loadFiles = useCallback(async () => {
+    try {
+      const response = await fetch("/api/resources", { cache: "no-store" });
+      if (!response.ok) return;
+      const data = await response.json();
+      const usable = (Array.isArray(data.resources) ? (data.resources as LibraryFile[]) : []).filter(
+        (item) => item.status === "READY" && item.textExtractionStatus === "EXTRACTED",
+      );
+      setFiles(usable);
+      setAttachedIds((ids) => ids.filter((id) => usable.some((file) => file.id === id)));
+      if (initialResourceId && !initialApplied.current) {
+        initialApplied.current = true;
+        if (usable.some((file) => file.id === initialResourceId)) setAttachedIds([initialResourceId]);
+        else setNotice("That file is not ready to chat about yet. Its text may still be extracting.");
+      }
+    } catch { /* The file picker simply stays empty. */ }
+  }, [initialResourceId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const timer = window.setTimeout(() => { void loadList(); void loadFiles(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadList, loadFiles]);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (event.target instanceof Node && !formRef.current?.contains(event.target)) setPickerOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setPickerOpen(false); };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [pickerOpen]);
+
+  useEffect(() => {
+    // Follow the reply as it grows, unless the reader has scrolled up to read.
+    if (stickRef.current) bottomRef.current?.scrollIntoView({ behavior: loading ? "auto" : "smooth", block: "end" });
   }, [messages, loading]);
+
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   useEffect(() => {
     if (input === "" && composerRef.current) composerRef.current.style.height = "48px";
@@ -161,6 +225,10 @@ export default function AIChat() {
       setMessages(nextMessages);
       setInput("");
     }
+    const runId = ++runRef.current;
+    const controller = new AbortController();
+    abortRef.current = controller;
+    stickRef.current = true;
     setLoading(true);
     setError("");
     setNotice("");
@@ -169,36 +237,94 @@ export default function AIChat() {
       const response = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
-          messages: conversationId ? [nextMessages.at(-1)] : nextMessages.slice(-100),
+          messages: conversationId ? [toPayload(nextMessages.at(-1)!)] : nextMessages.slice(-100).map(toPayload),
           ...(conversationId ? { conversationId } : {}),
+          ...(attachedIds.length ? { resourceIds: attachedIds } : {}),
         }),
       });
-      const responseText = await response.text();
-      let data: { error?: string; reply?: string } | null = null;
-      try { data = JSON.parse(responseText) as { error?: string; reply?: string }; } catch { /* A proxy may return a plain-text error page. */ }
+
       if (!response.ok) {
+        // Problems found before any text exists arrive as a normal JSON error.
+        let data: { error?: string } | null = null;
+        try { data = JSON.parse(await response.text()) as { error?: string }; } catch { /* A proxy may return a plain-text error page. */ }
         const statusText = response.statusText ? ` ${response.statusText}` : "";
         throw new Error(data?.error ?? `The AI service returned HTTP ${response.status}${statusText}. Check the deployment's function logs.`);
       }
-      if (!data) throw new Error("The AI service returned an unreadable response. Check the deployment's function logs.");
-      if (typeof data.reply !== "string" || !data.reply.trim()) throw new Error("Gemini returned an empty reply. Please try again.");
+      if (!response.body) throw new Error("Your browser could not read the reply as it arrived. Please try again.");
 
-      setMessages([...nextMessages, { role: "assistant", content: data.reply.trim() }]);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let reply = "";
+      let sources: ChatSource[] = [];
+      let finished = false;
+      let streamError = "";
+      let frame = 0;
+
+      // Draw at most once per screen refresh so long answers stay smooth.
+      const draw = () => {
+        frame = 0;
+        if (runRef.current === runId) setMessages([...nextMessages, { role: "assistant", content: reply }]);
+      };
+
+      const handleLine = (line: string) => {
+        if (!line.trim()) return;
+        let event: StreamEvent;
+        try { event = JSON.parse(line) as StreamEvent; } catch { return; }
+        if (event.type === "delta") {
+          reply += event.text;
+          if (!frame) frame = window.requestAnimationFrame(draw);
+        } else if (event.type === "done") {
+          finished = true;
+          sources = event.sources ?? [];
+        } else if (event.type === "error") {
+          streamError = event.error || "Something went wrong while writing the reply.";
+        }
+      };
+
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        lines.forEach(handleLine);
+      }
+      handleLine(buffer + decoder.decode());
+      if (frame) window.cancelAnimationFrame(frame);
+
+      if (runRef.current !== runId) return;
+      if (streamError) throw new Error(streamError);
+      if (!finished) throw new Error("The connection was interrupted before the reply finished. Please try again.");
+      if (!reply.trim()) throw new Error("Gemini returned an empty reply. Please try again.");
+
+      const cutNames = [...new Set(sources.filter((source) => source.truncated).map((source) => source.name))];
+      const note = cutNames.length ? `Only the first part of ${cutNames.join(", ")} fit into this answer, so details from later pages may be missing.` : undefined;
+      setMessages([...nextMessages, { role: "assistant", content: reply.trim(), ...(note ? { note } : {}) }]);
       if (conversationId) void loadList();
     } catch (err) {
+      if (runRef.current !== runId || (err instanceof DOMException && err.name === "AbortError")) return;
+      // Drop any half-written reply: the server did not save it, so Try again starts clean.
+      setMessages(nextMessages);
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
-      setLoading(false);
+      if (runRef.current === runId) setLoading(false);
     }
   }
 
   function startNew() {
+    runRef.current += 1;
+    abortRef.current?.abort();
+    setLoading(false);
     setMessages([]);
     setInput("");
     setError("");
     setNotice("");
     setConversationId(null);
+    setAttachedIds([]);
+    setPickerOpen(false);
     setHistoryOpen(false);
     setDialog(null);
     setPendingHref(null);
@@ -212,7 +338,7 @@ export default function AIChat() {
       const response = await fetch("/api/ai/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages: messages.map(toPayload) }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not save this conversation.");
@@ -261,6 +387,9 @@ export default function AIChat() {
       setDialog({ kind: "dirty" });
       return;
     }
+    runRef.current += 1;
+    abortRef.current?.abort();
+    setLoading(false);
     setHistoryOpen(false);
     setError("");
     setNotice("");
@@ -268,6 +397,7 @@ export default function AIChat() {
       const response = await fetch(`/api/ai/conversations/${encodeURIComponent(id)}`, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not open this conversation.");
+      setAttachedIds([]);
       setConversationId(id);
       setMessages(data.conversation.messages.map((message: Message) => ({ role: message.role, content: message.content })));
     } catch (err) {
@@ -392,16 +522,16 @@ export default function AIChat() {
             <button type="button" aria-label="Open saved conversations" onClick={() => setHistoryOpen(true)} className="grid size-9 shrink-0 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/[0.07] lg:hidden"><Menu size={18} /></button>
             <div className="min-w-0">
               <p className="truncate text-[13px] font-semibold text-zinc-800 dark:text-zinc-100">{conversationId ? activeTitle : "New chat"}</p>
-              <p className="mt-0.5 text-[10px] text-zinc-500">Google Gemini <span className="mx-1 text-zinc-300 dark:text-zinc-700">·</span> General assistant</p>
+              <p className="mt-0.5 text-[10px] text-zinc-500">Google Gemini <span className="mx-1 text-zinc-300 dark:text-zinc-700">·</span> {attachedIds.length ? `Using ${attachedIds.length} of your file${attachedIds.length > 1 ? "s" : ""}` : "General assistant"}</p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {conversationId && <span className="hidden items-center gap-1.5 text-[10px] text-zinc-500 sm:inline-flex"><span className="size-1.5 rounded-full bg-emerald-500" /> Saved</span>}
-            {dirty && messages.at(-1)?.role === "assistant" && <button type="button" disabled={saving} onClick={() => void saveConversation()} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 text-[11px] font-medium text-white transition hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"><Save size={13} />{saving ? "Saving…" : "Save chat"}</button>}
+            {dirty && !loading && messages.at(-1)?.role === "assistant" && <button type="button" disabled={saving} onClick={() => void saveConversation()} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 text-[11px] font-medium text-white transition hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"><Save size={13} />{saving ? "Saving…" : "Save chat"}</button>}
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-8 lg:px-12">
+        <div onScroll={(event) => { const el = event.currentTarget; stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120; }} className="flex-1 overflow-y-auto px-4 py-6 sm:px-8 lg:px-12">
           {messages.length === 0 ? (
             <div className="mx-auto flex min-h-full max-w-[720px] flex-col justify-center pb-7">
               <ZohraMark size="large" />
@@ -409,7 +539,7 @@ export default function AIChat() {
               <h1 className="mt-2 max-w-[620px] text-[30px] font-semibold leading-[1.12] tracking-[-0.045em] text-zinc-900 dark:text-zinc-50 sm:text-[42px]">What would you like to work through?</h1>
               <p className="mt-3 max-w-lg text-[14px] leading-6 text-zinc-500 dark:text-zinc-400">Ask a question, untangle an idea, or get help finding your next step.</p>
               <div className="mt-8 flex flex-wrap gap-2">
-                {promptSuggestions.map((prompt) => (
+                {(attachedIds.length ? fileSuggestions : promptSuggestions).map((prompt) => (
                   <button key={prompt} type="button" onClick={() => { setInput(prompt); composerRef.current?.focus(); }} className="group inline-flex min-h-10 items-center gap-2 rounded-full border border-zinc-200 bg-white px-3.5 text-[11px] font-medium text-zinc-600 transition hover:border-zinc-400 hover:text-zinc-900 dark:border-white/[0.12] dark:bg-white/[0.025] dark:text-zinc-300 dark:hover:border-white/25 dark:hover:text-white">
                     {prompt}<ArrowRight size={12} className="text-zinc-400 transition-transform group-hover:translate-x-0.5" />
                   </button>
@@ -428,6 +558,7 @@ export default function AIChat() {
                   <div className="min-w-0 flex-1 pt-1">
                     <div className="mb-2 text-[11px] font-semibold tracking-wide text-zinc-800 dark:text-zinc-200">Zohra</div>
                     <FormattedReply content={message.content} />
+                    {message.note && <p className="mt-2 text-[11px] leading-5 text-amber-700 dark:text-amber-300">{message.note}</p>}
                     <button type="button" onClick={() => void copyReply(message.content, index)} className="mt-2 inline-flex items-center gap-1.5 rounded-md py-1 text-[10px] text-zinc-400 opacity-100 transition hover:text-zinc-700 dark:hover:text-zinc-200 sm:opacity-0 sm:group-hover/reply:opacity-100 sm:focus:opacity-100">
                       {copiedIndex === index ? <Check size={12} /> : <Copy size={12} />}{copiedIndex === index ? "Copied" : "Copy"}
                     </button>
@@ -435,7 +566,7 @@ export default function AIChat() {
                 </article>
               ))}
 
-              {loading && (
+              {loading && messages.at(-1)?.role !== "assistant" && (
                 <div className="flex items-center gap-3.5" role="status" aria-live="polite">
                   <ZohraMark />
                   <div className="flex items-center gap-2 text-[12px] text-zinc-500"><LoaderCircle size={14} className="animate-spin" /> Zohra is thinking</div>
@@ -455,8 +586,43 @@ export default function AIChat() {
         </div>
 
         <footer className="shrink-0 border-t border-zinc-200 bg-white px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3 dark:border-white/[0.08] dark:bg-[#141417] sm:px-6 sm:pb-4 lg:px-10">
-          <form onSubmit={(event) => { event.preventDefault(); void sendMessage(); }} className="mx-auto max-w-[760px]">
+          <form ref={formRef} onSubmit={(event) => { event.preventDefault(); void sendMessage(); }} className="relative mx-auto max-w-[760px]">
+            {pickerOpen && (
+              <div role="dialog" aria-label="Choose files to ask about" className="absolute bottom-full left-0 right-0 z-20 mb-2 max-h-64 overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl dark:border-white/10 dark:bg-[#1d1c21]">
+                <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">Ask about your files <span className="font-normal normal-case tracking-normal">· up to {MAX_ATTACHED_DOCUMENTS}</span></p>
+                {files.length === 0 ? (
+                  <p className="px-2 py-3 text-xs leading-5 text-zinc-500">No files with readable text yet. Add a PDF on the <Link href="/upload" className="font-medium underline underline-offset-2">Upload</Link> page and wait for its text to be extracted.</p>
+                ) : files.map((file) => {
+                  const attached = attachedIds.includes(file.id);
+                  const full = !attached && attachedIds.length >= MAX_ATTACHED_DOCUMENTS;
+                  return (
+                    <button key={file.id} type="button" disabled={full} onClick={() => setAttachedIds((ids) => attached ? ids.filter((id) => id !== file.id) : [...ids, file.id])} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-[12px] text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-200 dark:hover:bg-white/[0.06]">
+                      <FileText size={14} className="shrink-0 text-zinc-400" />
+                      <span className="min-w-0 flex-1 truncate">{file.originalName}</span>
+                      {file.pageCount ? <span className="shrink-0 text-[10px] text-zinc-400">{file.pageCount} pg</span> : null}
+                      {attached && <Check size={14} className="shrink-0 text-violet-600 dark:text-violet-300" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {attachedIds.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {attachedIds.map((id) => {
+                  const file = files.find((item) => item.id === id);
+                  if (!file) return null;
+                  return (
+                    <span key={id} className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 py-1 pl-2.5 pr-1 text-[11px] font-medium text-violet-900 dark:border-violet-400/25 dark:bg-violet-400/10 dark:text-violet-100">
+                      <FileText size={12} className="shrink-0" />
+                      <span className="max-w-[200px] truncate">{file.originalName}</span>
+                      <button type="button" aria-label={`Remove ${file.originalName}`} onClick={() => setAttachedIds((ids) => ids.filter((item) => item !== id))} className="rounded-full p-1 hover:bg-violet-200/60 dark:hover:bg-white/10"><X size={11} /></button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
             <div className="flex items-end gap-2 rounded-2xl border border-zinc-300 bg-white px-2.5 py-2 transition focus-within:border-zinc-500 focus-within:ring-2 focus-within:ring-zinc-900/[0.04] dark:border-white/[0.14] dark:bg-[#1b1a1f] dark:focus-within:border-white/25 dark:focus-within:ring-white/[0.04]">
+              <button type="button" onClick={() => setPickerOpen((open) => !open)} aria-label="Attach files from your library" aria-expanded={pickerOpen} className={`grid size-9 shrink-0 place-items-center rounded-xl transition hover:bg-zinc-100 dark:hover:bg-white/[0.07] ${attachedIds.length ? "text-violet-600 dark:text-violet-300" : "text-zinc-500"}`}><Paperclip size={16} /></button>
               <textarea
                 ref={composerRef}
                 value={input}
@@ -471,7 +637,7 @@ export default function AIChat() {
                     void sendMessage();
                   }
                 }}
-                placeholder="Message Zohra…"
+                placeholder={attachedIds.length ? "Ask about your files…" : "Message Zohra…"}
                 aria-label="Message Zohra AI"
                 rows={1}
                 maxLength={4000}
