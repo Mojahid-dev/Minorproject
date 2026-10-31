@@ -645,8 +645,9 @@ export default function AIChat({
           : "Could not open this conversation.",
       );
     }
+  }
 
-    async function renameConversation(id: string) {
+  async function renameConversation(id: string) {
       const title = renameValue.trim();
       if (!title || title.length > 120) return;
       const response = await fetch(
@@ -669,7 +670,7 @@ export default function AIChat({
       setNotice("Conversation renamed.");
     }
 
-    async function deleteConversation(id: string) {
+  async function deleteConversation(id: string) {
       const response = await fetch(
         `/api/ai/conversations/${encodeURIComponent(id)}`,
         { method: "DELETE" },
@@ -683,7 +684,7 @@ export default function AIChat({
       setDialog(null);
     }
 
-    async function copyReply(content: string, index: number) {
+  async function copyReply(content: string, index: number) {
       try {
         await navigator.clipboard.writeText(content);
         setCopiedIndex(index);
@@ -693,24 +694,24 @@ export default function AIChat({
       }
     }
 
-    function dismissDialog() {
+  function dismissDialog() {
       setDialog(null);
       setPendingHref(null);
       setPendingOpenId(null);
     }
 
-    const groups = groupConversations(
+  const groups = groupConversations(
       conversations.filter((item) =>
         item.title.toLowerCase().includes(query.trim().toLowerCase()),
       ),
       loadedAt,
     );
-    const suggestions = attachedIds.length
+  const suggestions = attachedIds.length
       ? fileSuggestions
       : promptSuggestions;
-    const lastIndex = messages.length - 1;
+  const lastIndex = messages.length - 1;
 
-    function toggleFile(id: string) {
+  function toggleFile(id: string) {
       setAttachedIds((ids) =>
         ids.includes(id)
           ? ids.filter((item) => item !== id)
@@ -720,7 +721,7 @@ export default function AIChat({
       );
     }
 
-    const sidebar = (
+  const sidebar = (
       <div className="flex h-full min-h-0 flex-col">
         <Link
           href="/dashboard"
@@ -1553,5 +1554,4 @@ export default function AIChat({
         )}
       </section>
     );
-  }
 }

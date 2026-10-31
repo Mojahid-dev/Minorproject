@@ -412,7 +412,7 @@ export async function POST(request: Request) {
             for (const call of calls) {
               if (call.name !== "create_tasks") continue;
               const result = await runCreateTasks(userId, call.args);
-              if ("created" in result)
+              if ("created" in result && Array.isArray(result.created))
                 send({ type: "tasks", tasks: result.created });
               responses.push({
                 functionResponse: { name: call.name, response: result },
