@@ -12,33 +12,25 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize, { defaultSchema, type Options } from "rehype-sanitize";
 
 import {
-  ArrowRight,
   ArrowUp,
-  BookOpen,
   Check,
-  Compass,
   Copy,
-  GraduationCap,
   FileText,
-  Lightbulb,
-  ListChecks,
   LoaderCircle,
-  Lock,
   Menu,
   MessageSquarePlus,
   Paperclip,
   Pencil,
   Save,
+  Search,
   Trash2,
   X,
-  type LucideIcon,
 } from "lucide-react";
 
-import { focusRing } from "@/components/dashboard/shared";
 import { MAX_ATTACHED_DOCUMENTS } from "@/lib/document-context";
 import { cn } from "@/lib/utils";
 
-type Message = { role: "user" | "assistant"; content: string; note?: string };
+type Message = { role: "user" | "assistant"; content: string; note?: string; sources?: ChatSource[] };
 type LibraryFile = { id: string; originalName: string; pageCount: number | null; status: string; textExtractionStatus: string };
 type ChatSource = { id: string; name: string; truncated: boolean };
 /** One line of the streamed reply sent by /api/ai/chat. */
@@ -49,19 +41,37 @@ type StreamEvent =
 type Conversation = { id: string; title: string; updatedAt: string; _count?: { messages: number } };
 type Dialog = { kind: "dirty" } | { kind: "delete"; id: string } | null;
 
-type Suggestion = { icon: LucideIcon; title: string; hint: string; prompt: string };
-
-const promptSuggestions: Suggestion[] = [
-  { icon: Lightbulb, title: "Explain simply", hint: "Break a difficult idea into plain language.", prompt: "Explain a difficult idea simply" },
-  { icon: ListChecks, title: "Plan it out", hint: "Think a plan through step by step.", prompt: "Help me think through a plan" },
-  { icon: Compass, title: "Explore an idea", hint: "Brainstorm and push on a thought.", prompt: "Explore an idea with me" },
+const promptSuggestions = [
+  "Explain a difficult idea simply",
+  "Help me plan a revision schedule",
+  "Quiz me on a topic I'm revising",
 ];
 
-const fileSuggestions: Suggestion[] = [
-  { icon: FileText, title: "Summarize", hint: "Get the key points of your file.", prompt: "Summarize this file" },
-  { icon: GraduationCap, title: "Practice questions", hint: "Turn it into 10 questions to test yourself.", prompt: "Make 10 practice questions from it" },
-  { icon: BookOpen, title: "Hardest part", hint: "Have the trickiest section explained simply.", prompt: "Explain the hardest part simply" },
+const fileSuggestions = [
+  "Summarize this file",
+  "Make 10 practice questions from it",
+  "Explain the hardest part simply",
 ];
+
+const focus = "outline-none focus-visible:ring-2 focus-visible:ring-pen";
+/** A highlighter stroke across the lower half of the text it sits behind. */
+const highlighter = "[background-image:linear-gradient(transparent_46%,var(--mark)_46%,var(--mark)_92%,transparent_92%)]";
+
+/** Groups saved chats by how recently they were used. */
+function groupConversations(items: Conversation[], now: number) {
+  const today = new Date(now).toDateString();
+  const groups: { label: string; items: Conversation[] }[] = [
+    { label: "Today", items: [] },
+    { label: "Last 7 days", items: [] },
+    { label: "Earlier", items: [] },
+  ];
+  for (const item of items) {
+    const time = new Date(item.updatedAt).getTime();
+    const slot = Number.isNaN(time) ? 2 : new Date(time).toDateString() === today ? 0 : now - time < 7 * 86_400_000 ? 1 : 2;
+    groups[slot].items.push(item);
+  }
+  return groups.filter((group) => group.items.length > 0);
+}
 
 /** The server only needs role and content; extra fields such as notes stay in the browser. */
 const toPayload = ({ role, content }: Message) => ({ role, content });
@@ -77,35 +87,34 @@ const markdownSanitizeSchema: Options = {
   },
 };
 
-function ZohraMark({ size = "regular" }: { size?: "regular" | "large" }) {
-  const dimensions = size === "large" ? 45 : 30;
+function ZohraMark() {
   return (
-    <span className={`zohra-ai-mark inline-grid shrink-0 place-items-center ${size === "large" ? "size-[66px] rounded-[20px] shadow-lg shadow-violet-500/20 ring-4 ring-violet-500/10" : "size-9 rounded-xl sm:size-10"}`}>
-      <Image src="/Logo.svg" alt="" width={dimensions} height={dimensions} priority={size === "large"} className="h-[76%] w-[76%] object-contain" />
+    <span className="zohra-ai-mark inline-grid size-8 shrink-0 place-items-center rounded-lg">
+      <Image src="/Logo.svg" alt="" width={24} height={24} className="h-[68%] w-[68%] object-contain" />
     </span>
   );
 }
 
 function FormattedReply({ content }: { content: string }) {
   return (
-    <div className="chat-markdown min-w-0 text-[14px] leading-7 text-foreground/90 sm:text-[15px]">
+    <div className="chat-markdown min-w-0 font-reading text-[16.5px] leading-[1.75] text-ink sm:text-[17px]">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeRaw, [rehypeSanitize, markdownSanitizeSchema], rehypeKatex]}
         components={{
           a: ({ children, href }) => (
-            <a href={href} target="_blank" rel="noreferrer" className="font-medium text-violet-700 underline decoration-violet-300 underline-offset-4 hover:text-violet-900 dark:text-violet-300 dark:decoration-violet-500 dark:hover:text-violet-200">{children}</a>
+            <a href={href} target="_blank" rel="noreferrer" className="font-medium text-pen underline decoration-pen/40 underline-offset-4 hover:decoration-pen">{children}</a>
           ),
           pre: ({ children }) => (
-            <pre className="my-4 max-w-full overflow-x-auto rounded-xl border border-zinc-800 bg-[#111116] p-4 text-[13px] leading-6 text-zinc-100">{children}</pre>
+            <pre className="my-5 max-w-full overflow-x-auto rounded-md border border-rule bg-ink/[0.05] p-4 text-[13px] leading-6 text-ink">{children}</pre>
           ),
           code: ({ children, className }) => className
-            ? <code className="font-mono text-[12px]">{children}</code>
-            : <code className="rounded bg-violet-100 px-1.5 py-0.5 font-mono text-[0.88em] text-violet-900 dark:bg-violet-400/15 dark:text-violet-200">{children}</code>,
-          table: ({ children }) => <div className="my-4 max-w-full overflow-x-auto"><table className="w-full border-collapse text-left text-sm">{children}</table></div>,
-          th: ({ children }) => <th className="border border-border bg-muted px-3 py-2 font-semibold">{children}</th>,
-          td: ({ children }) => <td className="border border-border px-3 py-2">{children}</td>,
-          blockquote: ({ children }) => <blockquote className="my-3 border-l-2 border-violet-400 pl-4 text-muted-foreground">{children}</blockquote>,
+            ? <code className="font-mono text-[12.5px]">{children}</code>
+            : <code className="rounded-[3px] bg-mark px-1 py-px font-mono text-[0.84em] text-ink">{children}</code>,
+          table: ({ children }) => <div className="my-5 max-w-full overflow-x-auto"><table className="w-full border-collapse border-y-2 border-ink text-left font-ui text-[14px]">{children}</table></div>,
+          th: ({ children }) => <th className="border-b border-ink py-2 pr-6 font-semibold">{children}</th>,
+          td: ({ children }) => <td className="border-b border-rule py-2 pr-6">{children}</td>,
+          blockquote: ({ children }) => <blockquote className="my-5 border-l-2 border-pen pl-4 italic text-ink-soft">{children}</blockquote>,
         }}
       >
         {content}
@@ -134,6 +143,8 @@ export default function AIChat({ initialResourceId, initialPrompt }: { initialRe
   const [files, setFiles] = useState<LibraryFile[]>([]);
   const [attachedIds, setAttachedIds] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [loadedAt] = useState(() => Date.now());
+  const [query, setQuery] = useState("");
   const initialApplied = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const runRef = useRef(0);
@@ -326,7 +337,7 @@ export default function AIChat({ initialResourceId, initialPrompt }: { initialRe
 
       const cutNames = [...new Set(sources.filter((source) => source.truncated).map((source) => source.name))];
       const note = cutNames.length ? `Only the first part of ${cutNames.join(", ")} fit into this answer, so details from later pages may be missing.` : undefined;
-      setMessages([...nextMessages, { role: "assistant", content: reply.trim(), ...(note ? { note } : {}) }]);
+      setMessages([...nextMessages, { role: "assistant", content: reply.trim(), ...(note ? { note } : {}), ...(sources.length ? { sources } : {}) }]);
       if (conversationId) void loadList();
     } catch (err) {
       if (runRef.current !== runId || (err instanceof DOMException && err.name === "AbortError")) return;
@@ -474,15 +485,23 @@ export default function AIChat({ initialResourceId, initialPrompt }: { initialRe
     setPendingOpenId(null);
   }
 
+  const groups = groupConversations(
+    conversations.filter((item) => item.title.toLowerCase().includes(query.trim().toLowerCase())),
+    loadedAt,
+  );
+  const suggestions = attachedIds.length ? fileSuggestions : promptSuggestions;
+  const lastIndex = messages.length - 1;
+
+  function toggleFile(id: string) {
+    setAttachedIds((ids) => ids.includes(id) ? ids.filter((item) => item !== id) : ids.length >= MAX_ATTACHED_DOCUMENTS ? ids : [...ids, id]);
+  }
+
   const sidebar = (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-3 px-4 pb-4 pt-4">
         <ZohraMark />
-        <div className="min-w-0">
-          <p className="text-[15px] font-semibold tracking-[-0.02em] text-foreground">Zohra</p>
-          <p className="text-[11px] text-muted-foreground">AI workspace</p>
-        </div>
-        <button type="button" onClick={() => setHistoryOpen(false)} aria-label="Close chat history" className={cn("ml-auto grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted lg:hidden", focusRing)}><X size={17} /></button>
+        <p className="font-reading text-[20px] font-semibold tracking-[-0.01em] text-ink">Zohra</p>
+        <button type="button" onClick={() => setHistoryOpen(false)} aria-label="Close chat history" className={cn("ml-auto grid size-10 place-items-center rounded-md text-ink-soft hover:bg-ink/[0.06] lg:hidden", focus)}><X size={18} /></button>
       </div>
 
       <button
@@ -493,116 +512,135 @@ export default function AIChat({ initialResourceId, initialPrompt }: { initialRe
           if (dirty) setDialog({ kind: "dirty" });
           else startNew();
         }}
-        className={cn("mx-3 flex h-10 items-center justify-center gap-2 rounded-xl bg-violet-600 text-[13px] font-semibold text-violet-50 shadow-sm motion-safe:transition-colors hover:bg-violet-500 active:bg-violet-700", focusRing)}
+        className={cn("mx-4 flex h-11 items-center justify-center gap-2 rounded-lg bg-ink text-sm font-semibold text-paper hover:opacity-90", focus)}
       >
-        <MessageSquarePlus size={16} strokeWidth={2} aria-hidden="true" /> New chat
+        <MessageSquarePlus size={16} aria-hidden="true" /> New chat
       </button>
 
-      <div className="mt-6 flex items-center justify-between px-4 pb-1.5">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Recent</p>
-        <span className="text-[10px] tabular-nums text-muted-foreground">{conversations.length || ""}</span>
-      </div>
-      <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-3">
+      {conversations.length > 0 && (
+        <label className="relative mx-4 mt-3 block">
+          <span className="sr-only">Search your chats</span>
+          <Search size={15} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-soft" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search chats" className={cn("h-10 w-full rounded-lg border border-rule bg-transparent pl-9 pr-3 text-sm placeholder:text-ink-soft", focus)} />
+        </label>
+      )}
+
+      <div className="mt-4 flex-1 overflow-y-auto px-2 pb-3">
         {conversations.length === 0 ? (
-          <p className="px-2 py-4 text-xs leading-5 text-muted-foreground">Your saved conversations will appear here.</p>
-        ) : conversations.map((item) => (
-          <div key={item.id} className={cn("group relative flex items-center gap-1 rounded-lg px-2 py-1 motion-safe:transition-colors", conversationId === item.id ? "bg-violet-500/10" : "hover:bg-muted")}>
-            {conversationId === item.id && <span aria-hidden="true" className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-violet-500" />}
-            {renamingId === item.id ? (
-              <form className="flex min-w-0 flex-1 gap-1" onSubmit={(event) => { event.preventDefault(); void renameConversation(item.id); }}>
-                <input autoFocus maxLength={120} value={renameValue} onChange={(event) => setRenameValue(event.target.value)} className={cn("min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs", focusRing)} />
-                <button type="submit" aria-label="Save title" className="rounded-md p-1.5 text-violet-700 hover:bg-violet-500/10 dark:text-violet-300"><Check size={14} /></button>
-              </form>
-            ) : (
-              <>
-                <button type="button" onClick={() => void openConversation(item.id)} aria-current={conversationId === item.id ? "true" : undefined} className={cn("min-w-0 flex-1 truncate py-1.5 text-left text-[13px] font-medium", conversationId === item.id ? "text-violet-800 dark:text-violet-100" : "text-foreground/80")}>{item.title}</button>
-                <div className="flex shrink-0 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
-                  <button type="button" aria-label={`Rename ${item.title}`} onClick={() => { setRenamingId(item.id); setRenameValue(item.title); }} className="rounded-md p-1.5 text-muted-foreground hover:bg-background hover:text-foreground"><Pencil size={12} /></button>
-                  <button type="button" aria-label={`Delete ${item.title}`} onClick={() => setDialog({ kind: "delete", id: item.id })} className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 size={12} /></button>
-                </div>
-              </>
-            )}
+          <p className="px-3 py-3 text-sm leading-6 text-ink-soft">Chats you save will be listed here.</p>
+        ) : groups.length === 0 ? (
+          <p className="px-3 py-3 text-sm leading-6 text-ink-soft">No chats match &ldquo;{query}&rdquo;.</p>
+        ) : groups.map((group) => (
+          <div key={group.label} className="mb-4">
+            <p className="px-3 pb-1 text-[13px] text-ink-soft">{group.label}</p>
+            {group.items.map((item) => (
+              <div key={item.id} className={cn("group flex items-center gap-1 rounded-lg pl-3 pr-1", conversationId === item.id ? "bg-ink/[0.07]" : "hover:bg-ink/[0.04]")}>
+                {renamingId === item.id ? (
+                  <form className="flex min-w-0 flex-1 gap-1 py-1" onSubmit={(event) => { event.preventDefault(); void renameConversation(item.id); }}>
+                    <input autoFocus maxLength={120} value={renameValue} onChange={(event) => setRenameValue(event.target.value)} className={cn("min-w-0 flex-1 rounded-md border border-rule bg-transparent px-2 py-1.5 text-sm", focus)} />
+                    <button type="submit" aria-label="Save title" className="grid size-9 place-items-center rounded-md text-pen hover:bg-pen/10"><Check size={15} /></button>
+                  </form>
+                ) : (
+                  <>
+                    <button type="button" onClick={() => void openConversation(item.id)} aria-current={conversationId === item.id ? "true" : undefined} className={cn("min-w-0 flex-1 truncate py-2.5 text-left text-[14px] text-ink", conversationId === item.id && "font-medium", focus)}>{item.title}</button>
+                    <div className="flex shrink-0 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
+                      <button type="button" aria-label={`Rename ${item.title}`} onClick={() => { setRenamingId(item.id); setRenameValue(item.title); }} className="grid size-9 place-items-center rounded-md text-ink-soft hover:text-ink"><Pencil size={13} /></button>
+                      <button type="button" aria-label={`Delete ${item.title}`} onClick={() => setDialog({ kind: "delete", id: item.id })} className="grid size-9 place-items-center rounded-md text-ink-soft hover:text-flag"><Trash2 size={13} /></button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
           </div>
         ))}
       </div>
-      <div className="flex items-center gap-1.5 border-t border-border px-4 py-3 text-[11px] text-muted-foreground">
-        <Lock size={11} aria-hidden="true" /> Private to your account
-      </div>
+      <p className="border-t border-rule px-4 py-3 text-xs text-ink-soft">Only you can see your chats.</p>
     </div>
   );
 
-  const suggestions = attachedIds.length ? fileSuggestions : promptSuggestions;
-  const lastIndex = messages.length - 1;
-
   return (
-    <section className="zohra-ai relative flex h-[calc(100dvh-11.5rem-env(safe-area-inset-bottom))] min-h-[380px] w-full overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-sm lg:h-[calc(100dvh-8.5rem)]">
-      <aside className="hidden w-[264px] shrink-0 border-r border-border bg-muted/40 lg:block">{sidebar}</aside>
+    <section className="planner zohra-ai font-ui relative flex h-[calc(100dvh-11.5rem-env(safe-area-inset-bottom))] min-h-[380px] w-full overflow-hidden rounded-xl border border-rule text-ink lg:h-[calc(100dvh-8.5rem)]">
+      <div className="hidden w-[280px] shrink-0 border-r border-rule bg-ink/[0.03] lg:block">{sidebar}</div>
 
       {historyOpen && (
         <div className="absolute inset-0 z-30 lg:hidden" style={{ backgroundColor: "rgb(9 9 11 / 0.5)" }} onClick={() => setHistoryOpen(false)}>
-          <aside role="dialog" aria-modal="true" aria-label="Saved conversations" onClick={(event) => event.stopPropagation()} className="h-full w-[min(86vw,310px)] border-r border-border bg-card shadow-2xl">{sidebar}</aside>
+          <div role="dialog" aria-modal="true" aria-label="Saved conversations" onClick={(event) => event.stopPropagation()} className="h-full w-[min(86vw,310px)] border-r border-rule bg-paper shadow-2xl">{sidebar}</div>
         </div>
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-[60px] shrink-0 items-center justify-between gap-3 border-b border-border px-3 sm:px-5">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <button type="button" aria-label="Open saved conversations" onClick={() => setHistoryOpen(true)} className={cn("grid size-10 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-muted lg:hidden", focusRing)}><Menu size={18} /></button>
+        <header className="flex h-[64px] shrink-0 items-center justify-between gap-3 border-b border-rule px-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2">
+            <button type="button" aria-label="Open saved conversations" onClick={() => setHistoryOpen(true)} className={cn("grid size-10 shrink-0 place-items-center rounded-md text-ink-soft hover:bg-ink/[0.06] lg:hidden", focus)}><Menu size={19} /></button>
             <div className="min-w-0">
-              <h1 className="truncate text-[14px] font-semibold text-foreground">{conversationId ? activeTitle : "New chat"}</h1>
-              <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <span>Gemini</span>
-                {attachedIds.length > 0 && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 font-medium text-violet-700 dark:text-violet-300"><FileText size={10} aria-hidden="true" />{attachedIds.length} file{attachedIds.length > 1 ? "s" : ""}</span>
-                )}
-              </p>
+              <h1 className="truncate font-reading text-[18px] font-medium leading-tight text-ink">{conversationId ? activeTitle : "New chat"}</h1>
+              <p className="mt-0.5 truncate text-xs text-ink-soft">{attachedIds.length ? `Answering from ${attachedIds.length} of your file${attachedIds.length > 1 ? "s" : ""}` : "Answering from general knowledge"}</p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {conversationId && <span className="hidden items-center gap-1.5 text-[11px] text-muted-foreground sm:inline-flex"><span className="size-1.5 rounded-full bg-emerald-500" /> Saved</span>}
-            {dirty && !loading && messages.at(-1)?.role === "assistant" && <button type="button" disabled={saving} onClick={() => void saveConversation()} className={cn("inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-background px-3 text-[12px] font-medium text-foreground hover:bg-muted disabled:opacity-50", focusRing)}><Save size={13} />{saving ? "Saving…" : "Save chat"}</button>}
+          <div className="flex shrink-0 items-center gap-3">
+            {conversationId && <span className="hidden items-center gap-1.5 text-xs text-ink-soft sm:inline-flex"><Check size={13} className="text-pen" /> Saved</span>}
+            {dirty && !loading && messages.at(-1)?.role === "assistant" && <button type="button" disabled={saving} onClick={() => void saveConversation()} className={cn("inline-flex h-9 items-center gap-2 rounded-lg border border-rule px-3 text-sm font-medium hover:border-ink disabled:opacity-50", focus)}><Save size={14} />{saving ? "Saving" : "Save chat"}</button>}
           </div>
         </header>
 
-        <div onScroll={(event) => { const el = event.currentTarget; stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120; }} className="relative flex-1 overflow-y-auto px-4 py-6 sm:px-8 lg:px-12">
+        <div onScroll={(event) => { const el = event.currentTarget; stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120; }} className="flex-1 overflow-y-auto px-5 py-8 sm:px-8">
           {messages.length === 0 ? (
-            <div className="relative mx-auto flex min-h-full max-w-[720px] flex-col justify-center pb-6">
-              <div aria-hidden="true" className="pointer-events-none absolute -top-10 left-0 h-64 w-full max-w-[520px] rounded-full bg-violet-500/10 blur-3xl" />
-              <div className="relative">
-                <ZohraMark size="large" />
-                <p className="mt-7 text-[11px] font-semibold uppercase tracking-[0.14em] text-violet-600 dark:text-violet-300">{attachedIds.length ? "Your files are ready" : "Zohra AI"}</p>
-                <h2 className="mt-2 max-w-[620px] text-[30px] font-semibold leading-[1.1] tracking-[-0.045em] text-foreground sm:text-[42px]">{attachedIds.length ? "What should we do with your files?" : "What would you like to work through?"}</h2>
-                <p className="mt-3 max-w-lg text-[14px] leading-6 text-muted-foreground">{attachedIds.length ? "Zohra will answer from the files you attached." : "Ask a question, untangle an idea, or get help finding your next step."}</p>
-                <div className="mt-8 grid gap-2.5 sm:grid-cols-3">
-                  {suggestions.map(({ icon: Icon, title, hint, prompt }) => (
-                    <button key={title} type="button" onClick={() => { setInput(prompt); composerRef.current?.focus(); }} className={cn("group flex flex-col items-start gap-3 rounded-2xl border border-border bg-background p-4 text-left shadow-sm motion-safe:transition hover:-translate-y-0.5 hover:border-violet-500/50 hover:shadow-md motion-reduce:hover:translate-y-0", focusRing)}>
-                      <span className="grid size-9 place-items-center rounded-xl bg-violet-500/10 text-violet-700 dark:text-violet-300"><Icon size={17} aria-hidden="true" /></span>
-                      <span>
-                        <span className="block text-[13px] font-semibold text-foreground">{title}</span>
-                        <span className="mt-0.5 block text-[12px] leading-5 text-muted-foreground">{hint}</span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
+            <div className="mx-auto flex min-h-full max-w-[720px] flex-col justify-center pb-4">
+              <h2 className="font-reading text-[36px] font-medium leading-[1.06] tracking-[-0.03em] text-ink sm:text-[52px]">{attachedIds.length ? "What should Zohra do with your files?" : "What are you working on?"}</h2>
+              <p className="mt-4 max-w-[52ch] text-[16px] leading-7 text-ink-soft">{attachedIds.length ? "Ask anything about them, or start with one of these." : "Ask a question, or pick one of your files and Zohra will answer from it."}</p>
+
+              <div className="mt-7 flex flex-wrap gap-2">
+                {suggestions.map((prompt) => (
+                  <button key={prompt} type="button" onClick={() => { setInput(prompt); composerRef.current?.focus(); }} className={cn("min-h-11 rounded-lg border border-rule px-4 py-2.5 text-left text-[14px] font-medium text-ink motion-safe:transition-colors hover:border-ink hover:bg-mark", focus)}>{prompt}</button>
+                ))}
               </div>
-            </div>
-          ) : (
-            <div className="mx-auto max-w-[760px] space-y-8 pb-6 pt-2 sm:space-y-10">
-              {messages.map((message, index) => message.role === "user" ? (
-                <div key={`${index}-user`} className="flex justify-end">
-                  <div className="max-w-[88%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-violet-600 px-4 py-3 text-[14px] leading-6 text-violet-50 shadow-sm sm:max-w-[78%] sm:px-5">{message.content}</div>
+
+              {files.length > 0 ? (
+                <div className="mt-11">
+                  <p className="text-[14px] font-medium text-ink">Your files</p>
+                  <ul className="mt-2 border-b border-rule">
+                    {files.slice(0, 5).map((file) => {
+                      const attached = attachedIds.includes(file.id);
+                      const full = !attached && attachedIds.length >= MAX_ATTACHED_DOCUMENTS;
+                      return (
+                        <li key={file.id} className="border-t border-rule">
+                          <button type="button" disabled={full} aria-pressed={attached} onClick={() => toggleFile(file.id)} className={cn("flex min-h-14 w-full items-center gap-3.5 px-1 py-3 text-left motion-safe:transition-colors hover:bg-ink/[0.04] disabled:cursor-not-allowed disabled:opacity-40", attached && "bg-mark/50 hover:bg-mark/50", focus)}>
+                            <span className={cn("grid size-5 shrink-0 place-items-center rounded-[4px] border-[1.5px]", attached ? "border-ink bg-ink text-paper" : "border-ink-soft")}>{attached && <Check size={13} strokeWidth={3} />}</span>
+                            <span className="min-w-0 flex-1 truncate font-reading text-[17px] text-ink">{file.originalName}</span>
+                            {file.pageCount ? <span className="shrink-0 text-sm tabular-nums text-ink-soft">{file.pageCount} pages</span> : null}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
               ) : (
-                <article key={`${index}-assistant`} className="group/reply flex items-start gap-3.5 sm:gap-4">
-                  <ZohraMark />
-                  <div className="min-w-0 flex-1 pt-1.5">
-                    <div className="mb-1.5 text-[12px] font-semibold tracking-wide text-foreground">Zohra</div>
+                <p className="mt-11 text-[14px] leading-6 text-ink-soft">No files yet. Add a PDF on the <Link href="/upload" className="font-medium text-pen underline underline-offset-4">Upload</Link> page and Zohra can answer from it.</p>
+              )}
+            </div>
+          ) : (
+            <div className="mx-auto max-w-[720px] pb-6">
+              {messages.map((message, index) => message.role === "user" ? (
+                <div key={`${index}-user`} className="mt-10 flex justify-end first:mt-0">
+                  <p className="max-w-[88%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-ink px-4 py-3 text-[15px] leading-6 text-paper sm:max-w-[78%]">{message.content}</p>
+                </div>
+              ) : (
+                <article key={`${index}-assistant`} className="group/reply mt-6 flex items-start gap-3.5">
+                  <span className="hidden sm:block"><ZohraMark /></span>
+                  <div className="min-w-0 flex-1 pt-0.5">
                     <FormattedReply content={message.content} />
-                    {loading && index === lastIndex && <span aria-hidden="true" className="mt-1 inline-block h-4 w-0.5 animate-pulse rounded-full bg-violet-500 align-middle" />}
-                    {message.note && <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] leading-5 text-amber-800 dark:text-amber-200">{message.note}</p>}
+                    {loading && index === lastIndex && <span aria-hidden="true" className="ml-0.5 inline-block h-[1.1em] w-[2px] animate-pulse bg-pen align-text-bottom" />}
+                    {message.sources && message.sources.length > 0 && (
+                      <ul className="mt-4 flex flex-wrap gap-1.5" aria-label="Files used for this answer">
+                        {message.sources.map((source) => (
+                          <li key={source.id} className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-rule px-2 py-1 text-[13px] text-ink-soft"><FileText size={13} className="shrink-0" /><span className="max-w-[240px] truncate">{source.name}</span></li>
+                        ))}
+                      </ul>
+                    )}
+                    {message.note && <p className="mt-3 bg-mark px-3 py-2 text-[13px] leading-5 text-ink">{message.note}</p>}
                     {!(loading && index === lastIndex) && (
-                      <button type="button" onClick={() => void copyReply(message.content, index)} className={cn("mt-2 inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium text-muted-foreground opacity-100 transition hover:bg-muted hover:text-foreground sm:opacity-0 sm:group-hover/reply:opacity-100 sm:focus-visible:opacity-100", focusRing)}>
-                        {copiedIndex === index ? <Check size={12} /> : <Copy size={12} />}{copiedIndex === index ? "Copied" : "Copy"}
+                      <button type="button" onClick={() => void copyReply(message.content, index)} className={cn("-ml-2 mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-md px-2 text-[13px] text-ink-soft hover:text-ink", focus)}>
+                        {copiedIndex === index ? <Check size={13} /> : <Copy size={13} />}{copiedIndex === index ? "Copied" : "Copy"}
                       </button>
                     )}
                   </div>
@@ -610,67 +648,64 @@ export default function AIChat({ initialResourceId, initialPrompt }: { initialRe
               ))}
 
               {loading && messages.at(-1)?.role !== "assistant" && (
-                <div className="flex items-center gap-3.5 sm:gap-4" role="status" aria-live="polite">
+                <div className="mt-6 flex items-center gap-3.5 text-[14px] text-ink-soft" role="status" aria-live="polite">
                   <ZohraMark />
-                  <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
-                    <span aria-hidden="true" className="flex items-center gap-1">
-                      {[0, 150, 300].map((delay) => <i key={delay} className="size-1.5 animate-bounce rounded-full bg-violet-500 motion-reduce:animate-none" style={{ animationDelay: `${delay}ms` }} />)}
-                    </span>
-                    Zohra is thinking
-                  </div>
+                  <span aria-hidden="true" className="flex items-center gap-1">
+                    {[0, 160, 320].map((delay) => <i key={delay} className="size-1.5 animate-bounce rounded-full bg-ink-soft motion-reduce:animate-none" style={{ animationDelay: `${delay}ms` }} />)}
+                  </span>
+                  Thinking
                 </div>
               )}
 
               {error && (
-                <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-[13px] leading-5 text-destructive sm:ml-[54px]">
+                <div role="alert" className="mt-6 border-l-2 border-flag pl-4 text-[14px] leading-6 text-ink">
                   <p>{error}</p>
-                  {messages.at(-1)?.role === "user" && <button type="button" disabled={loading} onClick={() => void sendMessage(messages.at(-1)!.content, true)} className="mt-2 inline-flex items-center gap-1.5 font-semibold underline underline-offset-2"><ArrowRight size={12} /> Try again</button>}
+                  {messages.at(-1)?.role === "user" && <button type="button" disabled={loading} onClick={() => void sendMessage(messages.at(-1)!.content, true)} className={cn("mt-1 font-semibold underline underline-offset-4", focus)}>Try again</button>}
                 </div>
               )}
-              {notice && <p role="status" className="text-[12px] text-muted-foreground sm:ml-[54px]">{notice}</p>}
+              {notice && <p role="status" className="mt-6 text-[13px] text-ink-soft">{notice}</p>}
               <div ref={bottomRef} />
             </div>
           )}
         </div>
 
-        <footer className="shrink-0 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2 sm:px-6 sm:pb-4 lg:px-10">
-          <form ref={formRef} onSubmit={(event) => { event.preventDefault(); void sendMessage(); }} className="relative mx-auto max-w-[760px]">
+        <footer className="shrink-0 px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-1 sm:px-8 sm:pb-4">
+          <form ref={formRef} onSubmit={(event) => { event.preventDefault(); void sendMessage(); }} className="relative mx-auto max-w-[720px]">
             {pickerOpen && (
-              <div role="dialog" aria-label="Choose files to ask about" className="absolute bottom-full left-0 right-0 z-20 mb-2 max-h-64 overflow-y-auto rounded-2xl border border-border bg-popover p-2 text-popover-foreground shadow-xl">
-                <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Ask about your files <span className="font-normal normal-case tracking-normal">· up to {MAX_ATTACHED_DOCUMENTS}</span></p>
+              <div role="dialog" aria-label="Choose files to ask about" className="absolute bottom-full left-0 right-0 z-20 mb-2 max-h-64 overflow-y-auto rounded-xl border border-rule bg-popover p-1.5 text-popover-foreground shadow-xl">
+                <p className="px-2.5 pb-1 pt-1.5 text-[13px] text-ink-soft">Choose up to {MAX_ATTACHED_DOCUMENTS} files to ask about</p>
                 {files.length === 0 ? (
-                  <p className="px-2 py-3 text-xs leading-5 text-muted-foreground">No files with readable text yet. Add a PDF on the <Link href="/upload" className="font-medium text-violet-700 underline underline-offset-2 dark:text-violet-300">Upload</Link> page and wait for its text to be extracted.</p>
+                  <p className="px-2.5 py-3 text-sm leading-6 text-ink-soft">No files are ready yet. Add a PDF on the <Link href="/upload" className="font-medium text-pen underline underline-offset-4">Upload</Link> page and wait for its text to be read.</p>
                 ) : files.map((file) => {
                   const attached = attachedIds.includes(file.id);
                   const full = !attached && attachedIds.length >= MAX_ATTACHED_DOCUMENTS;
                   return (
-                    <button key={file.id} type="button" disabled={full} onClick={() => setAttachedIds((ids) => attached ? ids.filter((id) => id !== file.id) : [...ids, file.id])} className={cn("flex w-full items-center gap-2.5 rounded-lg px-2 py-2.5 text-left text-[13px] transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40", attached && "bg-violet-500/10")}>
-                      <FileText size={14} className="shrink-0 text-muted-foreground" />
+                    <button key={file.id} type="button" disabled={full} onClick={() => toggleFile(file.id)} className={cn("flex w-full items-center gap-3 rounded-lg px-2.5 py-3 text-left text-[14px] hover:bg-ink/[0.05] disabled:cursor-not-allowed disabled:opacity-40", attached && "bg-mark/50")}>
+                      <FileText size={15} className="shrink-0 text-ink-soft" />
                       <span className="min-w-0 flex-1 truncate">{file.originalName}</span>
-                      {file.pageCount ? <span className="shrink-0 text-[11px] text-muted-foreground">{file.pageCount} pg</span> : null}
-                      {attached && <Check size={14} className="shrink-0 text-violet-600 dark:text-violet-300" />}
+                      {file.pageCount ? <span className="shrink-0 text-xs text-ink-soft">{file.pageCount} pages</span> : null}
+                      {attached && <Check size={15} className="shrink-0 text-ink" />}
                     </button>
                   );
                 })}
               </div>
             )}
-            {attachedIds.length > 0 && (
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                {attachedIds.map((id) => {
-                  const file = files.find((item) => item.id === id);
-                  if (!file) return null;
-                  return (
-                    <span key={id} className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 py-1 pl-2.5 pr-1 text-[12px] font-medium text-violet-800 dark:text-violet-100">
-                      <FileText size={12} className="shrink-0" />
-                      <span className="max-w-[200px] truncate">{file.originalName}</span>
-                      <button type="button" aria-label={`Remove ${file.originalName}`} onClick={() => setAttachedIds((ids) => ids.filter((item) => item !== id))} className="grid size-5 place-items-center rounded-full hover:bg-violet-500/20"><X size={11} /></button>
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-            <div className="flex items-end gap-1.5 rounded-3xl border border-border bg-background px-2 py-1.5 shadow-sm transition focus-within:border-violet-500/70 focus-within:ring-4 focus-within:ring-violet-500/10">
-              <button type="button" onClick={() => setPickerOpen((open) => !open)} aria-label="Attach files from your library" aria-expanded={pickerOpen} className={cn("mb-0.5 grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-muted", attachedIds.length ? "text-violet-600 dark:text-violet-300" : "text-muted-foreground", focusRing)}><Paperclip size={17} /></button>
+            <div className="rounded-2xl border border-ink/25 bg-paper shadow-[0_10px_32px_-14px_rgb(0_0_0/0.35)] focus-within:border-ink">
+              {attachedIds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 px-3 pt-3">
+                  {attachedIds.map((id) => {
+                    const file = files.find((item) => item.id === id);
+                    if (!file) return null;
+                    return (
+                      <span key={id} className="inline-flex max-w-full items-center gap-1.5 rounded-md bg-mark py-1 pl-2 pr-1 text-[13px] text-ink">
+                        <FileText size={13} className="shrink-0" />
+                        <span className="max-w-[220px] truncate">{file.originalName}</span>
+                        <button type="button" aria-label={`Remove ${file.originalName}`} onClick={() => setAttachedIds((ids) => ids.filter((item) => item !== id))} className="grid size-6 place-items-center rounded hover:bg-ink/10"><X size={12} /></button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
               <textarea
                 ref={composerRef}
                 value={input}
@@ -685,49 +720,53 @@ export default function AIChat({ initialResourceId, initialPrompt }: { initialRe
                     void sendMessage();
                   }
                 }}
-                placeholder={attachedIds.length ? "Ask about your files…" : "Message Zohra…"}
+                placeholder={attachedIds.length ? "Ask about your files" : "Ask Zohra anything"}
                 aria-label="Message Zohra AI"
                 rows={1}
                 maxLength={4000}
                 disabled={loading}
-                className="max-h-40 min-h-12 flex-1 resize-none overflow-y-auto bg-transparent px-2 py-3 text-[14px] leading-5 text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-60"
+                className="block max-h-40 min-h-12 w-full resize-none overflow-y-auto bg-transparent px-4 pb-1 pt-4 text-[16px] leading-6 text-ink outline-none placeholder:text-ink-soft disabled:opacity-60"
               />
-              <button type="submit" disabled={loading || !input.trim()} aria-label="Send message" className={cn("mb-0.5 grid size-10 shrink-0 place-items-center rounded-full bg-violet-600 text-violet-50 shadow-sm transition hover:bg-violet-500 active:bg-violet-700 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none", focusRing)}>
-                {loading ? <LoaderCircle size={16} className="animate-spin" /> : <ArrowUp size={18} strokeWidth={2.4} />}
-              </button>
+              <div className="flex items-center justify-between gap-2 px-2.5 pb-2.5 pt-1">
+                <button type="button" onClick={() => setPickerOpen((open) => !open)} aria-expanded={pickerOpen} className={cn("inline-flex h-9 items-center gap-2 rounded-lg border border-rule px-3 text-sm font-medium hover:border-ink", attachedIds.length ? "text-ink" : "text-ink-soft hover:text-ink", focus)}>
+                  <Paperclip size={15} aria-hidden="true" />{attachedIds.length ? `${attachedIds.length} attached` : "Attach files"}
+                </button>
+                <div className="flex items-center gap-3">
+                  {input.length > 3000 && <span className="text-xs tabular-nums text-ink-soft">{input.length} / 4000</span>}
+                  <button type="submit" disabled={loading || !input.trim()} aria-label={loading ? "Zohra is thinking" : "Send message"} className={cn("grid size-10 place-items-center rounded-full bg-ink text-paper hover:opacity-90 disabled:cursor-not-allowed disabled:bg-rule disabled:text-ink-soft disabled:opacity-100", focus)}>
+                    {loading ? <LoaderCircle size={17} className="animate-spin" /> : <ArrowUp size={19} strokeWidth={2.4} />}
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="mt-2 flex items-center justify-between gap-3 px-3 text-[11px] text-muted-foreground">
-              <span className="hidden sm:inline">Enter to send <span className="mx-1 opacity-50">·</span> Shift + Enter for a new line</span>
-              <span className="sm:hidden">Gemini may make mistakes.</span>
-              <span className="ml-auto tabular-nums">{input.length > 3000 ? `${input.length}/4000` : <span className="hidden sm:inline">Gemini may make mistakes. Check important details.</span>}</span>
-            </div>
+            <p className="mt-2 px-1 text-xs leading-5 text-ink-soft"><span className="hidden sm:inline">Enter sends, Shift+Enter adds a line. </span>Gemini can make mistakes, so check anything important.</p>
           </form>
         </footer>
       </div>
 
       {dialog && (
-        <div className="absolute inset-0 z-40 grid place-items-center p-4 backdrop-blur-[2px]" style={{ backgroundColor: "rgb(9 9 11 / 0.5)" }} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) dismissDialog(); }}>
-          <div role="dialog" aria-modal="true" aria-labelledby="chat-dialog-title" className="w-full max-w-[380px] rounded-2xl border border-border bg-popover p-5 text-popover-foreground shadow-2xl">
-            <div className="mb-3 flex items-start justify-between">
-              <div><p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-600 dark:text-violet-300">Zohra AI</p><h2 id="chat-dialog-title" className="mt-1 text-[17px] font-semibold text-foreground">{dialog.kind === "delete" ? "Delete this conversation?" : "Keep this conversation?"}</h2></div>
-              <button type="button" aria-label="Close dialog" onClick={dismissDialog} className={cn("grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted", focusRing)}><X size={16} /></button>
+        <div className="absolute inset-0 z-40 grid place-items-center p-4" style={{ backgroundColor: "rgb(9 9 11 / 0.55)" }} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) dismissDialog(); }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="chat-dialog-title" className="w-full max-w-[400px] rounded-lg border border-rule bg-paper p-6 text-ink shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <h2 id="chat-dialog-title" className="font-reading text-[22px] font-medium leading-tight">{dialog.kind === "delete" ? "Delete this conversation?" : "Save this conversation?"}</h2>
+              <button type="button" aria-label="Close dialog" onClick={dismissDialog} className={cn("-mr-2 -mt-1 grid size-10 place-items-center rounded-md text-ink-soft hover:bg-ink/[0.06]", focus)}><X size={17} /></button>
             </div>
             {dialog.kind === "dirty" ? (
               <>
-                <p className="text-[13px] leading-5 text-muted-foreground">Save it to your history before moving on, or discard this unsaved chat.</p>
-                <div className="mt-5 flex flex-wrap justify-end gap-2">
-                  <button type="button" onClick={dismissDialog} className={cn("h-10 rounded-lg px-3 text-[12px] font-medium text-muted-foreground hover:bg-muted", focusRing)}>Stay here</button>
-                  <button type="button" onClick={discardAndContinue} className={cn("h-10 rounded-lg border border-border px-3 text-[12px] font-medium hover:bg-muted", focusRing)}>Discard</button>
-                  <button type="button" disabled={saving || messages.at(-1)?.role !== "assistant"} onClick={() => void saveAndContinue()} className={cn("inline-flex h-10 items-center gap-1.5 rounded-lg bg-violet-600 px-3.5 text-[12px] font-semibold text-violet-50 hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50", focusRing)}><Save size={13} />{saving ? "Saving…" : "Save & continue"}</button>
+                <p className="mt-2 text-[14px] leading-6 text-ink-soft">This chat isn&apos;t in your history yet. Save it before you leave, or discard it.</p>
+                <div className="mt-6 flex flex-wrap justify-end gap-2">
+                  <button type="button" onClick={dismissDialog} className={cn("h-10 rounded-md px-3 text-sm font-medium text-ink-soft hover:text-ink", focus)}>Stay here</button>
+                  <button type="button" onClick={discardAndContinue} className={cn("h-10 rounded-md border border-rule px-4 text-sm font-medium hover:border-ink", focus)}>Discard</button>
+                  <button type="button" disabled={saving || messages.at(-1)?.role !== "assistant"} onClick={() => void saveAndContinue()} className={cn("inline-flex h-10 items-center gap-2 rounded-md bg-ink px-4 text-sm font-semibold text-paper hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50", focus)}>{saving ? "Saving" : "Save and continue"}</button>
                 </div>
-                {messages.at(-1)?.role !== "assistant" && <p className="mt-3 text-right text-[11px] text-muted-foreground">Retry the current reply before saving.</p>}
+                {messages.at(-1)?.role !== "assistant" && <p className="mt-3 text-right text-xs text-ink-soft">Retry the current reply before saving.</p>}
               </>
             ) : (
               <>
-                <p className="text-[13px] leading-5 text-muted-foreground">Its messages will be permanently removed from your saved chats.</p>
-                <div className="mt-5 flex justify-end gap-2">
-                  <button type="button" onClick={() => setDialog(null)} className={cn("h-10 rounded-lg px-3 text-[12px] font-medium text-muted-foreground hover:bg-muted", focusRing)}>Cancel</button>
-                  <button type="button" onClick={() => void deleteConversation(dialog.id)} className={cn("h-10 rounded-lg bg-red-600 px-3.5 text-[12px] font-semibold text-red-50 hover:bg-red-700", focusRing)}>Delete</button>
+                <p className="mt-2 text-[14px] leading-6 text-ink-soft">All of its messages will be removed from your saved chats. This can&apos;t be undone.</p>
+                <div className="mt-6 flex justify-end gap-2">
+                  <button type="button" onClick={() => setDialog(null)} className={cn("h-10 rounded-md px-3 text-sm font-medium text-ink-soft hover:text-ink", focus)}>Cancel</button>
+                  <button type="button" onClick={() => void deleteConversation(dialog.id)} className={cn("h-10 rounded-md bg-flag px-4 text-sm font-semibold text-paper hover:opacity-90", focus)}>Delete conversation</button>
                 </div>
               </>
             )}
