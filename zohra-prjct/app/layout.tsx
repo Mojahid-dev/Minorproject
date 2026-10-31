@@ -1,28 +1,27 @@
-import { Hanken_Grotesk, Literata } from "next/font/google";
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth";
-import { AppShell } from "@/components/app-shell";
+import type { Metadata } from "next";
+import "./globals.css";
+import "katex/dist/katex.min.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 
-const reading = Literata({ subsets: ["latin"], variable: "--next-reading", display: "swap" });
-const ui = Hanken_Grotesk({ subsets: ["latin"], variable: "--next-ui", display: "swap" });
+export const metadata: Metadata = {
 
-export default async function DashboardLayout({
+  title: "Zohra",
+  description: "Your workspace for organizing projects and resources.",
+};
+
+export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode;
-}) {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session) {
-    redirect("/");
-  }
-
+}: Readonly<{ children: React.ReactNode }>) {
+  
   return (
-    <div className={`${reading.variable} ${ui.variable} contents`}>
-      <AppShell>{children}</AppShell>
-    </div>
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased">
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          {children}
+          <Toaster />
+        </ThemeProvider>
+      </body>
+    </html>
   );
 }
