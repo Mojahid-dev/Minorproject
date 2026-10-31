@@ -9,11 +9,7 @@
 .chat-markdown p { margin: 0.75rem 0; }
 .chat-markdown h1,
 .chat-markdown h2,
-.chat-markdown h3 { margin: 1.4rem 0 0.55rem; color: #272435; font-weight: 650; letter-spacing: -0.025em; line-height: 1.35; }
-.dark .chat-markdown h1,
-
-.dark .chat-markdown h2,
-.dark .chat-markdown h3 { color: #f4f2fa; }
+.chat-markdown h3 { margin: 1.4rem 0 0.55rem; color: var(--foreground); font-weight: 650; letter-spacing: -0.025em; line-height: 1.35; }
 .chat-markdown h1 { font-size: 1.45rem; }
 .chat-markdown h2 { font-size: 1.25rem; }
 .chat-markdown h3 { font-size: 1.08rem; }
@@ -23,8 +19,8 @@
 .chat-markdown ol { list-style: decimal; }
 .chat-markdown li { margin: 0.25rem 0; padding-left: 0.2rem; }
 .chat-markdown li > p { margin: 0.35rem 0; }
-.chat-markdown hr { margin: 1.25rem 0; border-color: #e4e4e7; }
-.dark .chat-markdown hr { border-color: rgb(255 255 255 / 12%); }
+.chat-markdown hr { margin: 1.25rem 0; border-color: var(--border); }
+.chat-markdown li::marker { color: rgb(139 92 246 / 0.8); }
 .zohra-ai-mark { background: #17171a; border: 1px solid rgb(24 24 27 / 10%); }
 .dark .zohra-ai-mark { border-color: rgb(255 255 255 / 10%); }
 .light .workspace-shell .zohra-ai-mark.zohra-ai-mark { background-color: #17171a !important; border-color: rgb(24 24 27 / 16%) !important; }
