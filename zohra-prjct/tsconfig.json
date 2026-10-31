@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "../docs/components/dashboard/week-strip.tsx", "../docs/components/dashboard/today-panel.tsx", "../docs/components/dashboard/library-panel.tsx", "../docs/components/dashboard/onboarding-checklist.tsx", "../docs/components/dashboard/shared.tsx"  ],
+, "../docs/components/dashboard/week-strip.tsx", "../docs/components/dashboard/today-panel.tsx", "components/dashboard/library-panel.tsx", "../docs/components/dashboard/onboarding-checklist.tsx", "components/dashboard/shared.tsx"  ],
   "exclude": ["node_modules"]
 }
