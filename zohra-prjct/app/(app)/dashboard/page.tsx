@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { BadgeCheck, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "@/lib/auth-client";
@@ -68,9 +68,19 @@ export default function DashboardPage() {
   const today = now ? localDateString(new Date(now)) : null;
   const clock = now ? new Date(now) : null;
 
-  // Keep in sync when the sidebar (or another tab of the app) changes tasks.
+  // Keep in sync when the sidebar (or another page) changes tasks. Our own
+  // changes are skipped: a reload could briefly undo a rapid second tick.
+  const ownChange = useRef(false);
+  const emitChanged = useCallback(() => {
+    ownChange.current = true;
+    notifyTasksChanged();
+    ownChange.current = false;
+  }, []);
+
   useEffect(() => {
-    const onChanged = () => void refreshTasks();
+    const onChanged = () => {
+      if (!ownChange.current) void refreshTasks();
+    };
     window.addEventListener("zohra:tasks-updated", onChanged);
     return () => window.removeEventListener("zohra:tasks-updated", onChanged);
   }, [refreshTasks]);
@@ -96,13 +106,13 @@ export default function DashboardPage() {
           body: JSON.stringify({ completed: completing }),
         });
         if (!response.ok) throw new Error();
-        notifyTasksChanged();
+        emitChanged();
       } catch {
         apply(task.completedAt); // roll back
         toast.error("Couldn't update that task. Please try again.");
       }
     },
-    [setTasks],
+    [setTasks, emitChanged],
   );
 
   const addTask = useCallback(
@@ -120,9 +130,9 @@ export default function DashboardPage() {
         throw new Error(message || "Unable to add task.");
       }
       setTasks((current) => [...current, created]);
-      notifyTasksChanged();
+      emitChanged();
     },
-    [setTasks, today],
+    [setTasks, today, emitChanged],
   );
 
   // ---- header copy -------------------------------------------------------

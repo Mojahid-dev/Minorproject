@@ -1,486 +1,562 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import {
-  ArrowRight,
-  CalendarDays,
-  CheckCheck,
-  CircleAlert,
-  ListTodo,
-  Plus,
-  Sparkles,
-} from "lucide-react";
-import { TaskRow } from "@/components/task-row";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, CalendarDays, CalendarCheck, ListTodo, PartyPopper } from "lucide-react";
+import { toast } from "sonner";
 import { useTasks } from "@/hooks/use-tasks";
+import { useClock } from "@/hooks/use-clock";
 import {
-  formatTaskDate,
+  isDateOnly,
   localDateString,
   notifyTasksChanged,
+  type TaskRecord,
 } from "@/lib/task-utils";
+import { parseDateOnly, plural } from "@/lib/dashboard-utils";
+import { bucketTasks, dayHeading, groupByDate, type TaskView } from "@/lib/task-view";
+import { Skeleton } from "@/components/ui/skeleton";
+import { InlineError, focusRing, panel, secondaryButton } from "@/components/dashboard/shared";
+import { WeekStrip } from "@/components/dashboard/week-strip";
+import { TaskComposer } from "@/components/tasks/task-composer";
+import { TaskItem, type TaskPatch } from "@/components/tasks/task-item";
+import { ProgressPanel } from "@/components/tasks/progress-panel";
+import { cn } from "@/lib/utils";
 
-type TaskView = "today" | "upcoming" | "unscheduled" | "completed" | "date";
+const DONE_PAGE = 25;
+const fullDate = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" });
 
-function requestedDate() {
-  if (typeof window === "undefined") return "";
-  const value = new URLSearchParams(window.location.search).get("date") ?? "";
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+function parseView(value: string | null): TaskView {
+  return value === "upcoming" || value === "nodate" || value === "done" ? value : "today";
 }
 
 export default function TasksPage() {
-  const { tasks, isLoading, error, refresh } = useTasks();
-  const [selectedDate, setSelectedDate] = useState(
-    () => requestedDate() || localDateString(),
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <TasksContent />
+    </Suspense>
   );
-  const [view, setView] = useState<TaskView>(() =>
-    requestedDate() && requestedDate() !== localDateString() ? "date" : "today",
-  );
-  const [title, setTitle] = useState("");
-  const [notes, setNotes] = useState("");
-  const [dueDate, setDueDate] = useState(() => requestedDate());
-  const [isSaving, setIsSaving] = useState(false);
-  const [formError, setFormError] = useState("");
-  const today = localDateString();
+}
 
-  const openTasks = useMemo(
-    () => tasks.filter((task) => !task.completedAt),
-    [tasks],
+function PageSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-[1200px] space-y-5" aria-busy="true" aria-label="Loading tasks">
+      <Skeleton className="h-14 w-64" />
+      <Skeleton className="h-28" />
+      <Skeleton className="h-72" />
+    </div>
   );
-  const dueToday = tasks.filter((task) => task.dueDate === today);
-  const openToday = dueToday.filter((task) => !task.completedAt).length;
-  const overdue = openTasks.filter(
-    (task) => task.dueDate && task.dueDate < today,
-  );
-  const upcoming = openTasks.filter(
-    (task) => task.dueDate && task.dueDate > today,
-  );
-  const unscheduled = openTasks.filter((task) => !task.dueDate);
-  const completed = tasks.filter((task) => Boolean(task.completedAt));
-  const completionRate = tasks.length
-    ? Math.round((completed.length / tasks.length) * 100)
-    : 0;
+}
 
-  const tabs: { id: TaskView; label: string; count: number }[] = [
-    { id: "today", label: "Today", count: dueToday.length },
-    {
-      id: "upcoming",
-      label: "Upcoming",
-      count: overdue.length + upcoming.length,
+function TasksContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const now = useClock();
+  const today = now ? localDateString(new Date(now)) : null;
+
+  const { tasks, setTasks, isLoading, error, refresh } = useTasks();
+  const [doneLimit, setDoneLimit] = useState(DONE_PAGE);
+
+  const view = parseView(searchParams.get("view"));
+  const dateParam = searchParams.get("date");
+  // ?date=YYYY-MM-DD shows a single day (the calendar links here).
+  const dayView = dateParam && isDateOnly(dateParam) && dateParam !== today ? dateParam : null;
+
+  const navigate = useCallback(
+    (next: { view?: TaskView; date?: string | null }) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next.view !== undefined) {
+        if (next.view === "today") params.delete("view");
+        else params.set("view", next.view);
+      }
+      if (next.date !== undefined) {
+        if (next.date) params.set("date", next.date);
+        else params.delete("date");
+      }
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    { id: "unscheduled", label: "Unscheduled", count: unscheduled.length },
-    { id: "completed", label: "Completed", count: completed.length },
-  ];
+    [pathname, router, searchParams],
+  );
 
-  let visibleTasks =
-    view === "today"
-      ? dueToday
-      : view === "upcoming"
-        ? [...overdue, ...upcoming]
-        : view === "unscheduled"
-          ? unscheduled
-          : view === "completed"
-            ? completed
-            : tasks.filter((task) => task.dueDate === selectedDate);
-  if (view === "upcoming")
-    visibleTasks = [...visibleTasks].sort((a, b) =>
-      (a.dueDate ?? "").localeCompare(b.dueDate ?? ""),
-    );
+  // ---- sync with changes made elsewhere (sidebar, other pages) ------------
+  const ownChange = useRef(false);
+  const emitChanged = useCallback(() => {
+    ownChange.current = true; // dispatch is synchronous; our own listener skips it
+    notifyTasksChanged();
+    ownChange.current = false;
+  }, []);
 
-  async function createTask(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!title.trim()) return;
-    setIsSaving(true);
-    setFormError("");
-    try {
+  useEffect(() => {
+    const onChanged = () => {
+      if (!ownChange.current) void refresh();
+    };
+    window.addEventListener("zohra:tasks-updated", onChanged);
+    return () => window.removeEventListener("zohra:tasks-updated", onChanged);
+  }, [refresh]);
+
+  // ---- mutations (optimistic, with rollback) ------------------------------
+  const patchTask = useCallback(
+    async (task: TaskRecord, patch: TaskPatch): Promise<boolean> => {
+      const optimistic: Partial<TaskRecord> = {};
+      if (patch.title !== undefined) optimistic.title = patch.title;
+      if (patch.notes !== undefined) optimistic.notes = patch.notes;
+      if (patch.dueDate !== undefined) optimistic.dueDate = patch.dueDate;
+      if (patch.completed !== undefined)
+        optimistic.completedAt = patch.completed ? new Date().toISOString() : null;
+
+      setTasks((current) =>
+        current.map((item) => (item.id === task.id ? { ...item, ...optimistic } : item)),
+      );
+      try {
+        const response = await fetch(`/api/tasks/${task.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        });
+        const payload: unknown = await response.json().catch(() => null);
+        const updated = (payload as { task?: TaskRecord } | null)?.task;
+        if (!response.ok || !updated) {
+          const message = (payload as { error?: string } | null)?.error;
+          throw new Error(message || "Unable to update task.");
+        }
+        setTasks((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+        emitChanged();
+        return true;
+      } catch (caught) {
+        setTasks((current) => current.map((item) => (item.id === task.id ? task : item)));
+        toast.error(caught instanceof Error ? caught.message : "Unable to update task.");
+        return false;
+      }
+    },
+    [setTasks, emitChanged],
+  );
+
+  const createTask = useCallback(
+    async (input: { title: string; notes: string | null; dueDate: string | null }) => {
       const response = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          notes: notes || null,
-          dueDate: dueDate || null,
-        }),
+        body: JSON.stringify(input),
       });
-      const payload = await response.json();
-      if (!response.ok)
-        throw new Error(payload.error || "Unable to create task.");
-      notifyTasksChanged();
-      setTitle("");
-      setNotes("");
-      setDueDate("");
-      await refresh();
-    } catch (caught) {
-      setFormError(
-        caught instanceof Error ? caught.message : "Unable to create task.",
-      );
-    } finally {
-      setIsSaving(false);
-    }
+      const payload: unknown = await response.json().catch(() => null);
+      const created = (payload as { task?: TaskRecord } | null)?.task;
+      if (!response.ok || !created) {
+        const message = (payload as { error?: string } | null)?.error;
+        throw new Error(message || "Unable to create task.");
+      }
+      setTasks((current) => [...current, created]);
+      emitChanged();
+      return created;
+    },
+    [setTasks, emitChanged],
+  );
+
+  const deleteTask = useCallback(
+    async (task: TaskRecord) => {
+      setTasks((current) => current.filter((item) => item.id !== task.id));
+      try {
+        const response = await fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
+        if (!response.ok) throw new Error("Unable to delete task.");
+        emitChanged();
+        toast("Task deleted", {
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              try {
+                const restored = await createTask({
+                  title: task.title,
+                  notes: task.notes,
+                  dueDate: task.dueDate,
+                });
+                if (task.completedAt) await patchTask(restored, { completed: true });
+              } catch {
+                toast.error("Couldn't restore that task.");
+              }
+            },
+          },
+        });
+      } catch (caught) {
+        setTasks((current) => [...current, task]);
+        toast.error(caught instanceof Error ? caught.message : "Unable to delete task.");
+      }
+    },
+    [setTasks, emitChanged, createTask, patchTask],
+  );
+
+  // ---- derived data -------------------------------------------------------
+  const ready = Boolean(today) && !isLoading;
+  const buckets = useMemo(
+    () =>
+      today && now
+        ? bucketTasks(tasks, today, now)
+        : { overdue: [], today: [], upcoming: [], nodate: [], done: [], doneThisWeek: 0 },
+    [tasks, today, now],
+  );
+
+  const openToday = buckets.today.filter((task) => !task.completedAt).length;
+  const doneToday = buckets.today.length - openToday;
+  const actionable = buckets.overdue.length + openToday;
+
+  const summary = !ready || error
+    ? ""
+    : actionable === 0
+      ? "You're all caught up."
+      : [
+          buckets.overdue.length ? `${buckets.overdue.length} overdue` : null,
+          openToday ? `${plural(openToday, "task")} left today` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
+  async function moveOverdueToToday() {
+    if (!today) return;
+    const list = buckets.overdue;
+    const results = await Promise.all(list.map((task) => patchTask(task, { dueDate: today })));
+    const moved = results.filter(Boolean).length;
+    if (moved) toast.success(`Moved ${plural(moved, "task")} to today`);
   }
 
+  // ---- tabs ----------------------------------------------------------------
+  const tabs: { id: TaskView; label: string; count: number; emphasis?: boolean }[] = [
+    { id: "today", label: "Today", count: actionable, emphasis: true },
+    { id: "upcoming", label: "Upcoming", count: buckets.upcoming.length },
+    { id: "nodate", label: "No date", count: buckets.nodate.length },
+    { id: "done", label: "Done", count: buckets.done.length },
+  ];
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  function onTabKeyDown(event: React.KeyboardEvent, index: number) {
+    const target =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? tabs.length - 1
+          : event.key === "ArrowRight"
+            ? (index + 1) % tabs.length
+            : event.key === "ArrowLeft"
+              ? (index - 1 + tabs.length) % tabs.length
+              : -1;
+    if (target < 0) return;
+    event.preventDefault();
+    navigate({ view: tabs[target].id, date: null });
+    tabRefs.current[tabs[target].id]?.focus();
+  }
+
+  const defaultDue = dayView ?? (view === "today" ? (today ?? "") : "");
+
   return (
-    <div className="mx-auto w-full min-w-0 max-w-[1440px] overflow-x-clip pb-10 text-white">
-      <header className="relative isolate flex flex-wrap items-end justify-between gap-4 overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#1a1b20] to-[#111214] p-4 sm:rounded-[28px] sm:p-7">
-        <div
-          aria-hidden="true"
-          className="absolute -right-16 -top-32 -z-10 size-80 rounded-full bg-[radial-gradient(circle,rgba(196,181,253,0.16),transparent_68%)]"
-        />
-        <div>
-          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.17em] text-violet-200">
-            <Sparkles size={14} /> Your planner
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold leading-tight tracking-[-0.055em] sm:text-5xl">
-            Make room for focus.
-          </h1>
-          <p className="mt-2 text-sm text-neutral-300">
-            Today, {formatTaskDate(today)}{" "}
-            <span className="px-1 text-neutral-600">·</span> Keep your next step
-            clear and your week in reach.
-          </p>
+    <div className="mx-auto w-full min-w-0 max-w-[1200px] space-y-5 pb-10 sm:space-y-6">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Tasks</h1>
+          <div className="mt-1.5 min-h-5 text-sm text-muted-foreground" aria-live="polite">
+            {ready || error ? summary : <Skeleton className="h-4 w-48 rounded-md" aria-hidden="true" />}
+          </div>
         </div>
-        <Link
-          href="/calendar"
-          className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-violet-100"
-        >
-          <CalendarDays size={17} /> Open calendar <ArrowRight size={15} />
+        <Link href="/calendar" className={cn(secondaryButton, "w-full sm:w-auto")}>
+          <CalendarDays size={17} aria-hidden="true" /> Open calendar
         </Link>
       </header>
 
-      <div className="mt-3 grid w-full min-w-0 grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
-        <TaskMetric
-          icon={CalendarDays}
-          label="Due today"
-          value={dueToday.length}
-          detail={
-            dueToday.length
-              ? `${dueToday.filter((task) => task.completedAt).length} completed`
-              : "Nothing on the list"
-          }
-          tone="violet"
-        />
-        <TaskMetric
-          icon={CircleAlert}
-          label="Overdue"
-          value={overdue.length}
-          detail={
-            overdue.length ? "Bring these back into focus" : "You’re up to date"
-          }
-          tone={overdue.length ? "rose" : "neutral"}
-        />
-        <TaskMetric
-          icon={CheckCheck}
-          label="Completed"
-          value={completed.length}
-          detail={
-            tasks.length
-              ? `${completionRate}% of all tasks`
-              : "Your first win is waiting"
-          }
-          tone="emerald"
-        />
-      </div>
+      <div className="grid grid-cols-1 gap-5 sm:gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
+        <div className="min-w-0 space-y-5 sm:space-y-6">
+          <TaskComposer today={today} defaultDue={defaultDue} onAdd={async (input) => void (await createTask(input))} />
 
-      <form
-        onSubmit={createTask}
-        className="mt-4 w-full min-w-0 rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#191a1d] to-[#111214] p-3 sm:mt-7 sm:p-5"
-      >
-        <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-neutral-200">
-          <Plus size={17} /> Quick add a task
-        </div>
-        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2 sm:gap-3 md:grid-cols-[minmax(0,1fr)_190px_auto]">
-          <label className="sr-only" htmlFor="new-task-title">
-            Task title
-          </label>
-          <input
-            id="new-task-title"
-            required
-            maxLength={180}
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="What do you need to do?"
-            className="col-span-2 h-11 min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 text-sm text-white outline-none placeholder:text-neutral-500 focus:border-neutral-400 md:col-span-1"
-          />
-          <label className="sr-only" htmlFor="new-task-date">
-            Due date
-          </label>
-          <input
-            id="new-task-date"
-            type="date"
-            value={dueDate}
-            onChange={(event) => setDueDate(event.target.value)}
-            className="h-11 min-w-0 rounded-xl border border-zinc-700 bg-zinc-950 px-2 text-xs text-neutral-200 outline-none focus:border-neutral-400 sm:px-3 sm:text-sm"
-          />
-          <button
-            disabled={isSaving || !title.trim()}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSaving ? "Adding…" : "Add task"}
-            <ArrowRight size={16} />
-          </button>
-        </div>
-        <label className="mt-3 block text-xs text-neutral-500">
-          Notes (optional)
-          <textarea
-            maxLength={5000}
-            rows={2}
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="Add a little context"
-            className="mt-1.5 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:border-zinc-600"
-          />
-        </label>
-        {formError && (
-          <p role="alert" className="mt-2 text-sm text-red-300">
-            {formError}
-          </p>
-        )}
-      </form>
-
-      <div className="mt-4 grid w-full min-w-0 grid-cols-1 items-start gap-3 sm:mt-5 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="w-full min-w-0 rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#17181c] to-[#101114] p-3.5 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 text-sm text-neutral-400">
-                <ListTodo size={17} />{" "}
-                {view === "date" ? "Selected day" : "Personal tasks"}
-              </div>
-              <h2 className="mt-1.5 text-xl font-semibold">
-                {view === "date" ? formatTaskDate(selectedDate) : "Your tasks"}
-              </h2>
-            </div>
-            {view === "date" && (
-              <button
-                onClick={() => {
-                  setView("today");
-                  setSelectedDate(today);
-                }}
-                className="rounded-lg px-3 py-2 text-xs text-neutral-300 hover:bg-white/10"
-              >
-                Back to today
-              </button>
-            )}
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-2 border-b border-zinc-800 pb-4 sm:flex sm:flex-wrap sm:gap-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setView(tab.id)}
-                aria-pressed={view === tab.id}
-                className={`flex min-h-10 w-full min-w-0 items-center justify-between rounded-xl px-2.5 py-2 text-xs transition sm:w-auto sm:shrink-0 sm:justify-start sm:rounded-lg sm:px-3 sm:text-sm ${view === tab.id ? "bg-white text-black" : "bg-white/[0.035] text-neutral-400 hover:bg-white/10 hover:text-white"}`}
-              >
-                <span className="truncate">{tab.label}</span>
-                <span
-                  className={`ml-1.5 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] sm:ml-2 sm:text-xs ${view === tab.id ? "bg-black/10" : "bg-white/[0.07]"}`}
+          <section className={cn(panel, "overflow-hidden")} aria-label="Task list">
+            {dayView && today ? (
+              <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                <div className="min-w-0">
+                  <h2 className="truncate text-base font-semibold tracking-tight text-foreground">
+                    {fullDate.format(parseDateOnly(dayView))}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">Tasks due on this day</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate({ date: null, view: "today" })}
+                  className={cn(secondaryButton, "min-h-9 shrink-0 px-3 text-xs")}
                 >
-                  {tab.count}
-                </span>
-              </button>
-            ))}
-          </div>
-          {isLoading ? (
-            <p className="py-8 text-center text-sm text-neutral-500">
-              Loading your tasks…
-            </p>
-          ) : error ? (
-            <div className="py-8 text-center">
-              <p role="alert" className="text-sm text-red-300">
-                {error}
-              </p>
-              <button
-                onClick={() => void refresh()}
-                className="mt-3 rounded-lg bg-white/[0.08] px-3 py-2 text-sm"
-              >
-                Try again
-              </button>
-            </div>
-          ) : view === "upcoming" && visibleTasks.length === 0 ? (
-            <EmptyTasks message="No overdue or upcoming tasks. You’re all caught up." />
-          ) : visibleTasks.length === 0 ? (
-            <EmptyTasks
-              message={
-                view === "completed"
-                  ? "Completed tasks will appear here."
-                  : view === "unscheduled"
-                    ? "Tasks without due dates will appear here."
-                    : view === "date"
-                      ? "No tasks are scheduled for this date."
-                      : "Nothing due today. Add a task above or enjoy the breathing room."
-              }
-            />
-          ) : (
-            <div className="mt-4 space-y-2">
-              {view === "upcoming" && overdue.length > 0 && (
-                <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-rose-300">
-                  Overdue
-                </p>
-              )}
-              {visibleTasks.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onChanged={() => void refresh()}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-        <aside className="w-full min-w-0 space-y-4 xl:sticky xl:top-24">
-          <section className="relative isolate w-full min-w-0 overflow-hidden rounded-3xl border border-violet-200/10 bg-[#17151e] p-4 sm:p-5">
-            <div
-              aria-hidden="true"
-              className="absolute -right-14 -top-16 -z-10 size-44 rounded-full bg-[radial-gradient(circle,rgba(167,139,250,0.2),transparent_70%)]"
-            />
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-200">
-              Today’s focus
-            </p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight">
-              {openToday === 0 ? "Clear space." : `${openToday} to go.`}
-            </p>
-            <p className="mt-1 text-sm text-neutral-400">
-              {dueToday.length
-                ? `${dueToday.length - openToday} of ${dueToday.length} tasks complete`
-                : "You haven’t scheduled anything for today."}
-            </p>
-            <div
-              className="mt-5 h-2 overflow-hidden rounded-full bg-white/[0.08]"
-              role="progressbar"
-              aria-label="Today’s task progress"
-              aria-valuemin={0}
-              aria-valuemax={dueToday.length || 1}
-              aria-valuenow={dueToday.length - openToday}
-            >
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-violet-300 to-sky-200 transition-all"
-                style={{
-                  width: `${dueToday.length ? ((dueToday.length - openToday) / dueToday.length) * 100 : 0}%`,
-                }}
-              />
-            </div>
-            <Link
-              href={`/calendar?date=${today}`}
-              className="mt-5 flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 text-sm text-neutral-200 transition hover:bg-white/[0.06]"
-            >
-              See today in Calendar <ArrowRight size={15} />
-            </Link>
-          </section>
-          <section className="w-full min-w-0 rounded-3xl border border-white/[0.08] bg-[#141518] p-4 sm:p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-neutral-500">
-                  Coming up
-                </p>
-                <h2 className="mt-1 text-lg font-semibold">
-                  Next on your list
-                </h2>
-              </div>
-              <CalendarDays size={18} className="text-neutral-400" />
-            </div>
-            {upcoming.length ? (
-              <div className="mt-4 space-y-2">
-                {[...upcoming]
-                  .sort((a, b) =>
-                    (a.dueDate ?? "").localeCompare(b.dueDate ?? ""),
-                  )
-                  .slice(0, 3)
-                  .map((task) => (
-                    <div
-                      key={task.id}
-                      className="flex min-w-0 items-center gap-3 rounded-xl bg-white/[0.035] p-3"
-                    >
-                      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white/[0.07] text-xs text-neutral-300">
-                        {task.dueDate
-                          ? new Date(`${task.dueDate}T00:00:00`).getDate()
-                          : "·"}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm text-neutral-200">
-                          {task.title}
-                        </span>
-                        <span className="mt-0.5 block text-xs text-neutral-500">
-                          {task.dueDate
-                            ? formatTaskDate(task.dueDate)
-                            : "No due date"}
-                        </span>
-                      </span>
-                    </div>
-                  ))}
+                  <ArrowLeft size={14} aria-hidden="true" /> Back to today
+                </button>
               </div>
             ) : (
-              <p className="mt-4 rounded-xl border border-dashed border-zinc-800 px-3 py-5 text-center text-sm text-neutral-500">
-                Add a due date to see what’s next.
-              </p>
+              <div
+                role="tablist"
+                aria-label="Task views"
+                className="flex overflow-x-auto border-b border-border px-1 [scrollbar-width:none] sm:gap-1 sm:px-3 [&::-webkit-scrollbar]:hidden"
+              >
+                {tabs.map(({ id, label, count, emphasis }, index) => {
+                  const selected = view === id;
+                  return (
+                    <button
+                      key={id}
+                      ref={(element) => {
+                        tabRefs.current[id] = element;
+                      }}
+                      id={`task-tab-${id}`}
+                      role="tab"
+                      type="button"
+                      aria-selected={selected}
+                      aria-controls="task-panel"
+                      tabIndex={selected ? 0 : -1}
+                      onClick={() => navigate({ view: id, date: null })}
+                      onKeyDown={(event) => onTabKeyDown(event, index)}
+                      className={cn(
+                        "-mb-px inline-flex min-h-12 shrink-0 items-center gap-1.5 border-b-2 px-2.5 text-sm font-medium motion-safe:transition-colors sm:gap-2 sm:px-3",
+                        selected
+                          ? "border-violet-600 text-foreground"
+                          : "border-transparent text-muted-foreground hover:text-foreground",
+                        focusRing,
+                      )}
+                    >
+                      {label}
+                      {ready && count > 0 && (
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums",
+                            // Phones: counts only on the active tab and Today, so all four tabs fit.
+                            !selected && !emphasis && "hidden sm:inline-block",
+                            emphasis && buckets.overdue.length > 0
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             )}
-            <p className="mt-4 border-t border-white/[0.06] pt-4 text-xs leading-5 text-neutral-500">
-              {completionRate}% of your tasks are complete. Keep your plan small
-              enough to move forward.
-            </p>
-          </section>
-        </aside>
-      </div>
-      <div className="mt-4 flex items-center justify-between gap-4 text-xs text-neutral-500">
-        <span>
-          {openTasks.length} active task{openTasks.length === 1 ? "" : "s"}
-        </span>
-        <span>Due dates use your local calendar day.</span>
-      </div>
-    </div>
-  );
-}
 
-function TaskMetric({
-  icon: Icon,
-  label,
-  value,
-  detail,
-  tone,
-}: {
-  icon: typeof CalendarDays;
-  label: string;
-  value: number;
-  detail: string;
-  tone: "violet" | "rose" | "emerald" | "neutral";
-}) {
-  const accents = {
-    violet: "bg-violet-300/10 text-violet-200",
-    rose: "bg-rose-300/10 text-rose-200",
-    emerald: "bg-emerald-300/10 text-emerald-200",
-    neutral: "bg-white/[0.07] text-neutral-200",
-  };
-  return (
-    <div className="w-full min-w-0 rounded-2xl border border-white/[0.07] bg-[#151619] p-2.5 sm:flex sm:items-center sm:gap-3 sm:p-4">
-      <span
-        className={`hidden size-10 shrink-0 place-items-center rounded-xl sm:grid ${accents[tone]}`}
-      >
-        <Icon size={18} />
-      </span>
-      <div className="min-w-0">
-        <p className="truncate text-[10px] text-neutral-400 sm:text-xs">
-          {label}
-        </p>
-        <div className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 sm:justify-between sm:gap-2">
-          <span className="text-xl font-semibold text-white sm:text-2xl">
-            {value}
-          </span>
-          <span className="hidden truncate text-[11px] text-neutral-500 sm:block">
-            {detail}
-          </span>
+            <div id="task-panel" role="tabpanel" aria-labelledby={dayView ? undefined : `task-tab-${view}`}>
+              {!ready ? (
+                <div className="space-y-2 p-3" aria-busy="true" aria-label="Loading tasks">
+                  <Skeleton className="h-11" />
+                  <Skeleton className="h-11" />
+                  <Skeleton className="h-11" />
+                </div>
+              ) : error ? (
+                <div className="p-4">
+                  <InlineError message={error} onRetry={() => void refresh()} />
+                </div>
+              ) : (
+                <TaskLists
+                  view={view}
+                  dayView={dayView}
+                  today={today!}
+                  tasks={tasks}
+                  buckets={buckets}
+                  openToday={openToday}
+                  doneLimit={doneLimit}
+                  onMore={() => setDoneLimit((limit) => limit + DONE_PAGE)}
+                  onPatch={patchTask}
+                  onDelete={(task) => void deleteTask(task)}
+                  onMoveOverdue={() => void moveOverdueToToday()}
+                />
+              )}
+            </div>
+          </section>
+        </div>
+
+        <div className="min-w-0 space-y-5 sm:space-y-6 lg:sticky lg:top-4 lg:self-start">
+          <ProgressPanel
+            loading={!ready}
+            total={buckets.today.length}
+            done={doneToday}
+            overdue={buckets.overdue.length}
+            doneThisWeek={buckets.doneThisWeek}
+            onShowOverdue={() => navigate({ view: "today", date: null })}
+          />
+          <WeekStrip tasks={tasks} upcoming={buckets.upcoming} today={today} loading={!ready} />
         </div>
       </div>
     </div>
   );
 }
 
-function EmptyTasks({ message }: { message: string }) {
+function GroupHeading({
+  primary,
+  secondary,
+  count,
+  tone = "default",
+  action,
+}: {
+  primary: string;
+  secondary?: string;
+  count?: number;
+  tone?: "default" | "danger";
+  action?: React.ReactNode;
+}) {
   return (
-    <div className="grid min-h-40 w-full min-w-0 place-items-center px-2 text-center sm:px-4">
-      <div className="w-full min-w-0">
-        <span className="mx-auto grid size-11 place-items-center rounded-xl bg-white/[0.06] text-neutral-400">
-          <ListTodo size={20} />
-        </span>
-        <p className="mx-auto mt-3 max-w-[34ch] break-words text-sm leading-6 text-neutral-400">
-          {message}
-        </p>
-      </div>
+    <div className="flex items-center justify-between gap-3 bg-muted/40 px-4 py-2">
+      <h3
+        className={cn(
+          "flex items-baseline gap-2 text-xs font-semibold uppercase tracking-wide",
+          tone === "danger" ? "text-destructive" : "text-muted-foreground",
+        )}
+      >
+        {primary}
+        {secondary && <span className="font-normal normal-case tracking-normal">{secondary}</span>}
+        {typeof count === "number" && <span className="font-medium">· {count}</span>}
+      </h3>
+      {action}
     </div>
+  );
+}
+
+function EmptyView({ title, hint, icon: Icon = ListTodo }: { title: string; hint: string; icon?: typeof ListTodo }) {
+  return (
+    <div className="flex flex-col items-center px-5 py-12 text-center">
+      <span className="grid size-11 place-items-center rounded-xl bg-muted text-muted-foreground">
+        <Icon size={22} aria-hidden="true" />
+      </span>
+      <p className="mt-3 text-sm font-semibold text-foreground">{title}</p>
+      <p className="mt-1 max-w-sm text-sm text-muted-foreground">{hint}</p>
+    </div>
+  );
+}
+
+type ListProps = {
+  view: TaskView;
+  dayView: string | null;
+  today: string;
+  tasks: TaskRecord[];
+  buckets: ReturnType<typeof bucketTasks>;
+  openToday: number;
+  doneLimit: number;
+  onMore: () => void;
+  onPatch: (task: TaskRecord, patch: TaskPatch) => Promise<boolean>;
+  onDelete: (task: TaskRecord) => void;
+  onMoveOverdue: () => void;
+};
+
+function TaskLists({
+  view,
+  dayView,
+  today,
+  tasks,
+  buckets,
+  openToday,
+  doneLimit,
+  onMore,
+  onPatch,
+  onDelete,
+  onMoveOverdue,
+}: ListProps) {
+  const row = (task: TaskRecord, showDue = false) => (
+    <TaskItem key={task.id} task={task} today={today} showDue={showDue} onPatch={onPatch} onDelete={onDelete} />
+  );
+  const list = (items: TaskRecord[], showDue = false) => (
+    <ul className="divide-y divide-border/60">{items.map((task) => row(task, showDue))}</ul>
+  );
+
+  if (dayView) {
+    const items = tasks
+      .filter((task) => task.dueDate === dayView)
+      .sort(
+        (a, b) =>
+          Number(Boolean(a.completedAt)) - Number(Boolean(b.completedAt)) ||
+          a.createdAt.localeCompare(b.createdAt),
+      );
+    return items.length ? (
+      list(items)
+    ) : (
+      <EmptyView title="Nothing scheduled" hint="No tasks are due on this day. Add one above and it will land here." />
+    );
+  }
+
+  if (view === "today") {
+    const hasOverdue = buckets.overdue.length > 0;
+    if (!hasOverdue && buckets.today.length === 0)
+      return <EmptyView title="Nothing due today" hint="Add a task above, or enjoy the breathing room." />;
+    return (
+      <>
+        {hasOverdue && (
+          <section aria-label="Overdue">
+            <GroupHeading
+              primary="Overdue"
+              count={buckets.overdue.length}
+              tone="danger"
+              action={
+                <button
+                  type="button"
+                  onClick={onMoveOverdue}
+                  className={cn(
+                    "inline-flex min-h-8 items-center rounded-lg px-2 text-xs font-semibold text-violet-700 hover:bg-violet-500/10 dark:text-violet-300",
+                    focusRing,
+                  )}
+                >
+                  Move all to today
+                </button>
+              }
+            />
+            {list(buckets.overdue, true)}
+          </section>
+        )}
+        {buckets.today.length > 0 && (
+          <section aria-label="Due today">
+            {hasOverdue && <GroupHeading primary="Due today" count={buckets.today.length} />}
+            {list(buckets.today)}
+          </section>
+        )}
+        {openToday === 0 && !hasOverdue && buckets.today.length > 0 && (
+          <p className="flex items-center gap-2 border-t border-border bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-800 dark:text-emerald-300">
+            <PartyPopper size={18} aria-hidden="true" /> You&apos;re all caught up. Nice work.
+          </p>
+        )}
+      </>
+    );
+  }
+
+  if (view === "upcoming") {
+    if (!buckets.upcoming.length)
+      return (
+        <EmptyView
+          icon={CalendarCheck}
+          title="Nothing coming up"
+          hint="Give a task a due date and it will show up here, grouped by day."
+        />
+      );
+    return (
+      <>
+        {groupByDate(buckets.upcoming).map((group) => {
+          const heading = dayHeading(group.date, today);
+          return (
+            <section key={group.date} aria-label={heading.primary}>
+              <GroupHeading primary={heading.primary} secondary={heading.secondary} count={group.tasks.length} />
+              {list(group.tasks)}
+            </section>
+          );
+        })}
+      </>
+    );
+  }
+
+  if (view === "nodate") {
+    return buckets.nodate.length ? (
+      list(buckets.nodate)
+    ) : (
+      <EmptyView title="Every task has a date" hint="Tasks without a due date will collect here until you schedule them." />
+    );
+  }
+
+  const shown = buckets.done.slice(0, doneLimit);
+  return buckets.done.length ? (
+    <>
+      {list(shown, true)}
+      {buckets.done.length > shown.length && (
+        <div className="border-t border-border p-3 text-center">
+          <button type="button" onClick={onMore} className={cn(secondaryButton, "min-h-10")}>
+            Show {Math.min(DONE_PAGE, buckets.done.length - shown.length)} more
+          </button>
+        </div>
+      )}
+    </>
+  ) : (
+    <EmptyView title="No completed tasks yet" hint="Tick a task off and your wins will be listed here." />
   );
 }
