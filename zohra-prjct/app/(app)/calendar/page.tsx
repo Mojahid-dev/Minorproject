@@ -2,8 +2,21 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { InlineError } from "@/components/dashboard/shared";
+import {
+  ArrowRight,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ListChecks,
+  Plus,
+} from "lucide-react";
+import {
+  focusRing,
+  InlineError,
+  panel,
+  primaryButton,
+  secondaryButton,
+} from "@/components/dashboard/shared";
 import { useTasks } from "@/hooks/use-tasks";
 import { cn } from "@/lib/utils";
 import {
@@ -14,13 +27,7 @@ import {
 } from "@/lib/task-utils";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MAX_LINES = 3;
-
-const focus =
-  "outline-none focus-visible:ring-2 focus-visible:ring-pen focus-visible:ring-offset-0";
-/** A highlighter stroke across the lower half of the text it sits behind. */
-const highlighter =
-  "[background-image:linear-gradient(transparent_46%,var(--mark)_46%,var(--mark)_92%,transparent_92%)]";
+const MAX_CHIPS = 2;
 
 function parseDay(value: string) {
   const [year, month, day] = value.split("-").map(Number);
@@ -40,7 +47,7 @@ function monthLabel(date: Date) {
   }).format(date);
 }
 
-function fullDay(value: string) {
+function longDay(value: string) {
   return new Intl.DateTimeFormat(undefined, {
     weekday: "long",
     month: "long",
@@ -48,23 +55,13 @@ function fullDay(value: string) {
   }).format(parseDay(value));
 }
 
-/** "Today" / "Tomorrow" / "Yesterday", otherwise the weekday. */
-function dayTitle(value: string, today: string) {
+function relativeLabel(value: string, today: string) {
   if (value === today) return "Today";
   if (value === shiftDay(today, 1)) return "Tomorrow";
   if (value === shiftDay(today, -1)) return "Yesterday";
   return new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(
     parseDay(value),
   );
-}
-
-function dayDetail(value: string, today: string) {
-  const near = [today, shiftDay(today, 1), shiftDay(today, -1)].includes(value);
-  return new Intl.DateTimeFormat(undefined, {
-    ...(near ? { weekday: "long" } : {}),
-    month: "long",
-    day: "numeric",
-  }).format(parseDay(value));
 }
 
 /** Open tasks first, then by title, so the most useful ones show in a cell. */
@@ -121,13 +118,14 @@ export default function CalendarPage() {
   const monthKey = `${month.getFullYear()}-${`${month.getMonth() + 1}`.padStart(2, "0")}`;
   const monthTasks = tasks.filter((task) => task.dueDate?.startsWith(monthKey));
   const monthDone = monthTasks.filter((task) => task.completedAt).length;
+  const monthOpen = monthTasks.length - monthDone;
   const monthPercent = monthTasks.length
     ? Math.round((monthDone / monthTasks.length) * 100)
     : 0;
   const overdueCount = tasks.filter(
     (task) => task.dueDate && task.dueDate < today && !task.completedAt,
   ).length;
-  const viewingToday = monthKey === today.slice(0, 7) && selectedDate === today;
+  const viewingThisMonth = monthKey === today.slice(0, 7);
 
   // After an arrow-key move, put focus on the newly selected day.
   useEffect(() => {
@@ -209,103 +207,127 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="planner font-ui mx-auto w-full min-w-0 max-w-[1440px] overflow-x-clip pb-12 text-ink">
-      <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
-        <h1 className="font-reading text-[40px] font-medium leading-none tracking-[-0.025em] sm:text-[56px]">
-          {monthLabel(month)}
-        </h1>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            aria-label="Previous month"
-            onClick={() => goToMonth(-1)}
-            className={cn(
-              "grid size-11 place-items-center rounded-md text-ink-soft hover:bg-ink/[0.06] hover:text-ink",
-              focus,
-            )}
+    <div className="mx-auto w-full min-w-0 max-w-[1440px] overflow-x-clip pb-10 text-foreground">
+      {/* Header: title on the left, month controls on the right */}
+      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-600 dark:text-violet-300">
+            Calendar
+          </p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
+            {monthLabel(month)}
+          </h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            role="group"
+            aria-label="Change month"
+            className="flex items-center rounded-xl border border-border bg-card shadow-sm"
           >
-            <ChevronLeft size={20} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            aria-label="Next month"
-            onClick={() => goToMonth(1)}
-            className={cn(
-              "grid size-11 place-items-center rounded-md text-ink-soft hover:bg-ink/[0.06] hover:text-ink",
-              focus,
-            )}
-          >
-            <ChevronRight size={20} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={goToToday}
-            disabled={viewingToday}
-            className={cn(
-              "ml-1 h-11 rounded-md border border-rule px-4 text-sm font-medium hover:border-ink disabled:border-transparent disabled:text-ink-soft",
-              focus,
-            )}
-          >
-            Today
-          </button>
-          <Link
-            href="/tasks"
-            className={cn(
-              "ml-3 inline-flex h-11 items-center text-sm font-medium underline decoration-rule underline-offset-[6px] hover:decoration-ink",
-              focus,
-            )}
-          >
-            All tasks
+            <button
+              type="button"
+              aria-label="Previous month"
+              onClick={() => goToMonth(-1)}
+              className={cn(
+                "grid size-11 place-items-center rounded-l-xl text-muted-foreground hover:bg-muted hover:text-foreground",
+                focusRing,
+              )}
+            >
+              <ChevronLeft size={18} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={goToToday}
+              disabled={viewingThisMonth && selectedDate === today}
+              className={cn(
+                "h-11 border-x border-border px-4 text-sm font-medium hover:bg-muted disabled:text-muted-foreground disabled:hover:bg-transparent",
+                focusRing,
+              )}
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              aria-label="Next month"
+              onClick={() => goToMonth(1)}
+              className={cn(
+                "grid size-11 place-items-center rounded-r-xl text-muted-foreground hover:bg-muted hover:text-foreground",
+                focusRing,
+              )}
+            >
+              <ChevronRight size={18} aria-hidden="true" />
+            </button>
+          </div>
+          <Link href="/tasks" className={secondaryButton}>
+            <ListChecks size={16} aria-hidden="true" /> All tasks
           </Link>
         </div>
       </header>
 
-      {/* Month progress: one sentence and a hairline, not a dashboard */}
-      <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ink-soft">
-        <p>
-          {monthTasks.length
-            ? `${monthDone} of ${monthTasks.length} tasks done`
-            : "No tasks due this month"}
-        </p>
-        <div
-          role="progressbar"
-          aria-label="Tasks completed this month"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={monthPercent}
-          className="h-px min-w-24 flex-1 bg-rule"
-        >
-          <div
-            className="h-[3px] -translate-y-px bg-pen motion-safe:transition-[width] motion-safe:duration-700"
-            style={{ width: `${monthPercent}%` }}
-          />
-        </div>
-        {overdueCount > 0 && (
-          <p className="inline-flex items-center gap-2 text-ink">
-            <i aria-hidden="true" className="size-2 bg-flag" />
-            {overdueCount} overdue
-          </p>
+      {/* Month summary */}
+      <section
+        aria-label={`${monthLabel(month)} summary`}
+        className={cn(
+          panel,
+          "mt-5 grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-8 sm:px-5",
         )}
-      </div>
+      >
+        <div className="min-w-0">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-sm font-medium">
+              {monthTasks.length
+                ? `${monthDone} of ${monthTasks.length} done this month`
+                : "Nothing scheduled this month"}
+            </p>
+            <p className="text-sm tabular-nums text-muted-foreground">
+              {monthPercent}%
+            </p>
+          </div>
+          <div
+            role="progressbar"
+            aria-label="Tasks completed this month"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={monthPercent}
+            className="mt-2 h-2 overflow-hidden rounded-full bg-muted"
+          >
+            <div
+              className="h-full rounded-full bg-violet-500 motion-safe:transition-[width] motion-safe:duration-500"
+              style={{ width: `${monthPercent}%` }}
+            />
+          </div>
+        </div>
+        <dl className="grid grid-cols-3 gap-2 sm:gap-3">
+          <Stat label="Open" value={monthOpen} />
+          <Stat label="Done" value={monthDone} />
+          <Stat
+            label="Overdue"
+            value={overdueCount}
+            tone={overdueCount ? "danger" : "default"}
+          />
+        </dl>
+      </section>
 
-      <div className="mt-8 grid min-w-0 items-start gap-10 xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-0">
-        {/* Month ledger */}
+      <div className="mt-4 grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        {/* Month grid */}
         <section
           aria-label="Monthly task calendar"
-          className="min-w-0 xl:pr-10"
+          className={cn(panel, "min-w-0 overflow-hidden p-2 sm:p-4")}
         >
           {isLoading ? (
             <CalendarSkeleton />
           ) : error ? (
-            <InlineError message={error} onRetry={() => void refresh()} />
+            <div className="p-3">
+              <InlineError message={error} onRetry={() => void refresh()} />
+            </div>
           ) : (
             <>
               <div
                 aria-hidden="true"
-                className="grid grid-cols-7 border-b border-ink pb-2 text-[13px] text-ink-soft"
+                className="grid grid-cols-7 pb-2 text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground"
               >
                 {WEEKDAYS.map((day) => (
-                  <div key={day} className="px-1 sm:px-3">
+                  <div key={day}>
                     <span className="sm:hidden">{day[0]}</span>
                     <span className="hidden sm:inline">{day}</span>
                   </div>
@@ -316,7 +338,7 @@ export default function CalendarPage() {
                 role="group"
                 aria-label={monthLabel(month)}
                 onKeyDown={onGridKeyDown}
-                className="grid grid-cols-7"
+                className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-border bg-border"
               >
                 {days.map(({ date, key, inMonth }) => {
                   const dayTasks = tasksByDate.get(key) ?? [];
@@ -326,7 +348,8 @@ export default function CalendarPage() {
                   const isSelected = key === selectedDate;
                   const isToday = key === today;
                   const isPast = key < today;
-                  const shown = dayTasks.slice(0, MAX_LINES);
+                  const hasOverdue = isPast && openCount > 0;
+                  const shown = dayTasks.slice(0, MAX_CHIPS);
                   const hidden = dayTasks.length - shown.length;
                   return (
                     <button
@@ -337,98 +360,79 @@ export default function CalendarPage() {
                       onClick={() => selectDay(key, date)}
                       aria-pressed={isSelected}
                       aria-current={isToday ? "date" : undefined}
-                      aria-label={`${fullDay(key)}${
+                      aria-label={`${longDay(key)}${
                         dayTasks.length
                           ? `, ${openCount} open of ${dayTasks.length} task${dayTasks.length === 1 ? "" : "s"}`
                           : ""
                       }`}
                       className={cn(
-                        "relative flex min-h-[62px] min-w-0 flex-col items-center gap-2 border-t border-rule px-1 pb-2 pt-2.5 text-left sm:min-h-[118px] sm:items-stretch sm:px-3 sm:pb-3 sm:pt-3 xl:min-h-[128px]",
-                        "[&:not(:nth-child(7n+1))]:border-l [&:not(:nth-child(7n+1))]:border-l-rule/50",
-                        "motion-safe:transition-colors hover:bg-ink/[0.035]",
-                        "outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-pen",
-                        isSelected && "bg-ink/[0.045]",
+                        "relative flex min-h-[54px] min-w-0 flex-col items-center gap-1 p-1 text-left motion-safe:transition-colors sm:min-h-[104px] sm:items-stretch sm:p-2 xl:min-h-[112px]",
+                        "outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-500",
+                        inMonth ? "bg-card hover:bg-muted/60" : "bg-muted/40 hover:bg-muted/70",
+                        isSelected &&
+                          "z-[1] bg-violet-500/[0.08] ring-2 ring-inset ring-violet-500 hover:bg-violet-500/[0.12]",
                       )}
                     >
-                      <span className="relative grid size-9 shrink-0 place-items-center sm:ml-1 sm:mt-1 sm:self-start">
-                        {isToday && (
-                          <svg
-                            aria-hidden="true"
-                            viewBox="0 0 40 40"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.7"
-                            strokeLinecap="round"
-                            className="absolute -inset-2 size-[calc(100%+16px)] overflow-visible text-pen"
-                          >
-                            <path
-                              pathLength={1}
-                              className="pen-draw"
-                              d="M22 3.4C32.2 2.8 38.6 10.6 37.8 20.6 37 30.6 29.6 37.6 19.8 37 9.8 36.4 2.8 28.8 3.4 19.2 4 10.4 10.4 4.2 19.8 3.6 23 3.4 25.8 4 28 5.2"
-                            />
-                          </svg>
+                      <span
+                        className={cn(
+                          "grid size-6 shrink-0 place-items-center rounded-full text-xs font-medium tabular-nums sm:size-7 sm:text-[13px] sm:self-start",
+                          inMonth ? "text-foreground" : "text-muted-foreground/60",
+                          isToday &&
+                            "bg-violet-600 font-semibold text-violet-50",
                         )}
-                        <span
-                          className={cn(
-                            "font-reading relative text-[20px] font-medium leading-none tabular-nums sm:text-[24px]",
-                            inMonth ? "text-ink" : "text-ink-soft/55",
-                            isSelected && !isToday && cn(highlighter, "px-1"),
-                            isSelected && isToday && highlighter,
-                          )}
-                        >
-                          {date.getDate()}
-                        </span>
+                      >
+                        {date.getDate()}
                       </span>
 
-                      {/* Phones: a short tick per task */}
+                      {/* Phones: dots only */}
                       {dayTasks.length > 0 && (
                         <span
                           aria-hidden="true"
-                          className="flex items-center gap-[3px] sm:hidden"
+                          className="flex items-center gap-0.5 sm:hidden"
                         >
                           {dayTasks.slice(0, 3).map((task) => (
                             <i
                               key={task.id}
                               className={cn(
-                                "h-[3px] w-2.5",
+                                "size-1.5 rounded-full",
                                 task.completedAt
-                                  ? "bg-ink-soft/40"
-                                  : isPast
-                                    ? "bg-flag"
-                                    : "bg-ink",
+                                  ? "bg-muted-foreground/40"
+                                  : hasOverdue
+                                    ? "bg-rose-500"
+                                    : "bg-violet-500",
                               )}
                             />
                           ))}
                         </span>
                       )}
 
-                      {/* Tablets and up: the tasks themselves, as plain lines */}
+                      {/* Tablets and up: task chips */}
                       {dayTasks.length > 0 && (
                         <span
                           aria-hidden="true"
-                          className="hidden min-w-0 flex-col gap-1.5 sm:flex"
+                          className="hidden min-w-0 flex-col gap-1 sm:flex"
                         >
                           {shown.map((task) => (
                             <span
                               key={task.id}
-                              className="flex min-w-0 items-start gap-2 text-[13px] leading-[1.3]"
+                              className={cn(
+                                "flex min-w-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4",
+                                task.completedAt
+                                  ? "bg-muted text-muted-foreground"
+                                  : isPast
+                                    ? "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                                    : "bg-violet-500/10 text-violet-700 dark:text-violet-300",
+                              )}
                             >
-                              <i
-                                className={cn(
-                                  "relative top-[5px] size-[7px] shrink-0 border",
-                                  task.completedAt
-                                    ? "border-ink-soft/50"
-                                    : isPast
-                                      ? "border-flag bg-flag"
-                                      : "border-ink",
-                                )}
-                              />
+                              {task.completedAt ? (
+                                <Check size={10} className="shrink-0" />
+                              ) : (
+                                <i className="size-1.5 shrink-0 rounded-full bg-current" />
+                              )}
                               <span
                                 className={cn(
-                                  "line-clamp-2 break-words",
-                                  task.completedAt
-                                    ? "text-ink-soft line-through decoration-ink-soft/60"
-                                    : "text-ink",
+                                  "truncate",
+                                  task.completedAt && "line-through",
                                 )}
                               >
                                 {task.title}
@@ -436,8 +440,8 @@ export default function CalendarPage() {
                             </span>
                           ))}
                           {hidden > 0 && (
-                            <span className="text-xs text-ink-soft">
-                              and {hidden} more
+                            <span className="px-1.5 text-[11px] font-medium text-muted-foreground">
+                              +{hidden} more
                             </span>
                           )}
                         </span>
@@ -446,37 +450,45 @@ export default function CalendarPage() {
                   );
                 })}
               </div>
-              <div className="border-t border-rule" />
-              <p className="mt-3 hidden text-xs text-ink-soft sm:block">
-                Use the arrow keys to move between days.
+              <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <i className="size-2 rounded-full bg-violet-500" /> Open
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <i className="size-2 rounded-full bg-rose-500" /> Overdue
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <i className="size-2 rounded-full bg-muted-foreground/40" />{" "}
+                  Done
+                </span>
+                <span className="ml-auto hidden sm:inline">
+                  Arrow keys move between days
+                </span>
               </p>
             </>
           )}
         </section>
 
-        {/* The selected day, written out beside a margin rule */}
-        <section
-          aria-label="Selected day"
-          className="min-w-0 border-t-2 border-flag/50 pt-6 xl:sticky xl:top-4 xl:border-l-2 xl:border-t-0 xl:pl-8 xl:pt-1"
+        {/* Agenda for the selected day */}
+        <aside
+          aria-label="Selected day agenda"
+          className={cn(panel, "min-w-0 p-4 sm:p-5 xl:sticky xl:top-4")}
         >
-          <h2 className="font-reading text-[34px] font-medium leading-none tracking-[-0.02em]">
-            {dayTitle(selectedDate, today)}
-          </h2>
-          <p className="mt-2 text-[15px] text-ink-soft">
-            {dayDetail(selectedDate, today)}
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-600 dark:text-violet-300">
+            {relativeLabel(selectedDate, today)}
           </p>
-          <p className="mt-1 text-sm text-ink-soft" aria-live="polite">
+          <h2 className="mt-1 text-xl font-semibold tracking-tight">
+            {longDay(selectedDate)}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
             {selectedTasks.length
-              ? `${selectedOpen.length} to do, ${selectedDone} done`
+              ? `${selectedOpen.length} open · ${selectedDone} done`
               : "Nothing scheduled"}
           </p>
 
-          <form
-            onSubmit={addForSelectedDate}
-            className="mt-6 flex items-end gap-3 border-b border-rule focus-within:border-ink"
-          >
+          <form onSubmit={addForSelectedDate} className="mt-4 flex gap-2">
             <label className="sr-only" htmlFor="calendar-quick-add">
-              Add a task for {fullDay(selectedDate)}
+              Add task for {longDay(selectedDate)}
             </label>
             <input
               id="calendar-quick-add"
@@ -484,52 +496,85 @@ export default function CalendarPage() {
               onChange={(event) => setQuickTitle(event.target.value)}
               maxLength={180}
               placeholder="Add a task for this day"
-              className="h-11 min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-ink-soft"
+              className={cn(
+                "h-11 min-w-0 flex-1 rounded-xl border border-border bg-background px-3.5 text-sm placeholder:text-muted-foreground",
+                focusRing,
+              )}
             />
             <button
+              aria-label="Add task"
               disabled={saving || !quickTitle.trim()}
               className={cn(
-                "mb-1 h-9 rounded-md px-3 text-sm font-semibold text-pen hover:bg-pen/10 disabled:text-ink-soft disabled:hover:bg-transparent",
-                focus,
+                primaryButton,
+                "w-11 shrink-0 px-0 disabled:cursor-not-allowed disabled:opacity-50",
               )}
             >
-              {saving ? "Adding" : "Add"}
+              {saving ? (
+                <span aria-hidden="true" className="text-xs">
+                  …
+                </span>
+              ) : (
+                <Plus size={18} aria-hidden="true" />
+              )}
             </button>
           </form>
           {quickError && (
-            <p role="alert" className="mt-2 text-sm text-flag">
+            <p role="alert" className="mt-2 text-xs text-destructive">
               {quickError}
             </p>
           )}
 
-          {selectedTasks.length > 0 ? (
-            <ul className="mt-2">
-              {selectedTasks.map((task) => (
-                <AgendaItem
-                  key={task.id}
-                  task={task}
-                  today={today}
-                  onChanged={() => void refresh()}
-                />
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-6 max-w-[30ch] text-[15px] leading-6 text-ink-soft">
-              Nothing is due. Add a task above, or pick another day.
-            </p>
+          <ul className="mt-4 space-y-2">
+            {selectedTasks.map((task) => (
+              <AgendaItem
+                key={task.id}
+                task={task}
+                today={today}
+                onChanged={() => void refresh()}
+              />
+            ))}
+          </ul>
+          {selectedTasks.length === 0 && (
+            <div className="mt-4 rounded-xl border border-dashed border-border px-4 py-8 text-center">
+              <p className="text-sm font-medium">A clear day</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Add a task above or pick another date.
+              </p>
+            </div>
           )}
 
           <Link
             href={`/tasks?date=${selectedDate}`}
-            className={cn(
-              "mt-8 inline-flex text-sm font-medium underline decoration-rule underline-offset-[6px] hover:decoration-ink",
-              focus,
-            )}
+            className={cn(secondaryButton, "mt-5 w-full justify-between")}
           >
-            Open this day in Tasks
+            Open this day in Tasks <ArrowRight size={16} aria-hidden="true" />
           </Link>
-        </section>
+        </aside>
       </div>
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: number;
+  tone?: "default" | "danger";
+}) {
+  return (
+    <div className="min-w-[76px] rounded-xl bg-muted/60 px-3 py-2">
+      <dt className="text-[11px] font-medium text-muted-foreground">{label}</dt>
+      <dd
+        className={cn(
+          "text-xl font-semibold tabular-nums",
+          tone === "danger" && "text-rose-600 dark:text-rose-300",
+        )}
+      >
+        {value}
+      </dd>
     </div>
   );
 }
@@ -572,7 +617,12 @@ function AgendaItem({
   }
 
   return (
-    <li className="flex items-start gap-3.5 border-b border-rule py-3.5">
+    <li
+      className={cn(
+        "flex items-start gap-3 rounded-xl border border-border bg-background px-3 py-3",
+        completed && "bg-muted/40",
+      )}
+    >
       <button
         type="button"
         disabled={busy}
@@ -580,56 +630,36 @@ function AgendaItem({
         aria-pressed={completed}
         aria-label={`${completed ? "Reopen" : "Complete"} ${task.title}`}
         className={cn(
-          "relative mt-px grid size-[22px] shrink-0 place-items-center rounded-[4px] border-[1.5px] disabled:opacity-60",
-          completed ? "border-pen" : "border-ink-soft hover:border-ink",
-          focus,
+          "mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border-2 motion-safe:transition-colors disabled:opacity-50",
+          completed
+            ? "border-violet-600 bg-violet-600 text-violet-50"
+            : "border-muted-foreground/50 text-transparent hover:border-violet-500 hover:text-violet-500/60",
+          focusRing,
         )}
       >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="size-[18px] text-pen"
-        >
-          <path
-            pathLength={1}
-            d="M4 13.5 9.5 19 20.5 5"
-            style={{
-              strokeDasharray: 1,
-              strokeDashoffset: completed ? 0 : 1,
-              transition: "stroke-dashoffset 260ms ease-out",
-            }}
-          />
-        </svg>
+        <Check size={13} strokeWidth={3} aria-hidden="true" />
       </button>
       <div className="min-w-0 flex-1">
         <p
           className={cn(
-            "w-fit max-w-full break-words text-[15px] leading-[1.4] [background-image:linear-gradient(currentColor,currentColor)] [background-position:0_62%] [background-repeat:no-repeat] motion-safe:transition-[background-size,color] motion-safe:duration-300",
-            completed
-              ? "text-ink-soft [background-size:100%_1.5px]"
-              : "text-ink [background-size:0%_1.5px]",
+            "break-words text-sm font-medium leading-5",
+            completed && "text-muted-foreground line-through",
           )}
         >
           {task.title}
         </p>
         {task.notes && (
-          <p className="mt-1 line-clamp-2 break-words text-[13px] leading-5 text-ink-soft">
+          <p className="mt-0.5 line-clamp-2 break-words text-xs leading-5 text-muted-foreground">
             {task.notes}
           </p>
         )}
         {overdue && task.dueDate && (
-          <p className="mt-1.5 inline-flex items-center gap-2 text-[13px] text-flag">
-            <i aria-hidden="true" className="size-[7px] bg-flag" />
-            Due {formatTaskDate(task.dueDate)}
+          <p className="mt-1 text-xs font-medium text-rose-600 dark:text-rose-300">
+            Overdue since {formatTaskDate(task.dueDate)}
           </p>
         )}
         {error && (
-          <p role="alert" className="mt-1 text-[13px] text-flag">
+          <p role="alert" className="mt-1 text-xs text-destructive">
             {error}
           </p>
         )}
@@ -640,16 +670,22 @@ function AgendaItem({
 
 function CalendarSkeleton() {
   return (
-    <div role="status" aria-label="Loading your calendar">
-      <div className="border-b border-ink pb-2 text-[13px] text-transparent">
-        .
+    <div role="status" aria-label="Loading your calendar" className="p-1">
+      <div className="mb-3 grid grid-cols-7 gap-2">
+        {Array.from({ length: 7 }, (_, i) => (
+          <div key={i} className="mx-auto h-3 w-8 rounded bg-muted" />
+        ))}
       </div>
-      {Array.from({ length: 6 }, (_, i) => (
-        <div
-          key={i}
-          className="h-[62px] animate-pulse border-t border-rule sm:h-[118px] xl:h-[128px]"
-        />
-      ))}
+      <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-border bg-border">
+        {Array.from({ length: 42 }, (_, i) => (
+          <div
+            key={i}
+            className="min-h-[54px] bg-card p-2 sm:min-h-[104px] xl:min-h-[112px]"
+          >
+            <div className="size-6 animate-pulse rounded-full bg-muted" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
