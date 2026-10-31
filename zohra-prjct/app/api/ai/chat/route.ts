@@ -1,4 +1,4 @@
-import { ApiError, GoogleGenAI } from "@google/genai";
+
 import { auth } from "@/lib/auth";
 import {
   MAX_CHAT_CONTEXT_MESSAGES,
@@ -6,11 +6,24 @@ import {
   toChatRole,
   type ChatMessage,
 } from "@/lib/ai-conversations";
-import { buildDocumentContext, parseResourceIds, type DocumentSource } from "@/lib/document-context";
+import {
+  buildDocumentContext,
+  parseResourceIds,
+  type DocumentSource,
+} from "@/lib/document-context";
 import { prisma } from "@/lib/prisma";
 import { enforceRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import {
+  ApiError,
+  GoogleGenAI,
+  type Content,
+  type FunctionCall,
+  type Part,
+} from "@google/genai";
+import { createTasksDeclaration, runCreateTasks } from "@/lib/ai-task-tools";
+import { isDateOnly } from "@/lib/task-utils";
 
 const BASE_SYSTEM_INSTRUCTION =
   "You are Zohra AI, a friendly, accurate AI assistant that helps students learn, solve problems, understand concepts, and prepare for exams. Explain clearly, encourage critical thinking, and admit uncertainty. Adapt to the user's level and preferred language; use simple English by default and Hindi or Hinglish when requested. Keep answers concise unless detail is needed. Use headings for long answers, bullets for lists, numbered steps for procedures, and code blocks for code. Respect privacy and never invent facts.";
@@ -34,6 +47,10 @@ class ChatError extends Error {
 /** What the browser receives: one JSON object per line. */
 type StreamEvent =
   | { type: "delta"; text: string }
+  | {
+      type: "tasks";
+      tasks: { id: string; title: string; dueDate: string | null }[];
+    }
   | { type: "done"; sources: DocumentSource[] }
   | { type: "error"; error: string };
 
@@ -50,7 +67,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 function describeError(error: unknown): { message: string; status: number } {
-  if (error instanceof ChatError) return { message: error.message, status: error.status };
+  if (error instanceof ChatError)
+    return { message: error.message, status: error.status };
 
   const geminiError =
     error instanceof ApiError
@@ -70,12 +88,19 @@ function describeError(error: unknown): { message: string; status: number } {
           : null;
 
   return {
-    message: geminiError ?? "Unable to generate a response. Check the Vercel function logs for this request.",
+    message:
+      geminiError ??
+      "Unable to generate a response. Check the Vercel function logs for this request.",
     status: error instanceof ApiError ? error.status : 502,
   };
 }
 
-async function saveExchange(userId: string, conversationId: string, userContent: string, reply: string) {
+async function saveExchange(
+  userId: string,
+  conversationId: string,
+  userContent: string,
+  reply: string,
+) {
   const conversation = await prisma.aIConversation.findFirst({
     where: { id: conversationId, userId },
     select: { id: true, _count: { select: { messages: true } } },
@@ -86,9 +111,21 @@ async function saveExchange(userId: string, conversationId: string, userContent:
   const position = conversation._count.messages;
 
   await prisma.$transaction([
-    prisma.aIMessage.create({ data: { conversationId, role: "USER", content: userContent, position } }),
-    prisma.aIMessage.create({ data: { conversationId, role: "ASSISTANT", content: reply, position: position + 1 } }),
-    prisma.aIConversation.update({ where: { id: conversationId }, data: { updatedAt: new Date() } }),
+    prisma.aIMessage.create({
+      data: { conversationId, role: "USER", content: userContent, position },
+    }),
+    prisma.aIMessage.create({
+      data: {
+        conversationId,
+        role: "ASSISTANT",
+        content: reply,
+        position: position + 1,
+      },
+    }),
+    prisma.aIConversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date() },
+    }),
   ]);
 }
 
@@ -96,10 +133,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
-
-
   try {
-
     const session = await auth.api.getSession({ headers: await headers() });
     const userId = session?.user?.id;
 
@@ -109,7 +143,11 @@ export async function POST(request: Request) {
         { status: 401 },
       );
 
-    const limited = await enforceRateLimit(userId, "ai-chat", RATE_LIMITS.aiChat);
+    const limited = await enforceRateLimit(
+      userId,
+      "ai-chat",
+      RATE_LIMITS.aiChat,
+    );
     if (limited) return limited;
 
     const body = await request.json().catch(() => null);
@@ -123,7 +161,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const conversationId = typeof body?.conversationId === "string" ? body.conversationId : null;
+    const conversationId =
+      typeof body?.conversationId === "string" ? body.conversationId : null;
 
     let history: ChatMessage[] = messages;
 
@@ -150,7 +189,16 @@ export async function POST(request: Request) {
     }
 
     const resourceIds = parseResourceIds(body?.resourceIds);
-
+    const today = isDateOnly(body?.today) ? (body.today as string) : null;
+    const weekday = today
+      ? new Intl.DateTimeFormat("en", {
+          weekday: "long",
+          timeZone: "UTC",
+        }).format(new Date(`${today}T00:00:00Z`))
+      : "";
+    const taskInstruction = today
+      ? `Today is ${weekday}, ${today}. When the student asks you to add or plan tasks, call create_tasks with dates as YYYY-MM-DD resolved from today, then confirm in one or two sentences what you added.`
+      : "";
     if (!resourceIds) {
       return NextResponse.json(
         { error: "Invalid file selection. You can attach up to 3 files." },
@@ -183,7 +231,10 @@ export async function POST(request: Request) {
 
       if (documents.length !== resourceIds.length) {
         return NextResponse.json(
-          { error: "One of the selected files is not available. It may have been deleted, or its text is not ready yet." },
+          {
+            error:
+              "One of the selected files is not available. It may have been deleted, or its text is not ready yet.",
+          },
           { status: 404 },
         );
       }
@@ -191,13 +242,27 @@ export async function POST(request: Request) {
       ({ prompt: documentPrompt, sources } = buildDocumentContext(documents));
     }
 
+    const config = {
+      systemInstruction: [
+        BASE_SYSTEM_INSTRUCTION,
+        taskInstruction,
+        documentPrompt,
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+      temperature: 0.4,
+      maxOutputTokens: documentPrompt ? 2048 : 1024,
+      tools: today
+        ? [{ functionDeclarations: [createTasksDeclaration] }]
+        : undefined,
+    };
+
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
         {
-          error:
-            "Gemini is not configured.",
+          error: "Gemini is not configured.",
         },
         { status: 503 },
       );
@@ -207,21 +272,13 @@ export async function POST(request: Request) {
 
     if (context[0]?.role === "assistant") context = context.slice(1);
 
-    const contents = context.map((message) => ({
+    const contents: Content[] = context.map((message) => ({
       role:
         message.role === "assistant" ? ("model" as const) : ("user" as const),
       parts: [{ text: message.content }],
     }));
 
     const ai = new GoogleGenAI({ apiKey });
-
-    const config = {
-      systemInstruction: documentPrompt
-        ? `${BASE_SYSTEM_INSTRUCTION}\n\n${documentPrompt}`
-        : BASE_SYSTEM_INSTRUCTION,
-      temperature: 0.4,
-      maxOutputTokens: documentPrompt ? 2048 : 1024,
-    };
 
     // Starts the reply and waits for the first words, so problems that happen
     // before any text exists can still be returned as normal HTTP errors.
@@ -232,21 +289,39 @@ export async function POST(request: Request) {
         try {
           return await withTimeout(
             (async () => {
-              const stream = await ai.models.generateContentStream({ model, contents, config });
+              const stream = await ai.models.generateContentStream({
+                model,
+                contents,
+                config,
+              });
               const iterator = stream[Symbol.asyncIterator]();
               let blockReason: string | undefined;
               let finishReason: string | undefined;
               let text = "";
+              let calls: FunctionCall[] = [];
+              const parts: Part[] = [];
 
-              while (!text) {
+              while (!text && calls.length === 0) {
                 const next = await iterator.next();
                 if (next.done) break;
                 blockReason ??= next.value.promptFeedback?.blockReason;
                 finishReason ??= next.value.candidates?.[0]?.finishReason;
+                parts.push(
+                  ...(next.value.candidates?.[0]?.content?.parts ?? []),
+                );
+                calls = next.value.functionCalls ?? [];
                 text = next.value.text ?? "";
               }
 
-              return { iterator, text, blockReason, finishReason };
+              return {
+                model,
+                iterator,
+                text,
+                calls,
+                parts,
+                blockReason,
+                finishReason,
+              };
             })(),
             FIRST_WORDS_TIMEOUT_MS,
           );
@@ -260,7 +335,9 @@ export async function POST(request: Request) {
 
           if (!canFallBack) throw error;
 
-          console.warn(`Gemini ${model} returned ${error.status}; trying ${MODELS[index + 1]}.`);
+          console.warn(
+            `Gemini ${model} returned ${error.status}; trying ${MODELS[index + 1]}.`,
+          );
         }
       }
 
@@ -269,7 +346,7 @@ export async function POST(request: Request) {
 
     const opened = await openReplyStream();
 
-    if (!opened.text) {
+    if (!opened.text && opened.calls.length === 0) {
       console.error("Gemini returned no text", {
         blockReason: opened.blockReason,
         finishReason: opened.finishReason,
@@ -307,36 +384,90 @@ export async function POST(request: Request) {
 
         try {
           let reply = opened.text;
-          send({ type: "delta", text: opened.text });
+          let parts: Part[] = [...opened.parts];
+          let calls: FunctionCall[] = [...opened.calls];
+          if (opened.text) send({ type: "delta", text: opened.text });
 
           while (!cancelled) {
-            const next = await withTimeout(opened.iterator.next(), STALL_TIMEOUT_MS);
+            const next = await withTimeout(
+              opened.iterator.next(),
+              STALL_TIMEOUT_MS,
+            );
             if (next.done) break;
-
+            parts.push(...(next.value.candidates?.[0]?.content?.parts ?? []));
+            calls.push(...(next.value.functionCalls ?? []));
             const text = next.value.text ?? "";
             if (!text) continue;
-
             reply += text;
             send({ type: "delta", text });
           }
 
-          // The user left before the reply finished, so nothing is saved.
-          if (cancelled) return;
+          // Run the tools the model asked for, then let it write the confirmation.
+          for (
+            let round = 0;
+            round < 2 && calls.length > 0 && !cancelled;
+            round++
+          ) {
+            const responses: Part[] = [];
+            for (const call of calls) {
+              if (call.name !== "create_tasks") continue;
+              const result = await runCreateTasks(userId, call.args);
+              if ("created" in result)
+                send({ type: "tasks", tasks: result.created });
+              responses.push({
+                functionResponse: { name: call.name, response: result },
+              });
+            }
+            // Send the model's parts back exactly as received (Gemini 3 needs its thought signatures).
+            contents.push(
+              { role: "model", parts },
+              { role: "user", parts: responses },
+            );
+
+            parts = [];
+            calls = [];
+            const followUp = await ai.models.generateContentStream({
+              model: opened.model,
+              contents,
+              config,
+            });
+            for await (const chunk of followUp) {
+              parts.push(...(chunk.candidates?.[0]?.content?.parts ?? []));
+              calls.push(...(chunk.functionCalls ?? []));
+              const text = chunk.text ?? "";
+              if (!text) continue;
+              reply += text;
+              send({ type: "delta", text });
+            }
+          }
 
           if (conversationId) {
             try {
-              await saveExchange(userId, conversationId, userContent, reply.trim());
+              await saveExchange(
+                userId,
+                conversationId,
+                userContent,
+                reply.trim(),
+              );
             } catch (error) {
-              console.error("Saving the AI reply failed:", error instanceof Error ? error.message : error);
+              console.error(
+                "Saving the AI reply failed:",
+                error instanceof Error ? error.message : error,
+              );
               throw error instanceof ChatError
                 ? error
-                : new ChatError("Your reply was written but could not be saved to this conversation. Please try again.");
+                : new ChatError(
+                    "Your reply was written but could not be saved to this conversation. Please try again.",
+                  );
             }
           }
 
           send({ type: "done", sources });
         } catch (error) {
-          console.error("AI reply stream failed:", error instanceof Error ? error.message : error);
+          console.error(
+            "AI reply stream failed:",
+            error instanceof Error ? error.message : error,
+          );
           send({ type: "error", error: describeError(error).message });
         } finally {
           try {

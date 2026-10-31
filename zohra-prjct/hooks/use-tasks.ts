@@ -31,6 +31,12 @@ export function useTasks() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [refresh]);
+  
+  useEffect(() => {
+  const onChanged = () => void refresh();
+  window.addEventListener("zohra:tasks-updated", onChanged);
+  return () => window.removeEventListener("zohra:tasks-updated", onChanged);
+}, [refresh]);
 
   return { tasks, setTasks, isLoading, error, refresh };
 }
