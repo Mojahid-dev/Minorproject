@@ -6,7 +6,7 @@ import type { TaskRecord } from "@/lib/task-utils";
 import { addDays, parseDateOnly, plural } from "@/lib/dashboard-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { PanelHeader, focusRing, panel } from "../../../zohra-prjct/components/dashboard/shared";
+import { PanelHeader, focusRing, panel } from "./shared";
 
 type Props = {
   tasks: TaskRecord[];

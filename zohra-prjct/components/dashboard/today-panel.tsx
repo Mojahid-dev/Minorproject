@@ -7,7 +7,7 @@ import type { TaskRecord } from "@/lib/task-utils";
 import { overdueLabel, plural, type TaskGroups } from "@/lib/dashboard-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { InlineError, PanelHeader, focusRing, panel } from "../../../zohra-prjct/components/dashboard/shared";
+import { InlineError, PanelHeader, focusRing, panel } from "./shared";
 
 type Props = {
   groups: TaskGroups;
