@@ -84,7 +84,7 @@ Put local values in `.env.local` at the project root. `.env*` files are ignored 
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `DATABASE_URL` | Yes | PostgreSQL connection used by the running application through the Prisma PostgreSQL adapter. |
-| `DIRECT_URL` | Yes for Prisma CLI operations | Direct PostgreSQL connection used by `prisma.config.ts` for migrations and other Prisma CLI operations. It can be the same value as `DATABASE_URL` if the provider has no pooled/direct connection distinction. |
+| `DIRECT_URL` | Optional | Direct PostgreSQL connection used by `prisma.config.ts` for migrations and other Prisma CLI operations. When omitted, Prisma falls back to `DATABASE_URL`; use `DIRECT_URL` if your provider requires a non-pooled connection for migrations. |
 | `BETTER_AUTH_SECRET` | Yes | Secret used by Better Auth to sign and protect sessions. Use a long, random value. |
 | `BETTER_AUTH_URL` | Yes | Server-side base URL for Better Auth, such as `http://localhost:3000` locally or the deployed app URL. |
 | `NEXT_PUBLIC_BETTER_AUTH_URL` | Recommended | Client-side auth base URL. If omitted, the auth client uses the current site origin. Set it explicitly in production if needed. |
@@ -176,7 +176,7 @@ The generated Prisma client is written to `lib/generated/prisma` and is ignored 
    pnpm vercel-build
    ```
 
-4. Add production environment values in **Project Settings → Environment Variables**. Configure `DATABASE_URL`, `DIRECT_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, and `BLOB_READ_WRITE_TOKEN`. Add both Google credentials plus the authorized callback URI to enable Google sign-in.
+4. Add production environment values in **Project Settings → Environment Variables**. Configure `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, and `BLOB_READ_WRITE_TOKEN`. Set `DIRECT_URL` when your provider requires a separate non-pooled connection for Prisma migrations. Add both Google credentials plus the authorized callback URI to enable Google sign-in.
 5. Apply committed database migrations to the production database before or as part of release operations:
 
    ```bash

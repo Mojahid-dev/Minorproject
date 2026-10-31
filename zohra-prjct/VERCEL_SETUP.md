@@ -25,7 +25,7 @@ pnpm install
 Add these to Vercel → Project → Settings → Environment Variables:
 
 - `DATABASE_URL` — your Postgres connection string (required)
-- `DIRECT_URL` — only if `prisma.config.ts` uses it (optional)
+- `DIRECT_URL` — optional direct database connection for Prisma CLI operations; defaults to `DATABASE_URL` when omitted
 - `BETTER_AUTH_URL` and `NEXT_PUBLIC_BETTER_AUTH_URL` — the production site origin
 - `BETTER_AUTH_SECRET` — a long, random secret
 - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` — optional; configure both to enable Google sign-in

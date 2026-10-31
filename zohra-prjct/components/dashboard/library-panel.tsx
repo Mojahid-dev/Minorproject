@@ -26,7 +26,7 @@ import {
 } from "@/lib/dashboard-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { InlineError, PanelHeader, focusRing, panel, primaryButton } from "../../../docs/zohra-dashboard-redesign (1)/components/dashboard/shared";
+import { InlineError, PanelHeader, focusRing, panel, primaryButton } from "@/components/dashboard/shared";
 
 const kindIcon: Record<ResourceKind, LucideIcon> = {
   pdf: FileText,
