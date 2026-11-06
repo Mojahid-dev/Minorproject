@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { FolderTree, SearchX, UploadCloud, PartyPopper } from "lucide-react";
+import { ArrowRight, CircleAlert, FolderTree, SearchX, UploadCloud, PartyPopper } from "lucide-react";
 import { toast } from "sonner";
 import { useClock } from "@/hooks/use-clock";
 import { plural } from "@/lib/dashboard-utils";
@@ -29,8 +29,9 @@ import {
 } from "@/components/dashboard/shared";
 import { CourseBrowser } from "@/components/resources/course-browser";
 import { ConfirmDeleteDialog, OrganizerDialog, type Location } from "@/components/resources/dialogs";
-import { ResourceList, type RowContext } from "@/components/resources/resource-row";
+import { ResourceList, type RowContext, type ViewMode } from "@/components/resources/resource-row";
 import { Toolbar } from "@/components/resources/toolbar";
+import { NEUTRAL_TONE, buildToneMap } from "@/lib/subject-colors";
 import { cn } from "@/lib/utils";
 
 type Tab = "courses" | "all" | "review";
@@ -77,12 +78,32 @@ function ResourcesContent() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FileFilter>("all");
   const [sort, setSort] = useState<SortKey>("newest");
+  // Cards are the default; the choice is remembered on this device.
+  const [view, setView] = useState<ViewMode>("grid");
 
   const [organizing, setOrganizing] = useState<Resource | null>(null);
   const [organizeError, setOrganizeError] = useState("");
   const [deleting, setDeleting] = useState<Resource | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("zohra:resources-view");
+      if (saved === "list" || saved === "grid") setView(saved);
+    } catch {
+      /* storage can be blocked; the default is fine */
+    }
+  }, []);
+
+  function changeView(next: ViewMode) {
+    setView(next);
+    try {
+      window.localStorage.setItem("zohra:resources-view", next);
+    } catch {
+      /* ignore */
+    }
+  }
 
   // ---- data --------------------------------------------------------------
   const loadData = useCallback(async (showLoading = true) => {
@@ -214,7 +235,11 @@ function ResourcesContent() {
     }
   }
 
+  const toneMap = useMemo(() => buildToneMap(years), [years]);
+
   const ctx: RowContext = {
+    view,
+    toneOf: (subjectId) => (subjectId ? (toneMap.get(subjectId) ?? NEUTRAL_TONE) : NEUTRAL_TONE),
     now,
     busyId,
     deletingId,
@@ -306,7 +331,7 @@ function ResourcesContent() {
     <div className="mx-auto w-full min-w-0 max-w-[1200px] space-y-5 pb-10 sm:space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Resources</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Resources</h1>
           <div className="mt-1.5 min-h-5 text-sm text-muted-foreground" aria-live="polite">
             {loading ? <Skeleton className="h-4 w-56 rounded-md" aria-hidden="true" /> : summary}
           </div>
@@ -323,11 +348,35 @@ function ResourcesContent() {
 
       {loadError && <InlineError message={loadError} onRetry={() => void loadData()} />}
 
+      {!loading && reviewCount > 0 && tab !== "review" && (
+        <button
+          type="button"
+          onClick={() => navigate({ tab: "review", folder: null }, "push")}
+          className={cn(
+            "group flex w-full items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-left motion-safe:transition-colors hover:bg-amber-500/15 sm:p-4",
+            focusRing,
+          )}
+        >
+          <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-xl bg-amber-500/20 text-amber-800 dark:text-amber-300">
+            <CircleAlert size={18} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-foreground">
+              {plural(reviewCount, "file")} {reviewCount === 1 ? "needs" : "need"} a folder
+            </span>
+            <span className="block text-xs text-muted-foreground">Pick where they belong so Zohra AI and your course folders stay tidy.</span>
+          </span>
+          <span className="hidden shrink-0 items-center gap-1 text-sm font-semibold text-amber-900 dark:text-amber-300 sm:inline-flex">
+            Review now <ArrowRight size={15} aria-hidden="true" className="motion-safe:transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </button>
+      )}
+
       <div ref={topRef} className="scroll-mt-4 space-y-4">
         <div
           role="tablist"
           aria-label="Resource views"
-          className="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+          className="flex w-full gap-1 rounded-2xl bg-muted p-1 sm:inline-flex sm:w-auto"
         >
           {tabs.map(({ id, label, count }, index) => {
             const selected = tab === id;
@@ -346,10 +395,10 @@ function ResourcesContent() {
                 onClick={() => navigate({ tab: id, folder: null }, "replace")}
                 onKeyDown={(event) => onTabKeyDown(event, index)}
                 className={cn(
-                  "-mb-px inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3.5 text-sm font-medium motion-safe:transition-colors",
+                  "inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-2 text-[13px] font-semibold sm:gap-2 sm:px-4 sm:text-sm motion-safe:transition-colors sm:flex-none",
                   selected
-                    ? "border-violet-600 text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
                   focusRing,
                 )}
               >
@@ -374,15 +423,23 @@ function ResourcesContent() {
             sort={sort}
             onSort={setSort}
             showSort={showSort}
+            view={view}
+            onView={changeView}
           />
         )}
 
         <div id="resources-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="pt-1">
           {loading ? (
             tab === "courses" && !searching ? (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true" aria-label="Loading folders">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(230px,1fr))]" aria-busy="true" aria-label="Loading folders">
                 {[1, 2, 3, 4, 5, 6].map((item) => (
-                  <Skeleton key={item} className="h-[84px]" />
+                  <Skeleton key={item} className="h-[140px]" />
+                ))}
+              </div>
+            ) : view === "grid" ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] sm:gap-4" aria-busy="true" aria-label="Loading files">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
+                  <Skeleton key={item} className="h-[250px]" />
                 ))}
               </div>
             ) : (
@@ -529,7 +586,7 @@ function FlatList({
           {plural(list.length, "file")}
         </p>
       </div>
-      <ResourceList resources={list} ctx={ctx} label={heading} />
+      <ResourceList resources={list} ctx={ctx} label={heading} addTile={tab === "all" && !searching} />
     </section>
   );
 }

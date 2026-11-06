@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { LayoutGrid, List, Search, X } from "lucide-react";
 import {
   filterLabels,
   sortLabels,
@@ -9,6 +9,7 @@ import {
 } from "@/lib/resources-view";
 import { cn } from "@/lib/utils";
 import { focusRing } from "@/components/dashboard/shared";
+import type { ViewMode } from "@/components/resources/resource-row";
 
 type Props = {
   query: string;
@@ -20,9 +21,11 @@ type Props = {
   sort: SortKey;
   onSort: (value: SortKey) => void;
   showSort: boolean;
+  view: ViewMode;
+  onView: (value: ViewMode) => void;
 };
 
-export function Toolbar({ query, onQuery, filter, onFilter, counts, sort, onSort, showSort }: Props) {
+export function Toolbar({ query, onQuery, filter, onFilter, counts, sort, onSort, showSort, view, onView }: Props) {
   // Only offer types the library actually contains (plus whichever is active).
   const chips = (Object.keys(filterLabels) as FileFilter[]).filter(
     (id) => id === "all" || id === filter || counts[id] > 0,
@@ -68,7 +71,7 @@ export function Toolbar({ query, onQuery, filter, onFilter, counts, sort, onSort
         </div>
 
         {showSort && (
-          <div>
+          <div className="flex gap-2">
             <label htmlFor="resource-sort" className="sr-only">
               Sort files
             </label>
@@ -77,7 +80,7 @@ export function Toolbar({ query, onQuery, filter, onFilter, counts, sort, onSort
               value={sort}
               onChange={(event) => onSort(event.target.value as SortKey)}
               className={cn(
-                "min-h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground sm:w-44",
+                "min-h-11 w-full min-w-0 flex-1 rounded-xl border border-input bg-background px-3 text-sm text-foreground sm:w-44 sm:flex-none",
                 focusRing,
               )}
             >
@@ -87,6 +90,25 @@ export function Toolbar({ query, onQuery, filter, onFilter, counts, sort, onSort
                 </option>
               ))}
             </select>
+            <div role="group" aria-label="Layout" className="inline-flex shrink-0 rounded-xl border border-input bg-background p-1">
+              {([["grid", LayoutGrid, "Grid view"], ["list", List, "List view"]] as const).map(([id, Icon, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={view === id}
+                  aria-label={label}
+                  title={label}
+                  onClick={() => onView(id)}
+                  className={cn(
+                    "grid size-9 place-items-center rounded-lg motion-safe:transition-colors",
+                    view === id ? "bg-violet-500/15 text-violet-700 dark:text-violet-200" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    focusRing,
+                  )}
+                >
+                  <Icon size={17} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
