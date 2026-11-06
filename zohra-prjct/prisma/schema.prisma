@@ -20,6 +20,7 @@ model User {
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  onboardingVersion Int   @default(0)
   sessions      Session[]
   accounts      Account[]
   resources     Resource[]

@@ -14,6 +14,7 @@ import {
   ChevronRight,
   FolderKanban,
   Home,
+  HelpCircle,
   Ellipsis,
   LayoutGrid,
   ListTodo,
@@ -30,6 +31,7 @@ import {
 import { signOutAndClearCookies, useSession } from "@/lib/auth-client";
 import { localDateString, type TaskRecord } from "@/lib/task-utils";
 import { useTheme } from "next-themes";
+import { FirstTimeTour } from "@/components/onboarding/first-time-tour";
 
 const navigation = [
   { label: "Overview", href: "/dashboard", icon: Home },
@@ -421,6 +423,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               />
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
+              <button type="button" onClick={() => window.dispatchEvent(new Event("zohra:open-tour"))} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-xs font-medium text-neutral-300 transition hover:bg-white/[0.1] hover:text-white" aria-label="Open product tour" title="Take a tour"><HelpCircle size={16}/><span className="hidden sm:inline">Tour</span></button>
               <button
                 aria-label="Messages coming soon"
                 title="Messages are coming soon"
@@ -488,6 +491,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {children}
           </div>
         </section>
+        <FirstTimeTour />
         <>
           {mobileMoreOpen && (
             <button

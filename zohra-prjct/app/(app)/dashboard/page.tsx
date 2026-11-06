@@ -25,10 +25,6 @@ import {
   AskZohraCard,
   type ConversationSummary,
 } from "@/components/dashboard/ask-zohra-card";
-import {
-  OnboardingChecklist,
-  type OnboardingStep,
-} from "@/components/dashboard/onboarding-checklist";
 
 // Module-level selectors keep useJson's request identity stable.
 const selectResources = (payload: unknown): DashboardResource[] => {
@@ -164,39 +160,6 @@ export default function DashboardPage() {
         ? "Today's plan is complete."
         : "Nothing urgent right now.";
 
-  // ---- onboarding --------------------------------------------------------
-  const loadedAll =
-    !tasksLoading &&
-    !resourcesState.isLoading &&
-    !chatsState.isLoading &&
-    !taskError &&
-    !resourcesState.error &&
-    !chatsState.error;
-
-  const steps: OnboardingStep[] = [
-    {
-      id: "upload",
-      title: "Upload a resource",
-      hint: "Notes, slides or a PDF",
-      href: "/upload",
-      done: resources.length > 0,
-    },
-    {
-      id: "task",
-      title: "Plan a task",
-      hint: "Pick one thing for today",
-      href: today ? `/tasks?date=${today}` : "/tasks",
-      done: tasks.length > 0,
-    },
-    {
-      id: "ai",
-      title: "Ask Zohra AI",
-      hint: "Try a question about a topic",
-      href: "/zohra-ai",
-      done: conversations.length > 0,
-    },
-  ];
-  const showOnboarding = loadedAll && steps.some((step) => !step.done);
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-[1200px] space-y-5 pb-8 sm:space-y-6">
@@ -226,7 +189,6 @@ export default function DashboardPage() {
         </Link>
       </header>
 
-      {showOnboarding && <OnboardingChecklist steps={steps} />}
 
       {/* Mobile: a single column, today's plan first. Desktop: 2/3 + 1/3. */}
       <div className="grid grid-cols-1 gap-5 sm:gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
