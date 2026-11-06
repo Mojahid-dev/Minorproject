@@ -140,8 +140,11 @@ For Google OAuth, register `http://localhost:3000/api/auth/callback/google` as a
 | `/tasks` | Authenticated personal task list with Today, Upcoming, Unscheduled, and Completed views. |
 | `/calendar` | Authenticated monthly calendar and selected-day task agenda. |
 | `/resources` | Authenticated resource library. |
+| `/resources/courses` | Authenticated study-year, semester, subject, and chapter organizer. |
+| `/resources/[resourceId]` | Authenticated resource details and extracted text. |
 | `/upload` | Authenticated resource upload flow. |
 | `/profile`, `/settings` | Authenticated account and profile management. |
+| `/zohra-ai` | Authenticated study assistant with optional document context. |
 | `/admin/recognition` | Private recognition review queue; access is limited to IDs in `ZOHRA_RECOGNITION_REVIEWER_IDS`. |
 
 ### API
@@ -186,6 +189,8 @@ The generated Prisma client is written to `lib/generated/prisma` and is ignored 
 6. Deploy and check the build and runtime logs. A successful build generates the Prisma client, but it does not apply database migrations automatically.
 
 See [VERCEL_SETUP.md](./VERCEL_SETUP.md) for the repository's deployment checklist.
+
+For feature walkthroughs, architecture, API endpoints, operational procedures, contributing, and security reporting, see the [documentation index](../docs/README.md).
 
 ## Project structure
 

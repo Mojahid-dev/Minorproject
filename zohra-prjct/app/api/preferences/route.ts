@@ -3,6 +3,17 @@ import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
+const PREFERENCE_SELECT = {
+  emailNotifications: true,
+  focusMode: true,
+  pushTaskDue: true,
+  pushExamSoon: true,
+  pushAiFileReady: true,
+  pushReminderHour: true,
+} as const;
+
+const PUSH_SWITCHES = ["pushTaskDue", "pushExamSoon", "pushAiFileReady"] as const;
+
 async function currentUserId() {
   const session = await auth.api.getSession({ headers: await headers() });
   return session?.user?.id ?? null;
@@ -16,7 +27,7 @@ export async function GET() {
     where: { userId },
     create: { userId },
     update: {},
-    select: { emailNotifications: true, focusMode: true },
+    select: PREFERENCE_SELECT,
   });
   return NextResponse.json({ preferences });
 }
@@ -31,7 +42,33 @@ export async function PATCH(request: Request) {
       { error: "Invalid preferences." },
       { status: 400 },
     );
-  const data: { emailNotifications?: boolean; focusMode?: boolean } = {};
+  const data: {
+    emailNotifications?: boolean;
+    focusMode?: boolean;
+    pushTaskDue?: boolean;
+    pushExamSoon?: boolean;
+    pushAiFileReady?: boolean;
+    pushReminderHour?: number;
+  } = {};
+  for (const key of PUSH_SWITCHES) {
+    if (key in body) {
+      if (typeof body[key] !== "boolean")
+        return NextResponse.json(
+          { error: "Notification switches must be true or false." },
+          { status: 400 },
+        );
+      data[key] = body[key];
+    }
+  }
+  if ("pushReminderHour" in body) {
+    const hour = body.pushReminderHour;
+    if (!Number.isInteger(hour) || hour < 0 || hour > 23)
+      return NextResponse.json(
+        { error: "Reminder time must be a whole hour between 0 and 23." },
+        { status: 400 },
+      );
+    data.pushReminderHour = hour;
+  }
   if ("emailNotifications" in body) {
     if (typeof body.emailNotifications !== "boolean")
       return NextResponse.json(
@@ -57,7 +94,7 @@ export async function PATCH(request: Request) {
     where: { userId },
     create: { userId, ...data },
     update: data,
-    select: { emailNotifications: true, focusMode: true },
+    select: PREFERENCE_SELECT,
   });
   return NextResponse.json({ preferences });
 }

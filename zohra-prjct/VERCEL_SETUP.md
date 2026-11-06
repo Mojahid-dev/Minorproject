@@ -1,68 +1,39 @@
-Vercel deployment checklist for Zohra
+# Vercel deployment
 
-1) Build command
+The Next.js application is in this directory. When importing the repository, set the Vercel project root to `zohra-prjct`.
 
-Set the Vercel Build Command to:
+## Build settings
 
-```
-pnpm vercel-build
-```
+- Package manager: pnpm (from `pnpm-lock.yaml`)
+- Install command: `pnpm install` (or allow Vercel to detect pnpm)
+- Build command: `pnpm vercel-build`
+- Output: use the Next.js default
 
-This runs `prisma generate` then `next build` (script added in `package.json`).
+The build script runs `prisma generate` followed by `next build`. It does not apply database migrations.
 
-2) Install command
+## Environment variables
 
-If using pnpm, set Install Command to:
+Configure values in Vercel Project Settings → Environment Variables for each target environment:
 
-```
-pnpm install
-```
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | PostgreSQL runtime connection. |
+| `DIRECT_URL` | Provider-dependent | Direct connection for Prisma CLI/migrations; falls back to `DATABASE_URL`. |
+| `BETTER_AUTH_SECRET` | Yes | Long, random Better Auth session secret. |
+| `BETTER_AUTH_URL` | Yes | Canonical deployed origin. |
+| `NEXT_PUBLIC_BETTER_AUTH_URL` | Recommended | Client authentication origin; set to the deployed origin. |
+| `BLOB_READ_WRITE_TOKEN` | Yes for file workflows | Vercel Blob read/write token. |
+| `GEMINI_API_KEY` | Yes for study assistant | Google Gemini API credential. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional | Set both to enable Google sign-in. |
+| `ZOHRA_RECOGNITION_REVIEWER_IDS` | Optional | Comma-separated reviewer user IDs. Leave unset if no review accounts should be enabled. |
 
-(Or leave blank if Vercel detects pnpm automatically.)
+Do not commit secrets or populate the checked-in `.env.example` with real credentials.
 
-3) Environment variables
+## Release sequence
 
-Add these to Vercel → Project → Settings → Environment Variables:
+1. Configure the project root, build settings, and environment variables.
+2. If using Google sign-in, add `https://your-domain.com/api/auth/callback/google` to the OAuth client's authorized redirect URIs. Configure the corresponding production origin in the two Better Auth URL variables.
+3. Apply committed migrations to the intended production database from this project directory with `pnpm prisma migrate deploy`. Schedule this step before the new code needs the changed schema. Migrations are not automatically run by the Vercel build.
+4. Deploy and inspect build and runtime logs. Verify sign-in and the configured resource storage flow; exercise Gemini and OAuth when enabled.
 
-- `DATABASE_URL` — your Postgres connection string (required)
-- `DIRECT_URL` — optional direct database connection for Prisma CLI operations; defaults to `DATABASE_URL` when omitted
-- `BETTER_AUTH_URL` and `NEXT_PUBLIC_BETTER_AUTH_URL` — the production site origin
-- `BETTER_AUTH_SECRET` — a long, random secret
-- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` — optional; configure both to enable Google sign-in
-- `BLOB_READ_WRITE_TOKEN` — required for uploads
-
-For Google sign-in, add `https://your-domain.com/api/auth/callback/google` as an authorized redirect URI in the Google OAuth web client. For local development, use `http://localhost:3000/api/auth/callback/google`.
-
-Make sure values are correct for the target environment (production).
-
-4) Redeploy & clear cache
-
-When you trigger a new deploy, choose "Redeploy" and enable "Clear cache" (or use Vercel's redeploy UI option) so the build runs fresh and `prisma generate` executes.
-
-5) Local verification (before pushing)
-
-Run locally to ensure generation and build succeed:
-
-```bash
-pnpm prisma generate
-pnpm build
-```
-
-Confirm `lib/generated/prisma/client.ts` exists after `prisma generate`.
-
-6) Notes and troubleshooting
-
-- Do NOT commit generated Prisma client files into git — rely on `prisma generate` during build.
-- If `prisma generate` fails on Vercel, check the build logs to see whether `DATABASE_URL` is available to the build step.
-- If your database is private or blocked from the build environment, you can use a `DIRECT_URL` or set up a read-only connection string for generation.
-
-7) Optional: verify versions
-
-Ensure `prisma` and `@prisma/client` are compatible. Update if necessary:
-
-```bash
-pnpm add -D prisma@latest
-pnpm add @prisma/client@latest
-```
-
-If you want, I can prepare these env values or walk you through the Vercel UI steps.
+For the full release and troubleshooting notes, see [`../docs/OPERATIONS.md`](../docs/OPERATIONS.md). Local setup and command details are in [`README.md`](README.md).

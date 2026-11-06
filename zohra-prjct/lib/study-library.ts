@@ -2,6 +2,7 @@ import { get } from "@vercel/blob";
 import { inflateRawSync } from "node:zlib";
 import { prisma } from "@/lib/prisma";
 import { extractPdfText } from "@/lib/pdf-text-extraction";
+import { notifyFileProcessed } from "@/lib/notifications";
 
 const MAX_TEXT_CHARS = 500_000;
 const MAX_XML_FILE_BYTES = 8 * 1024 * 1024;
@@ -228,6 +229,8 @@ export async function processStudyResource(resourceId: string, retryStale = fals
   });
   if (!claimed.count) return;
 
+  const startedAt = Date.now();
+  let finished: { pageCount: number | null; textStatus: string; organizationStatus: string } | null = null;
   try {
     let result: Awaited<ReturnType<typeof extractText>> = { text: "", textLength: 0, pageCount: null, hasText: false };
     let extractionError: string | null = null;
@@ -275,6 +278,11 @@ export async function processStudyResource(resourceId: string, retryStale = fals
         chapterId: preserveOrganization ? resource.chapterId : location.chapterId,
       },
     });
+    finished = {
+      pageCount: result.pageCount,
+      textStatus: textExtractionStatus,
+      organizationStatus: preserveOrganization ? resource.organizationStatus : location.organizationStatus,
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Resource processing failed.";
     await prisma.resource.update({
@@ -286,6 +294,19 @@ export async function processStudyResource(resourceId: string, retryStale = fals
         organizationStatus: preserveOrganization ? resource.organizationStatus : "FAILED",
         organizationNote: preserveOrganization ? resource.organizationNote : "Text could not be read. You can retry processing or assign this file manually.",
       },
+    });
+  }
+
+  // Outside the try block on purpose: a notification problem must never mark the file as failed.
+  if (finished) {
+    await notifyFileProcessed({
+      userId: resource.userId,
+      resourceId: resource.id,
+      name: resource.originalName,
+      pageCount: finished.pageCount,
+      elapsedMs: Date.now() - startedAt,
+      textStatus: finished.textStatus,
+      organizationStatus: finished.organizationStatus,
     });
   }
 }

@@ -14,6 +14,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { useTheme } from "next-themes";
 import { RecognitionRequestCard } from "@/components/recognition/request-card";
+import { PushNotificationSettings } from "@/components/settings/push-notification-settings";
 
 const imageLimit = 1024 * 1024;
 type ProfileUser = { name: string; email: string; image?: string | null };
@@ -322,7 +323,7 @@ export default function SettingsPage() {
             <div>
               <h2 className="font-semibold text-white">Notifications</h2>
               <p className="text-sm text-neutral-500">
-                Choose your email alert preference.
+                Choose how Zohra reaches you.
               </p>
             </div>
           </div>
@@ -344,6 +345,7 @@ export default function SettingsPage() {
             />
           </label>
           <p className="mt-3 text-xs text-neutral-500">Email alert delivery is not active yet. This preference will be saved to your account.</p>
+          <PushNotificationSettings />
         </section>
 
         <section id="focus-settings" className="scroll-mt-24 rounded-3xl border border-white/[0.08] bg-[#141518] p-4 sm:p-6">
