@@ -144,7 +144,7 @@ function UploadFlow({ item }: { item: UploadItem }) {
     <div className="mt-3 rounded-xl border border-white/[0.07] bg-black/20 p-3">
       <div className="flex items-center justify-between gap-3">
         <p
-          className={`min-w-0 truncate text-xs font-medium ${item.status === "error" ? "text-rose-300" : item.status === "complete" ? "text-emerald-300" : "text-neutral-300"}`}
+          className={`min-w-0 truncate text-xs font-medium ${item.status === "error" ? "text-rose-700 dark:text-rose-300" : item.status === "complete" ? "text-emerald-700 dark:text-emerald-300" : "text-neutral-300"}`}
         >
           {item.status === "uploading" && (
             <LoaderCircle size={13} className="mr-1.5 inline animate-spin" />
@@ -161,7 +161,7 @@ function UploadFlow({ item }: { item: UploadItem }) {
         )}
       </div>
       {item.status === "error" ? (
-        <p role="alert" className="mt-1 text-xs leading-5 text-rose-200">
+        <p role="alert" className="mt-1 text-xs leading-5 text-rose-700 dark:text-rose-200">
           {item.error || "Please try adding this file again."}
         </p>
       ) : (
@@ -599,7 +599,7 @@ export default function UploadPage() {
         />
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-200">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-700 dark:text-violet-200">
               Your resource library
             </p>
             <h1 className="mt-2 max-w-2xl text-3xl font-semibold leading-tight tracking-[-0.055em] sm:text-5xl">
@@ -609,7 +609,7 @@ export default function UploadPage() {
               Add a file once. Find it again when you’re ready to learn.
             </p>
           </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200/10 bg-emerald-200/[0.06] px-3 py-2 text-xs font-medium text-emerald-100">
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200/10 bg-emerald-200/[0.06] px-3 py-2 text-xs font-medium text-emerald-800 dark:text-emerald-100">
             <ShieldCheck size={15} /> Private to your workspace
           </div>
         </div>
@@ -618,7 +618,7 @@ export default function UploadPage() {
       {validationErrors.length > 0 && (
         <div
           role="alert"
-          className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-left text-sm text-red-200"
+          className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-left text-sm text-red-700 dark:text-red-200"
         >
           <p className="font-medium">Some files were not accepted</p>
           <ul className="mt-2 text-xs">
@@ -629,7 +629,7 @@ export default function UploadPage() {
       {organizeNotice && (
         <div
           role="status"
-          className="mt-4 rounded-xl border border-emerald-200/15 bg-emerald-200/[0.06] px-4 py-3 text-sm text-emerald-100"
+          className="mt-4 rounded-xl border border-emerald-200/15 bg-emerald-200/[0.06] px-4 py-3 text-sm text-emerald-800 dark:text-emerald-100"
         >
           {organizeNotice}
         </div>
@@ -639,7 +639,7 @@ export default function UploadPage() {
         <section className="mt-5 overflow-hidden rounded-[26px] border border-violet-200/15 bg-[radial-gradient(ellipse_at_top_right,rgba(139,92,246,0.12),transparent_45%),#141418] p-4 sm:p-6">
           <div className="flex flex-col gap-3 border-b border-white/[0.08] pb-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <div className="flex items-center gap-2 text-violet-100">
+              <div className="flex items-center gap-2 text-violet-700 dark:text-violet-100">
                 <span className="grid size-9 place-items-center rounded-xl bg-violet-200/10">
                   <Tag size={17} />
                 </span>
@@ -688,7 +688,7 @@ export default function UploadPage() {
                             .slice(0, 50),
                     )
                   }
-                  className="min-h-9 rounded-lg px-2.5 text-xs font-medium text-violet-200 hover:bg-white/[0.06]"
+                  className="min-h-9 rounded-lg px-2.5 text-xs font-medium text-violet-700 dark:text-violet-200 hover:bg-white/[0.06]"
                 >
                   {selectedOrganizationIds.length === needsOrganization.length
                     ? "Clear selection"
@@ -842,7 +842,7 @@ export default function UploadPage() {
                   {tags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center gap-1 rounded-lg bg-violet-200/10 px-2 py-1 text-xs text-violet-100"
+                      className="inline-flex items-center gap-1 rounded-lg bg-violet-200/10 px-2 py-1 text-xs text-violet-700 dark:text-violet-100"
                     >
                       #{tag}
                       <button
@@ -880,7 +880,7 @@ export default function UploadPage() {
                     type="button"
                     onClick={() => addTag()}
                     disabled={!tagDraft.trim()}
-                    className="rounded-lg px-2 py-1 text-xs font-medium text-violet-200 hover:bg-white/[0.06] disabled:opacity-40"
+                    className="rounded-lg px-2 py-1 text-xs font-medium text-violet-700 dark:text-violet-200 hover:bg-white/[0.06] disabled:opacity-40"
                   >
                     Add
                   </button>
@@ -891,7 +891,7 @@ export default function UploadPage() {
                 </p>
               </div>
               <div className="rounded-xl border border-violet-200/10 bg-violet-200/[0.04] px-3 py-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-200">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-700 dark:text-violet-200">
                   Folder preview
                 </p>
                 <p className="mt-1 break-words text-sm text-neutral-200">
@@ -957,7 +957,7 @@ export default function UploadPage() {
             className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
           />
           <div className="w-full max-w-md">
-            <div className="mx-auto grid size-14 place-items-center rounded-2xl border border-violet-100/15 bg-violet-100/[0.08] text-violet-100 shadow-[0_10px_40px_rgba(139,92,246,0.1)] sm:size-16">
+            <div className="mx-auto grid size-14 place-items-center rounded-2xl border border-violet-100/15 bg-violet-100/[0.08] text-violet-700 dark:text-violet-100 shadow-[0_10px_40px_rgba(139,92,246,0.1)] sm:size-16">
               <UploadCloud size={25} strokeWidth={1.7} />
             </div>
             <h2 className="mt-5 text-xl font-semibold tracking-tight sm:text-2xl">
@@ -1042,7 +1042,7 @@ export default function UploadPage() {
           </div>
 
           <p className="mt-4 flex items-center gap-2 border-t border-white/[0.07] pt-4 text-xs text-neutral-400">
-            <ShieldCheck size={15} className="shrink-0 text-emerald-200" />{" "}
+            <ShieldCheck size={15} className="shrink-0 text-emerald-800 dark:text-emerald-200" />{" "}
             Files up to 100 MB each
           </p>
 
@@ -1187,7 +1187,7 @@ export default function UploadPage() {
                         {resource.tags?.map((tag) => (
                           <span
                             key={tag}
-                            className="rounded-md bg-violet-200/[0.08] px-2 py-0.5 text-[10px] text-violet-200"
+                            className="rounded-md bg-violet-200/[0.08] px-2 py-0.5 text-[10px] text-violet-700 dark:text-violet-200"
                           >
                             #{tag}
                           </span>

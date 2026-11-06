@@ -83,7 +83,7 @@ export default async function ProfilePage() {
     <div className="mx-auto max-w-6xl pb-10 text-white">
       <header className="mb-5 flex flex-col items-stretch justify-between gap-4 sm:mb-7 sm:flex-row sm:items-end">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-700 dark:text-violet-300">
             Your corner of Zohra
           </p>
           <h1 className="mt-2 text-4xl font-semibold tracking-[-0.055em] sm:text-5xl">
@@ -102,7 +102,7 @@ export default async function ProfilePage() {
         </Link>
       </header>
 
-      <section className="relative isolate overflow-hidden rounded-[28px] border border-white/10 bg-[#111117] shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
+      <section className="keep-dark relative isolate overflow-hidden rounded-[28px] border border-white/10 bg-[#111117] shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
         <div
           aria-hidden="true"
           className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_10%_0%,rgba(139,92,246,0.24),transparent_42%),radial-gradient(ellipse_at_90%_10%,rgba(56,189,248,0.15),transparent_40%),linear-gradient(135deg,#1b1b25,#101014_55%,#15151b)]"
@@ -135,14 +135,14 @@ export default async function ProfilePage() {
               </span>
             </div>
             <div className="min-w-0 pb-1">
-              <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-medium text-violet-100">
+              <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-medium text-violet-700 dark:text-violet-100">
                 <Sparkles size={12} /> Personal workspace
               </div>
               <h2 className="break-words text-2xl font-semibold tracking-[-0.045em] text-white sm:text-4xl">
                 {user.name}
               </h2>
               {latestRecognition?.status === "APPROVED" && (
-                <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-violet-200/25 bg-violet-200/10 px-2.5 py-1 text-xs font-semibold text-violet-100">
+                <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-violet-200/25 bg-violet-200/10 px-2.5 py-1 text-xs font-semibold text-violet-700 dark:text-violet-100">
                   <Award size={14} />
                   Zohra Recognized
                 </span>
@@ -153,7 +153,7 @@ export default async function ProfilePage() {
                 {user.emailVerified && (
                   <BadgeCheck
                     size={16}
-                    className="shrink-0 text-sky-300"
+                    className="shrink-0 text-sky-700 dark:text-sky-300"
                     aria-label="Email verified"
                   />
                 )}
@@ -203,7 +203,7 @@ export default async function ProfilePage() {
       {isRecognitionReviewer(user.id) && (
         <Link
           href="/admin/recognition"
-          className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-violet-200/15 px-3.5 text-sm font-medium text-violet-100 transition hover:bg-violet-200/[0.08]"
+          className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-violet-200/15 px-3.5 text-sm font-medium text-violet-700 dark:text-violet-100 transition hover:bg-violet-200/[0.08]"
         >
           <ShieldCheck size={16} />
           Review recognition requests
@@ -226,7 +226,7 @@ export default async function ProfilePage() {
                 where you left off.
               </p>
             </div>
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-300/10 text-violet-200">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-300/10 text-violet-700 dark:text-violet-200">
               <BookOpen size={19} />
             </span>
           </div>
@@ -335,7 +335,7 @@ export default async function ProfilePage() {
               </p>
               <Link
                 href="/upload"
-                className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-violet-200 hover:text-white"
+                className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-violet-700 dark:text-violet-200 hover:text-white"
               >
                 Add a resource <ArrowRight size={14} />
               </Link>

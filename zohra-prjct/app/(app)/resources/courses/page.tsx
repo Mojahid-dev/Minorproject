@@ -235,7 +235,7 @@ export default function CourseStructurePage() {
       </Link>
       <header className="mt-5 flex flex-col gap-3 border-b border-white/[0.08] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-200">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-700 dark:text-violet-200">
             Your study system
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-5xl">
@@ -248,7 +248,7 @@ export default function CourseStructurePage() {
           </p>
         </div>
         <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-neutral-300">
-          <FolderTree size={16} className="text-violet-200" /> Year → semester →
+          <FolderTree size={16} className="text-violet-700 dark:text-violet-200" /> Year → semester →
           subject → chapter
         </div>
       </header>
@@ -256,7 +256,7 @@ export default function CourseStructurePage() {
       {error && (
         <div
           role="alert"
-          className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/[0.08] px-4 py-3 text-sm text-rose-200"
+          className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/[0.08] px-4 py-3 text-sm text-rose-700 dark:text-rose-200"
         >
           {error}
         </div>
@@ -264,7 +264,7 @@ export default function CourseStructurePage() {
       {notice && (
         <div
           role="status"
-          className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/[0.07] px-4 py-3 text-sm text-emerald-100"
+          className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/[0.07] px-4 py-3 text-sm text-emerald-800 dark:text-emerald-100"
         >
           {notice}
         </div>
@@ -273,7 +273,7 @@ export default function CourseStructurePage() {
       <div className="mt-4 grid min-w-0 gap-3 sm:mt-6 sm:gap-5 lg:grid-cols-[minmax(280px,0.75fr)_minmax(0,1.25fr)]">
         <section className="h-fit rounded-2xl border border-white/[0.08] bg-[#151518] p-4 sm:p-5">
           <div className="flex items-start gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-200/10 text-violet-100">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-200/10 text-violet-700 dark:text-violet-100">
               <Plus size={18} />
             </span>
             <div>
@@ -354,7 +354,7 @@ export default function CourseStructurePage() {
                   />
                 </span>
                 {!hasParent && (
-                  <span className="mt-1 block text-[11px] text-amber-200">
+                  <span className="mt-1 block text-[11px] text-amber-800 dark:text-amber-200">
                     Create the parent level first.
                   </span>
                 )}
@@ -529,10 +529,10 @@ export default function CourseStructurePage() {
             aria-describedby="delete-folder-description"
             className="my-auto w-full max-w-md rounded-3xl border border-white/10 bg-[#191a1e] p-5 shadow-2xl sm:p-6"
           >
-            <span className="grid size-11 place-items-center rounded-2xl bg-rose-300/10 text-rose-200">
+            <span className="grid size-11 place-items-center rounded-2xl bg-rose-300/10 text-rose-700 dark:text-rose-200">
               <Trash2 size={19} />
             </span>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.15em] text-rose-200">
+            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.15em] text-rose-700 dark:text-rose-200">
               Delete folder
             </p>
             <h2
@@ -555,7 +555,7 @@ export default function CourseStructurePage() {
             {error && (
               <p
                 role="alert"
-                className="mt-3 rounded-xl bg-rose-300/[0.08] px-3 py-2 text-sm text-rose-200"
+                className="mt-3 rounded-xl bg-rose-300/[0.08] px-3 py-2 text-sm text-rose-700 dark:text-rose-200"
               >
                 {error}
               </p>
@@ -674,7 +674,7 @@ function StructureRow({
                 onDelete({ kind, id, name, aliases: aliases.join(", ") })
               }
               aria-label={`Delete ${name}`}
-              className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-rose-300/15 bg-rose-300/[0.06] px-2.5 text-xs font-medium text-rose-200 transition hover:bg-rose-300/15"
+              className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-rose-300/15 bg-rose-300/[0.06] px-2.5 text-xs font-medium text-rose-700 dark:text-rose-200 transition hover:bg-rose-300/15"
             >
               <Trash2 size={14} />
               Delete

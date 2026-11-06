@@ -14,12 +14,13 @@
 }
 .light .planner {
   --paper: #ffffff;
-  --ink: #17181c;
-  --ink-soft: #5f6371;
-  --rule: #dcdee6;
-  --pen: #2540d9;
-  --mark: rgb(255 226 40 / 0.62);
-  --flag: #d92d20;
+  --ink: #17142e;
+  --ink-soft: #5b5776;
+  --rule: #e1ddf0;
+  --pen: #5f36ea;
+  /* The highlighter: study notes get marked in lime. */
+  --mark: rgb(206 240 90 / 0.7);
+  --flag: #d42b3c;
 }
 
 @keyframes pen-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
@@ -105,39 +106,56 @@
 }
 
 :root {
-  --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  /* ---------- Light theme: "indigo and chalk" ----------
+     Indigo-tinted paper, near-black indigo ink, a deep violet for actions and a lime
+     highlighter for marks. The sidebar stays dark indigo so the brand reads in both themes. */
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: #f3f2f9;
+  --foreground: #17142e;
+  --card: #ffffff;
+  --card-foreground: #17142e;
+  --popover: #ffffff;
+  --popover-foreground: #17142e;
+  --primary: #5f36ea;
+  --primary-foreground: #f6f3ff;
+  --secondary: #ecebf6;
+  --secondary-foreground: #17142e;
+  --muted: #ecebf6;
+  --muted-foreground: #5b5776;
+  --accent: #e9e4ff;
+  --accent-foreground: #3e22a0;
+  --destructive: #d42b3c;
+  --border: #e1ddf0;
+  --input: #d3cee8;
+  --ring: #7a5af8;
+  --chart-1: #5f36ea;
+  --chart-2: #0d9488;
+  --chart-3: #d97706;
+  --chart-4: #db2777;
+  --chart-5: #2563eb;
+  --sidebar: #17133a;
+  --sidebar-foreground: #f1eeff;
+  --sidebar-primary: #d4f566;
+  --sidebar-primary-foreground: #1c2a00;
+  --sidebar-accent: rgb(255 255 255 / 0.08);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.1);
+  --sidebar-ring: #d4f566;
+}
+
+/* A deeper, bluer violet for the light theme, so buttons and links hold their own on paper. */
+.light {
+  --color-violet-50: #f4f1ff;
+  --color-violet-100: #e9e3ff;
+  --color-violet-200: #d4c9ff;
+  --color-violet-300: #b7a5ff;
+  --color-violet-400: #9778ff;
+  --color-violet-500: #7752f6;
+  --color-violet-600: #5f36ea;
+  --color-violet-700: #4d29c9;
+  --color-violet-800: #3e22a0;
+  --color-violet-900: #2f1a78;
+  --color-violet-950: #1c1048;
 }
 
 .dark {
@@ -241,150 +259,184 @@
   }
 }
 
-/* Keep workspace theme overrides scoped to the authenticated app, leaving the
-   public marketing pages on their own visual system. */
-.light .workspace-shell {
-  background-color: #f3f4f8 !important;
-  color: #20212b !important;
-}
-
-.light .workspace-shell > div,
-.light .workspace-shell .mobile-app-content {
-  background-color: #f3f4f8 !important;
-}
-
-.light .workspace-shell aside {
-  background-color: #ffffff !important;
-  border-color: #e3e5ed !important;
-}
-
-.light .workspace-shell [class*="bg-[#"] {
-  background-color: #ffffff !important;
-}
-
-.light .workspace-shell [class*="bg-gradient-to-br"] {
-  background-image: linear-gradient(145deg, #ffffff, #f3f4f8) !important;
-}
-
-.light .workspace-shell [class*="bg-zinc-950"],
-.light .workspace-shell [class*="bg-zinc-900"] {
-  background-color: #f8f9fc !important;
-}
-
-.light .workspace-shell [class*="bg-black"] {
-  background-color: rgb(241 243 248 / 90%) !important;
-}
-
-.light .workspace-shell [class*="text-white"],
-.light .workspace-shell [class*="text-neutral-100"],
-.light .workspace-shell [class*="text-neutral-200"] {
-  color: #222431 !important;
-}
-
-.light .workspace-shell [class*="text-neutral-300"] {
-  color: #414657 !important;
-}
-
-.light .workspace-shell [class*="text-neutral-400"],
-.light .workspace-shell [class*="text-neutral-500"],
-.light .workspace-shell [class*="text-neutral-600"] {
-  color: #687084 !important;
-}
-
-.light .workspace-shell [class*="border-white/"],
-.light .workspace-shell [class*="border-zinc-800"],
-.light .workspace-shell [class*="border-zinc-700"] {
-  border-color: #e2e5ed !important;
-}
-
-.light .workspace-shell .mobile-app-header {
-  background-color: rgb(248 249 252 / 94%) !important;
-  border-color: #e1e4ed !important;
-}
-
-.light .workspace-shell .mobile-app-dock nav {
-  background-color: rgb(255 255 255 / 94%) !important;
-  border-color: #e0e3ec !important;
-  box-shadow: 0 14px 42px rgb(43 47 67 / 16%);
-}
-
-.light .workspace-shell nav[aria-label="Mobile navigation"] [aria-current="page"] span:first-child,
-.light .workspace-shell nav[aria-label="Mobile navigation"] button[aria-expanded="true"] span:first-child {
-  background-color: #eee9ff !important;
-  color: #5b45a5 !important;
-}
-
+/* ---------- Dark: phone-size navy surfaces (unchanged) ---------- */
 @media (max-width: 1023px) {
-  .workspace-shell,
-  .workspace-shell > div,
-  .workspace-shell .mobile-app-content {
+  .dark .workspace-shell,
+  .dark .workspace-shell > div,
+  .dark .workspace-shell .mobile-app-content {
     background-color: #0d1222 !important;
   }
 
-  .workspace-shell .mobile-app-header {
+  .dark .workspace-shell .mobile-app-header {
     background-color: rgb(13 19 37 / 94%) !important;
     border-color: #252e49 !important;
   }
 
-  .workspace-shell .mobile-app-dock nav {
+  .dark .workspace-shell .mobile-app-dock nav {
     background-color: rgb(24 31 54 / 96%) !important;
     border-color: #303b5d !important;
     box-shadow: 0 14px 42px rgb(0 0 0 / 44%);
   }
 
-  .workspace-shell [class*="bg-gradient-to-br"] {
+  .dark .workspace-shell [class*="bg-gradient-to-br"] {
     background-image: linear-gradient(145deg, #202744, #151b30) !important;
   }
 
-  .workspace-shell [class*="bg-[#"] {
+  .dark .workspace-shell [class*="bg-[#"] {
     background-color: #171e34 !important;
   }
 
-  .workspace-shell [role="menu"] {
+  .dark .workspace-shell [role="menu"] {
     background-color: #1b2340 !important;
     border-color: #374264 !important;
   }
 
-  .workspace-shell nav[aria-label="Mobile navigation"] [aria-current="page"] span:first-child,
-  .workspace-shell nav[aria-label="Mobile navigation"] button[aria-expanded="true"] span:first-child {
+  .dark .workspace-shell nav[aria-label="Mobile navigation"] [aria-current="page"] span:first-child,
+  .dark .workspace-shell nav[aria-label="Mobile navigation"] button[aria-expanded="true"] span:first-child {
     background-color: #343b60 !important;
     color: #e0dcff !important;
   }
+}
 
-  .light .workspace-shell,
-  .light .workspace-shell > div,
-  .light .workspace-shell .mobile-app-content {
-    background-color: #f2f1f8 !important;
-  }
+/* ---------- Light theme for the signed-in workspace ----------
+   Most of the app is written dark-first (zinc and neutral shades, white and black at
+   different opacities). Rather than patch every class, the light theme re-points those
+   palette variables at the light scale, so "zinc-900 card" becomes a white card, "neutral-400
+   text" becomes ink, and "white/10 border" becomes a faint ink line. Dark mode is untouched. */
+.light .workspace-shell {
+  --color-white: #17142e;
+  --color-black: #f3f2f9;
+  --color-zinc-50: #17142e;
+  --color-zinc-100: #1c1938;
+  --color-zinc-200: #2a2646;
+  --color-zinc-300: #413d5c;
+  --color-zinc-400: #5b5776;
+  --color-zinc-500: #6f6b8a;
+  --color-zinc-600: #8e8aa8;
+  --color-zinc-700: #d2cee6;
+  --color-zinc-800: #e3e0f0;
+  --color-zinc-900: #ffffff;
+  --color-zinc-950: #f3f2f9;
+  --color-neutral-50: #17142e;
+  --color-neutral-100: #1c1938;
+  --color-neutral-200: #2a2646;
+  --color-neutral-300: #413d5c;
+  --color-neutral-400: #5b5776;
+  --color-neutral-500: #6f6b8a;
+  --color-neutral-600: #8e8aa8;
+  --color-neutral-700: #d2cee6;
+  --color-neutral-800: #e3e0f0;
+  --color-neutral-900: #ffffff;
+  --color-neutral-950: #f3f2f9;
+  color-scheme: light;
+}
 
-  .light .workspace-shell .mobile-app-header {
-    background-color: rgb(248 247 253 / 95%) !important;
-    border-color: #e3e0ef !important;
-  }
+/* The sidebar, and any surface marked .keep-dark, keep the dark palette: put the original scale back inside them. */
+.light .workspace-shell > div > aside,
+.light .workspace-shell .keep-dark {
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-zinc-50: oklch(98.5% 0 none);
+  --color-zinc-100: oklch(96.7% 0.001 286.375);
+  --color-zinc-200: oklch(92% 0.004 286.32);
+  --color-zinc-300: oklch(87.1% 0.006 286.286);
+  --color-zinc-400: oklch(70.5% 0.015 286.067);
+  --color-zinc-500: oklch(55.2% 0.016 285.938);
+  --color-zinc-600: oklch(44.2% 0.017 285.786);
+  --color-zinc-700: oklch(37% 0.013 285.805);
+  --color-zinc-800: oklch(27.4% 0.006 286.033);
+  --color-zinc-900: oklch(21% 0.006 285.885);
+  --color-zinc-950: oklch(14.1% 0.005 285.823);
+  --color-neutral-50: oklch(98.5% 0 none);
+  --color-neutral-100: oklch(97% 0 none);
+  --color-neutral-200: oklch(92.2% 0 none);
+  --color-neutral-300: oklch(87% 0 none);
+  --color-neutral-400: oklch(70.8% 0 none);
+  --color-neutral-500: oklch(55.6% 0 none);
+  --color-neutral-600: oklch(43.9% 0 none);
+  --color-neutral-700: oklch(37.1% 0 none);
+  --color-neutral-800: oklch(26.9% 0 none);
+  --color-neutral-900: oklch(20.5% 0 none);
+  --color-neutral-950: oklch(14.5% 0 none);
+  color: var(--sidebar-foreground);
+}
+.light .workspace-shell > div > aside {
+  background-color: var(--sidebar) !important;
+  border-color: var(--sidebar-border) !important;
+}
 
-  .light .workspace-shell .mobile-app-dock nav {
-    background-color: rgb(255 255 255 / 95%) !important;
-    border-color: #e2dfed !important;
-  }
+/* A dark indigo feature card (the profile hero) on the light page. */
+.light .workspace-shell .keep-dark {
+  background-color: #17133a;
+  border-color: rgb(255 255 255 / 0.1);
+}
+.light .workspace-shell .keep-dark > [aria-hidden="true"]:first-child {
+  background-image:
+    radial-gradient(ellipse at 8% 0%, rgb(139 92 246 / 0.5), transparent 46%),
+    radial-gradient(ellipse at 92% 8%, rgb(212 245 102 / 0.18), transparent 40%),
+    linear-gradient(135deg, #251c68, #17133a 55%, #110e2c);
+}
+.light .workspace-shell .keep-dark [class*="border-[#"] { border-color: #17133a; }
+.light .workspace-shell .keep-dark [class~="text-violet-700"] { color: #e9e3ff; }
+.light .workspace-shell .keep-dark [class~="text-sky-700"] { color: #7dd3fc; }
+.light .workspace-shell .keep-dark [class*="bg-[#"] { background-color: rgb(255 255 255 / 0.06); }
 
-  .light .workspace-shell [class*="bg-gradient-to-br"] {
-    background-image: linear-gradient(145deg, #ffffff, #f4f1fb) !important;
-  }
+/* Hard-coded dark hex surfaces inside pages become paper cards. */
+.light .workspace-shell [class*="bg-[#"] { background-color: #ffffff; }
+.light .workspace-shell [class*="from-[#"] { --tw-gradient-from: #ffffff; }
+.light .workspace-shell [class*="to-[#"] { --tw-gradient-to: #f6f5fb; }
+.light .workspace-shell [class*="border-[#"] { border-color: var(--border); }
+.light .workspace-shell > div > aside [class*="bg-[#"] { background-color: rgb(255 255 255 / 0.06); }
+.light .workspace-shell > div > aside [class*="from-[#"] { --tw-gradient-from: rgb(255 255 255 / 0.08); }
+.light .workspace-shell > div > aside [class*="to-[#"] { --tw-gradient-to: rgb(255 255 255 / 0.03); }
 
-  .light .workspace-shell [class*="bg-[#"] {
-    background-color: #ffffff !important;
-  }
+/* Sidebar: a lime marker on the current page, like a highlighter swipe. */
+.light .workspace-shell > div > aside a[aria-current="page"] {
+  background-color: rgb(255 255 255 / 0.1);
+  border-color: rgb(255 255 255 / 0.14);
+  box-shadow: none;
+}
+.light .workspace-shell > div > aside a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22%;
+  bottom: 22%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #d4f566;
+}
 
-  .light .workspace-shell [role="menu"] {
-    background-color: #ffffff !important;
-    border-color: #e4e0ef !important;
-  }
+/* Dark text on a fixed light fill (lime, emerald, pale violet) must stay dark in both themes. */
+.light .workspace-shell :is([class*="bg-lime-"], [class*="bg-emerald-"], [class*="bg-violet-200"], [class*="bg-violet-300"], [class*="from-violet-"], [class*="from-lime-"]):is([class~="text-zinc-950"], [class~="text-zinc-900"], [class~="text-black"]) {
+  color: #17142e;
+}
 
-  .light .workspace-shell nav[aria-label="Mobile navigation"] [aria-current="page"] span:first-child,
-  .light .workspace-shell nav[aria-label="Mobile navigation"] button[aria-expanded="true"] span:first-child {
-    background-color: #eee9ff !important;
-    color: #5b45a5 !important;
-  }
+.light .workspace-shell .zohra-logo-tile { background-color: #17133a; }
+
+/* Scrims stay dark in the light theme. */
+.light .workspace-shell .fixed[class*="bg-black"] { background-color: rgb(23 20 46 / 0.5); }
+
+/* Cards: a hairline plus a soft indigo shadow, so white surfaces lift off the paper. */
+.light .workspace-shell [class*="bg-card"],
+.light .workspace-shell [class*="bg-zinc-900"] {
+  box-shadow: 0 1px 2px rgb(23 20 46 / 0.04), 0 8px 24px -12px rgb(60 40 140 / 0.14);
+}
+
+/* Phone chrome: a frosted paper header and a white dock. */
+.light .workspace-shell .mobile-app-header {
+  background-color: rgb(243 242 249 / 0.92);
+  border-color: var(--border);
+}
+.light .workspace-shell .mobile-app-dock nav {
+  background-color: rgb(255 255 255 / 0.94);
+  border-color: var(--border);
+  box-shadow: 0 14px 42px rgb(60 40 140 / 0.18);
+}
+.light .workspace-shell nav[aria-label="Mobile navigation"] [aria-current="page"] span:first-child,
+.light .workspace-shell nav[aria-label="Mobile navigation"] button[aria-expanded="true"] span:first-child {
+  background-color: #e9e4ff;
+  color: #3e22a0;
 }
 
 @media (prefers-reduced-motion: no-preference) {

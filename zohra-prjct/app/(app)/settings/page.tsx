@@ -96,7 +96,7 @@ function ProfileForm({ user }: { user: ProfileUser }) {
           <UserRound size={18} />
         </div>
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-200">Your identity</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-lime-800 dark:text-lime-200">Your identity</p>
           <h2 className="mt-0.5 text-lg font-semibold text-white">Profile details</h2>
           <p className="text-sm text-neutral-400">Make this workspace feel like yours.</p>
         </div>
@@ -267,7 +267,7 @@ export default function SettingsPage() {
     <div className="mx-auto max-w-6xl pb-10">
       <header className="relative isolate overflow-hidden rounded-[28px] border border-white/[0.09] bg-[#141519] p-4 sm:p-8">
         <div aria-hidden="true" className="absolute -right-20 -top-36 -z-10 size-96 rounded-full bg-[radial-gradient(circle,rgba(163,230,53,0.14),transparent_68%)]" />
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-200">Account control room</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-800 dark:text-lime-200">Account control room</p>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
           <div><h1 className="text-4xl font-semibold tracking-[-0.055em] text-white sm:text-5xl">Settings</h1><p className="mt-2 max-w-xl text-sm leading-6 text-neutral-400">Shape how Zohra looks after your account and how your workspace feels.</p></div>
           <div className="rounded-xl border border-white/10 bg-black/20 px-3.5 py-2.5 text-xs text-neutral-400">Profile edits save manually <span className="mx-1 text-neutral-600">·</span> Preferences save instantly</div>
@@ -281,7 +281,7 @@ export default function SettingsPage() {
           <nav aria-label="Settings sections" className="grid grid-cols-2 gap-1 sm:grid-cols-4 lg:block lg:space-y-1">
             {[{ href: "#profile-settings", label: "Profile", icon: UserRound }, { href: "#appearance-settings", label: "Appearance", icon: Sun }, { href: "#notification-settings", label: "Notifications", icon: Bell }, { href: "#focus-settings", label: "Focus mode", icon: ShieldCheck }, { href: "#account-security", label: "Account security", icon: Trash2 }].map(({ href, label, icon: Icon }) => <a key={href} href={href} className="group flex min-h-10 items-center gap-2 rounded-xl px-2 py-2 text-[11px] text-neutral-400 transition hover:bg-white/[0.06] hover:text-white sm:px-3 sm:text-sm lg:gap-3"><Icon size={15} className="shrink-0" /><span className="min-w-0 flex-1 leading-4">{label}</span><ChevronRight size={13} className="shrink-0 text-neutral-600 transition group-hover:translate-x-0.5 group-hover:text-neutral-300" /></a>)}
           </nav>
-          <Link href="/profile" className="mt-4 flex items-center justify-between rounded-xl bg-lime-200/[0.08] px-3 py-3 text-xs font-medium text-lime-100 transition hover:bg-lime-200/[0.13]">View your profile <ArrowRight size={14} /></Link>
+          <Link href="/profile" className="mt-4 flex items-center justify-between rounded-xl bg-lime-200/[0.08] px-3 py-3 text-xs font-medium text-lime-800 dark:text-lime-100 transition hover:bg-lime-200/[0.13]">View your profile <ArrowRight size={14} /></Link>
         </aside>
 
       <div className="min-w-0 space-y-4">
@@ -303,12 +303,12 @@ export default function SettingsPage() {
         <section id="appearance-settings" className="scroll-mt-24 rounded-3xl border border-white/[0.08] bg-[#141518] p-4 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-violet-200/10 text-violet-100"><Sun size={18} /></div>
+              <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-violet-200/10 text-violet-700 dark:text-violet-100"><Sun size={18} /></div>
               <div><h2 className="font-semibold text-white">Appearance</h2><p className="text-sm text-neutral-500">Choose the colors that feel comfortable to use.</p></div>
             </div>
             <div role="group" aria-label="Color theme" className="grid w-full grid-cols-2 gap-2 sm:w-auto">
               <button type="button" aria-pressed={selectedTheme === "light"} onClick={() => setTheme("light")} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-medium transition ${selectedTheme === "light" ? "border-violet-200/40 bg-violet-200 text-violet-950 shadow-[0_6px_20px_rgba(196,181,253,0.12)]" : "border-white/10 bg-black/20 text-neutral-300 hover:bg-white/[0.06]"}`}><Sun size={16} />Light{selectedTheme === "light" && <Check size={15} />}</button>
-              <button type="button" aria-pressed={selectedTheme === "dark"} onClick={() => setTheme("dark")} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-medium transition ${selectedTheme === "dark" ? "border-sky-200/35 bg-[#202a3e] text-sky-100 shadow-[0_6px_20px_rgba(125,211,252,0.1)]" : "border-white/10 bg-black/20 text-neutral-300 hover:bg-white/[0.06]"}`}><Moon size={16} />Dark{selectedTheme === "dark" && <Check size={15} />}</button>
+              <button type="button" aria-pressed={selectedTheme === "dark"} onClick={() => setTheme("dark")} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-medium transition ${selectedTheme === "dark" ? "border-sky-200/35 bg-[#202a3e] text-sky-700 dark:text-sky-100 shadow-[0_6px_20px_rgba(125,211,252,0.1)]" : "border-white/10 bg-black/20 text-neutral-300 hover:bg-white/[0.06]"}`}><Moon size={16} />Dark{selectedTheme === "dark" && <Check size={15} />}</button>
             </div>
           </div>
           <p className="mt-3 text-xs leading-5 text-neutral-500">Your choice is saved on this device. Mobile has its own color treatment for either theme.</p>
@@ -377,11 +377,11 @@ export default function SettingsPage() {
           </label>
         </section>
 
-        {(preferenceMessage || preferenceError || preferencesLoading) && <p role={preferenceError ? "alert" : "status"} className={`px-1 text-sm ${preferenceError ? "text-red-300" : "text-neutral-400"}`}>{preferencesLoading ? "Loading saved preferences…" : savingPreference ? "Saving preference…" : preferenceError || preferenceMessage}</p>}
+        {(preferenceMessage || preferenceError || preferencesLoading) && <p role={preferenceError ? "alert" : "status"} className={`px-1 text-sm ${preferenceError ? "text-red-700 dark:text-red-300" : "text-neutral-400"}`}>{preferencesLoading ? "Loading saved preferences…" : savingPreference ? "Saving preference…" : preferenceError || preferenceMessage}</p>}
 
         <section id="account-security" className="scroll-mt-24 rounded-3xl border border-red-950/80 bg-[#141518] p-4 sm:p-6">
           <div className="flex items-center gap-3">
-            <div className="grid size-9 place-items-center rounded-lg bg-red-500/15 text-red-300">
+            <div className="grid size-9 place-items-center rounded-lg bg-red-500/15 text-red-700 dark:text-red-300">
               <Trash2 size={18} />
             </div>
             <div>
@@ -399,7 +399,7 @@ export default function SettingsPage() {
                 setDeleteConfirmation("");
                 setDeleteDialogOpen(true);
               }}
-              className="rounded-xl border border-red-500/70 px-4 py-2.5 text-sm font-semibold text-red-200 transition hover:bg-red-500/15"
+              className="rounded-xl border border-red-500/70 px-4 py-2.5 text-sm font-semibold text-red-700 dark:text-red-200 transition hover:bg-red-500/15"
             >
               Delete account
             </button>
@@ -451,7 +451,7 @@ export default function SettingsPage() {
               />
             </label>
             {deleteError && (
-              <p role="alert" className="mt-3 text-sm text-red-300">
+              <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-300">
                 {deleteError}
               </p>
             )}

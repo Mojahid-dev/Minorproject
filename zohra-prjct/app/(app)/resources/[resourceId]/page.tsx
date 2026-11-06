@@ -81,12 +81,12 @@ export default async function ResourcePreviewPage({ params }: Props) {
 
       <header className="mt-3 flex flex-col gap-4 rounded-2xl border border-white/[0.08] bg-[#151518] p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-violet-200/[0.09] text-violet-100">
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-violet-200/[0.09] text-violet-700 dark:text-violet-100">
             <FileText size={20} />
           </span>
 
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-violet-200">
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-violet-700 dark:text-violet-200">
               Document preview
             </p>
 
@@ -127,7 +127,7 @@ export default async function ResourcePreviewPage({ params }: Props) {
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
 
-        <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200/10 bg-emerald-200/[0.05] px-2.5 py-1.5 text-emerald-100">
+        <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200/10 bg-emerald-200/[0.05] px-2.5 py-1.5 text-emerald-800 dark:text-emerald-100">
           <ShieldCheck size={13} /> Private file
         </span>
 
@@ -143,7 +143,7 @@ export default async function ResourcePreviewPage({ params }: Props) {
         {resource.tags.map((tag) => (
           <span
             key={tag}
-            className="inline-flex items-center gap-1 rounded-lg border border-violet-200/10 bg-violet-200/[0.05] px-2.5 py-1.5 text-violet-100"
+            className="inline-flex items-center gap-1 rounded-lg border border-violet-200/10 bg-violet-200/[0.05] px-2.5 py-1.5 text-violet-700 dark:text-violet-100"
           >
             <Tag size={12} />
             {tag}
@@ -193,7 +193,7 @@ export default async function ResourcePreviewPage({ params }: Props) {
         ) : previewText ? (
           <div className="mx-auto max-w-4xl p-5 sm:p-8">
             <div className="mb-5 flex items-center gap-2 border-b border-white/[0.07] pb-4 text-sm font-medium text-neutral-300">
-              <BookOpenText size={17} className="text-violet-200" /> Readable
+              <BookOpenText size={17} className="text-violet-700 dark:text-violet-200" /> Readable
               document text
             </div>
             <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-neutral-300">
