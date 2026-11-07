@@ -202,12 +202,12 @@ model UserPreference {
   userId             String   @unique
   emailNotifications Boolean  @default(true)
   focusMode          Boolean  @default(false)
-  // Browser push notifications: one switch per type, plus the local hour
-  // (0-23) at which the daily task and exam reminders are sent.
+  // Browser push notification switches and the task reminder schedule.
   pushTaskDue        Boolean  @default(true)
   pushExamSoon       Boolean  @default(true)
   pushAiFileReady    Boolean  @default(true)
   pushReminderHour   Int      @default(8)
+  pushReminderIntervalMinutes Int      @default(1440)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)

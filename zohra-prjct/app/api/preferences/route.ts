@@ -10,9 +10,11 @@ const PREFERENCE_SELECT = {
   pushExamSoon: true,
   pushAiFileReady: true,
   pushReminderHour: true,
+  pushReminderIntervalMinutes: true,
 } as const;
 
 const PUSH_SWITCHES = ["pushTaskDue", "pushExamSoon", "pushAiFileReady"] as const;
+const PUSH_REMINDER_INTERVALS = [30, 60, 120, 240, 360, 480, 720, 1440] as const;
 
 async function currentUserId() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -49,6 +51,7 @@ export async function PATCH(request: Request) {
     pushExamSoon?: boolean;
     pushAiFileReady?: boolean;
     pushReminderHour?: number;
+    pushReminderIntervalMinutes?: number;
   } = {};
   for (const key of PUSH_SWITCHES) {
     if (key in body) {
@@ -68,6 +71,15 @@ export async function PATCH(request: Request) {
         { status: 400 },
       );
     data.pushReminderHour = hour;
+  }
+  if ("pushReminderIntervalMinutes" in body) {
+    const interval = body.pushReminderIntervalMinutes;
+    if (!PUSH_REMINDER_INTERVALS.includes(interval))
+      return NextResponse.json(
+        { error: "Choose a reminder interval from the available options." },
+        { status: 400 },
+      );
+    data.pushReminderIntervalMinutes = interval;
   }
   if ("emailNotifications" in body) {
     if (typeof body.emailNotifications !== "boolean")

@@ -940,6 +940,7 @@ export default function UploadPage() {
 
       <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(250px,0.7fr)] lg:gap-4">
         <section
+          data-tour="upload-drop"
           onDragOver={(event) => {
             event.preventDefault();
             setDragging(true);
@@ -994,7 +995,7 @@ export default function UploadPage() {
 
         </section>
 
-        <aside className="flex flex-col justify-between rounded-[26px] border border-white/[0.08] bg-[#141518] p-4 sm:p-5">
+        <aside data-tour="upload-details" className="flex flex-col justify-between rounded-[26px] border border-white/[0.08] bg-[#141518] p-4 sm:p-5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
               A few helpful details

@@ -414,18 +414,20 @@ function ResourcesContent() {
         </div>
 
         {resources.length > 0 && (
-          <Toolbar
-            query={query}
-            onQuery={setQuery}
-            filter={filter}
-            onFilter={setFilter}
-            counts={typeCounts}
-            sort={sort}
-            onSort={setSort}
-            showSort={showSort}
-            view={view}
-            onView={changeView}
-          />
+          <div data-tour="resources-toolbar">
+            <Toolbar
+              query={query}
+              onQuery={setQuery}
+              filter={filter}
+              onFilter={setFilter}
+              counts={typeCounts}
+              sort={sort}
+              onSort={setSort}
+              showSort={showSort}
+              view={view}
+              onView={changeView}
+            />
+          </div>
         )}
 
         <div id="resources-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="pt-1">

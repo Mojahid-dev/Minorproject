@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { ProductTour } from "@/components/onboarding/product-tour";
 
 /**
  * Full-screen pages that live outside the app shell (no sidebar or top bar).
@@ -22,6 +23,7 @@ export default async function FocusLayout({
   return (
     <div className="min-h-dvh w-full bg-background text-foreground">
       {children}
+      <ProductTour />
     </div>
   );
 }
