@@ -749,6 +749,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </>
       </div>
     </main>
+    <ProductTour />
     </StudyTrackerProvider>
   );
 }
