@@ -8,6 +8,9 @@ import { currentMonthKey, type CalendarData } from "./use-study-calendar";
 import { dateLabel, duration, monthLabel, shiftMonth } from "./format";
 
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
+type CalendarCell =
+  | { blank: true; key: string }
+  | (CalendarData["days"][number] & { key: string });
 
 // Shade is relative to the student's own daily goal, so the darkest square always means "goal reached".
 // (Light-theme-safe: no white text utilities, which the shell remaps.)
@@ -51,8 +54,8 @@ export function MonthHeatmap({
     setSelected(data && data.today.startsWith(month) ? data.today : null);
   }, [month, data?.today]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const cells = useMemo(() => {
-    if (!data) return [] as ({ blank: true; key: string } | (CalendarData["days"][number] & { blank?: false; key: string }))[];
+  const cells = useMemo<CalendarCell[]>(() => {
+    if (!data) return [];
     const lead = (new Date(`${data.days[0].date}T12:00:00`).getDay() + 6) % 7;
     return [
       ...Array.from({ length: lead }, (_, i) => ({ blank: true as const, key: `b${i}` })),
@@ -113,7 +116,7 @@ export function MonthHeatmap({
             {loading && !data
               ? Array.from({ length: 35 }, (_, i) => <div key={i} className="aspect-square animate-pulse rounded-lg bg-muted/60" />)
               : cells.map((cell) => {
-                  if (cell.blank) return <div key={cell.key} aria-hidden="true" />;
+                  if ("blank" in cell) return <div key={cell.key} aria-hidden="true" />;
                   const day = Number(cell.date.slice(8));
                   const isToday = cell.date === data?.today;
                   const future = Boolean(data && cell.date > data.today);
