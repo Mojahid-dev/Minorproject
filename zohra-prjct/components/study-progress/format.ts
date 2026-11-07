@@ -1,10 +1,13 @@
 export function duration(seconds: number) {
-  const safe = Math.max(0, Math.round(seconds));
+  const safe = Math.max(0, Math.floor(seconds));
   const hours = Math.floor(safe / 3600);
   const minutes = Math.floor((safe % 3600) / 60);
-  if (hours) return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
-  if (minutes) return `${minutes}m`;
-  return safe > 0 ? "<1m" : "0m";
+  const remainder = safe % 60;
+
+  // Never show "<1m": that wording is ambiguous while a live timer is running.
+  if (hours) return minutes ? `${hours} hr ${minutes} min` : `${hours} hr`;
+  if (minutes) return remainder ? `${minutes} min ${remainder} sec` : `${minutes} min`;
+  return `${remainder} sec`;
 }
 
 export function clock(seconds: number) {
