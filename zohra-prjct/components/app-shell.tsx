@@ -9,8 +9,8 @@ import {
   BadgeCheck,
   Bell,
   CalendarDays,
+  ChartNoAxesCombined,
   ChevronDown,
-  CircleHelp,
   ChevronLeft,
   ChevronRight,
   FolderKanban,
@@ -24,6 +24,7 @@ import {
   Search,
   Settings,
   Sun,
+  Timer,
   Moon,
   Upload,
   UserRound,
@@ -31,10 +32,7 @@ import {
 import { signOutAndClearCookies, useSession } from "@/lib/auth-client";
 import { localDateString, type TaskRecord } from "@/lib/task-utils";
 import { useTheme } from "next-themes";
-import { ProductTour } from "@/components/onboarding/product-tour";
-
-const tourSlug = (href: string) =>
-  href === "/zohra-ai" ? "ai" : href.replace("/", "");
+import { StudyTrackerProvider } from "@/components/study-progress/study-tracker-provider";
 
 const navigation = [
   { label: "Overview", href: "/dashboard", icon: Home },
@@ -47,6 +45,7 @@ const navigation = [
   { label: "Upload", href: "/upload", icon: Upload },
   { label: "Tasks", href: "/tasks", icon: LayoutGrid, badge: "tasks" },
   { label: "Calendar", href: "/calendar", icon: CalendarDays },
+  { label: "Study & Progress", href: "/study-progress", icon: ChartNoAxesCombined },
   { label: "Zohra AI", href: "/zohra-ai", icon: MessageCircle },
 ];
 
@@ -57,9 +56,7 @@ function MobileNavLink({
   active,
   badge,
   onNavigate,
-  tour,
 }: {
-  tour?: string;
   href: string;
   label: string;
   icon: typeof Home;
@@ -70,7 +67,6 @@ function MobileNavLink({
   return (
     <Link
       href={href}
-      data-tour={tour}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={`group relative flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold transition-[color,transform] duration-200 motion-reduce:transition-none active:scale-95 ${active ? "text-white" : "text-neutral-500 hover:text-neutral-200"}`}
@@ -182,14 +178,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => { active = false; };
   }, [pathname]);
 
-  // The product tour opens/closes the phone "More" menu when a step needs it.
+  // Lets floating UI (the study mini-player) step aside while the phone menu is open.
   useEffect(() => {
-    function onTourMore(event: Event) {
-      setMobileMoreOpen(Boolean((event as CustomEvent<boolean>).detail));
-    }
-    window.addEventListener("zohra:tour-more", onTourMore);
-    return () => window.removeEventListener("zohra:tour-more", onTourMore);
-  }, []);
+    window.dispatchEvent(new CustomEvent("zohra:more-menu", { detail: mobileMoreOpen }));
+  }, [mobileMoreOpen]);
 
   useEffect(() => {
     if (!mobileMoreOpen) return;
@@ -224,6 +216,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
+    <StudyTrackerProvider>
     <main className="workspace-shell min-h-dvh w-full min-w-0 overflow-x-clip bg-zinc-950 text-neutral-100 lg:h-dvh lg:overflow-hidden">
       <div className="flex min-h-dvh w-full min-w-0 flex-col border-zinc-800 bg-zinc-950 lg:h-full lg:flex-row lg:overflow-hidden lg:border lg:shadow-[0_25px_80px_rgba(0,0,0,0.4)]">
         <aside
@@ -290,7 +283,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={label}
                       href={href}
-                      data-tour={`nav-${tourSlug(href)}`}
                       title={collapsed ? label : undefined}
                       aria-current={isActive ? "page" : undefined}
                       className={className}
@@ -407,15 +399,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </section>
             )}
             <button
-              type="button"
-              onClick={() => window.dispatchEvent(new Event("zohra:open-tour"))}
-              title={collapsed ? "Take the tour" : undefined}
-              className="flex h-10 w-full items-center rounded-xl px-3 text-sm text-neutral-500 transition hover:bg-white/10 hover:text-white"
-            >
-              <CircleHelp size={18} />
-              {!collapsed && <span className="ml-3">Take the tour</span>}
-            </button>
-            <button
               onClick={handleSignOut}
               title={collapsed ? "Sign out" : undefined}
               className="flex h-10 w-full items-center rounded-xl px-3 text-sm text-neutral-500 transition hover:bg-white/10 hover:text-white"
@@ -474,7 +457,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
               <button
                 type="button"
-                data-tour="theme-toggle"
                 onClick={() => setTheme(isLightTheme ? "dark" : "light")}
                 aria-label={`Switch to ${isLightTheme ? "dark" : "light"} mode`}
                 title={`Switch to ${isLightTheme ? "dark" : "light"} mode`}
@@ -487,7 +469,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="mx-1 hidden h-8 w-px bg-white/10 sm:block" />
               <Link
                 href="/profile"
-                data-tour="profile-link"
                 aria-label={`Open ${profileName} profile${isRecognized ? ", Zohra recognized" : ""}`}
                 title={isRecognized ? `${profileName} · Zohra Recognized` : profileName}
                 className="group flex shrink-0 items-center gap-1 rounded-xl px-1.5 py-1 text-neutral-300 transition hover:bg-white/[0.06] hover:text-white"
@@ -538,7 +519,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </p>
                 <Link
                   role="menuitem"
-                  data-tour="nav-ai"
+                  href="/study-progress"
+                  onClick={() => setMobileMoreOpen(false)}
+                  aria-current={pathname.startsWith("/study-progress") ? "page" : undefined}
+                  className={`mb-2 flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium ${pathname.startsWith("/study-progress") ? "bg-violet-200/10 text-violet-100" : "text-neutral-300 hover:bg-white/[0.07] hover:text-white"}`}
+                >
+                  <Timer size={18} /> Study &amp; Progress
+                </Link>
+                <Link
+                  role="menuitem"
                   href="/zohra-ai"
                   onClick={() => setMobileMoreOpen(false)}
                   aria-current={pathname.startsWith("/zohra-ai") ? "page" : undefined}
@@ -625,7 +614,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </section>
                 <Link
                   role="menuitem"
-                  data-tour="nav-resources"
                   href="/resources"
                   onClick={() => setMobileMoreOpen(false)}
                   className="flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm text-neutral-200 hover:bg-white/[0.07]"
@@ -668,17 +656,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     ? "Switch to dark mode"
                     : "Switch to light mode"}
                 </button>
-                <button
-                  role="menuitem"
-                  onClick={() => {
-                    setMobileMoreOpen(false);
-                    window.dispatchEvent(new Event("zohra:open-tour"));
-                  }}
-                  className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm text-neutral-200 transition hover:bg-white/[0.07]"
-                >
-                  <CircleHelp size={18} />
-                  Take the tour
-                </button>
                 <div className="my-1 border-t border-white/[0.07]" />
                 <button
                   role="menuitem"
@@ -703,7 +680,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               />
               <MobileNavLink
                 href="/tasks"
-                tour="nav-tasks"
                 label="Tasks"
                 icon={ListTodo}
                 active={pathname.startsWith("/tasks")}
@@ -712,7 +688,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               />
               <Link
                 href="/upload"
-                data-tour="nav-upload"
                 onClick={() => setMobileMoreOpen(false)}
                 aria-label="Add a resource"
                 className="group flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 text-[10px] font-semibold text-neutral-400"
@@ -724,7 +699,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
               <MobileNavLink
                 href="/calendar"
-                tour="nav-calendar"
                 label="Calendar"
                 icon={CalendarDays}
                 active={pathname.startsWith("/calendar")}
@@ -735,7 +709,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 aria-haspopup="menu"
                 aria-expanded={mobileMoreOpen}
                 onClick={() => setMobileMoreOpen((open) => !open)}
-                className={`group flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold transition-colors ${mobileMoreOpen || pathname.startsWith("/resources") || pathname.startsWith("/profile") || pathname.startsWith("/settings") ? "text-white" : "text-neutral-500 hover:text-neutral-200"}`}
+                className={`group flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold transition-colors ${mobileMoreOpen || pathname.startsWith("/resources") || pathname.startsWith("/study-progress") || pathname.startsWith("/profile") || pathname.startsWith("/settings") ? "text-white" : "text-neutral-500 hover:text-neutral-200"}`}
               >
                 <span
                   className={`grid size-9 place-items-center rounded-[14px] transition-all duration-300 motion-reduce:transition-none ${mobileMoreOpen ? "-translate-y-0.5 rotate-90 bg-white/[0.12]" : "group-hover:bg-white/[0.05]"}`}
@@ -748,7 +722,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </>
       </div>
-      <ProductTour />
     </main>
+    </StudyTrackerProvider>
   );
 }

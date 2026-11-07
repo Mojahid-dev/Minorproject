@@ -20,7 +20,6 @@ model User {
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  onboardingVersion Int   @default(0)
   sessions      Session[]
   accounts      Account[]
   resources     Resource[]
@@ -29,6 +28,8 @@ model User {
   subjects      Subject[]
   chapters      Chapter[]
   tasks         Task[]
+  studySessions StudySession[]
+  studyGoal     StudyGoal?
   preferences   UserPreference?
   recognitionRequests RecognitionRequest[] @relation("RecognitionApplicant")
   aiConversations AIConversation[]
@@ -118,6 +119,7 @@ model Subject {
   semester  Semester   @relation(fields: [semesterId], references: [id], onDelete: Cascade)
   chapters  Chapter[]
   resources Resource[]
+  studySessions StudySession[]
 
   @@unique([semesterId, name])
   @@index([userId])
@@ -191,23 +193,76 @@ model Task {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studySessions StudySession[]
 
   @@index([userId, dueDate])
   @@index([userId, completedAt])
   @@map("task")
 }
 
+enum StudySessionStatus {
+  RUNNING
+  PAUSED
+  COMPLETED
+}
+
+enum StudySessionMode {
+  STOPWATCH
+  POMODORO
+}
+
+model StudySession {
+  id                 String             @id @default(cuid())
+  userId             String
+  subjectId          String?
+  taskId             String?
+  topic              String?            @db.VarChar(140)
+  mode               StudySessionMode   @default(STOPWATCH)
+  status             StudySessionStatus @default(RUNNING)
+  startedAt          DateTime           @default(now())
+  segmentStartedAt   DateTime?
+  lastHeartbeatAt    DateTime?
+  endedAt            DateTime?
+  accumulatedSeconds Int                @default(0)
+  durationSeconds    Int?
+  notes              String?            @db.VarChar(1000)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject            Subject?           @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  task               Task?              @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([userId, startedAt])
+  @@index([userId, status])
+  @@index([userId, status, endedAt])
+  @@index([subjectId, startedAt])
+  @@map("study_session")
+}
+
+model StudyGoal {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  dailyTargetMinutes Int      @default(120)
+  weeklyTargetMinutes Int     @default(600)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("study_goal")
+}
+
+
 model UserPreference {
   id                 String   @id @default(cuid())
   userId             String   @unique
   emailNotifications Boolean  @default(true)
   focusMode          Boolean  @default(false)
-  // Browser push notification switches and the task reminder schedule.
+  // Browser push notifications: one switch per type, plus the local hour
+  // (0-23) at which the daily task and exam reminders are sent.
   pushTaskDue        Boolean  @default(true)
   pushExamSoon       Boolean  @default(true)
   pushAiFileReady    Boolean  @default(true)
   pushReminderHour   Int      @default(8)
-  pushReminderIntervalMinutes Int      @default(1440)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
