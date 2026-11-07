@@ -52,6 +52,7 @@ export async function GET(request: Request) {
         endedAt: { gte: queryStart, lt: queryEnd },
       },
       orderBy: { endedAt: "asc" },
+      include: { subject: { select: { id: true, name: true } } },
     }),
     prisma.task.findMany({
       where: { userId, completedAt: { gte: queryStart, lt: queryEnd } },
@@ -70,6 +71,7 @@ export async function GET(request: Request) {
     todaySeconds = 0,
     previousSeconds = 0,
     currentSessionCount = 0;
+  const subjectTotals = new Map<string, { id: string | null; name: string; seconds: number }>();
   for (const item of studySessions) {
     const seconds = Math.max(
       0,
@@ -82,6 +84,14 @@ export async function GET(request: Request) {
       const bucket = dayMap.get(key);
       if (bucket) bucket.seconds += seconds;
       if (key === today) todaySeconds += seconds;
+      const subjectKey = item.subject?.id ?? "none";
+      const entry = subjectTotals.get(subjectKey) ?? {
+        id: item.subject?.id ?? null,
+        name: item.subject?.name ?? "Independent study",
+        seconds: 0,
+      };
+      entry.seconds += seconds;
+      subjectTotals.set(subjectKey, entry);
     } else if (key >= addDays(startDay, -days) && key < startDay)
       previousSeconds += seconds;
   }
@@ -121,5 +131,6 @@ export async function GET(request: Request) {
     dailyGoalSeconds: goal.dailyTargetMinutes * 60,
     weeklyGoalSeconds: goal.weeklyTargetMinutes * 60,
     daily,
+    bySubject: [...subjectTotals.values()].sort((a, b) => b.seconds - a.seconds),
   });
 }

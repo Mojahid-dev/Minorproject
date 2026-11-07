@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Pause, Play, Square, Timer, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -82,6 +83,9 @@ export function StudyTrackerProvider({
   const [baseElapsed, setBaseElapsed] = useState(0);
   const [anchor, setAnchor] = useState(0);
   const [now, setNow] = useState(0);
+  const pathname = usePathname();
+  // The Study page already shows the timer large; the floating mini-player would duplicate it.
+  const onStudyPage = pathname.startsWith("/study-progress");
 
   const refresh = useCallback(async () => {
     try {
@@ -247,7 +251,7 @@ export function StudyTrackerProvider({
   return (
     <TrackerContext.Provider value={value}>
       {children}
-      {showPlayer && active && (
+      {showPlayer && active && !onStudyPage && (
         <PersistentStudyPlayer
           active={active}
           elapsedSeconds={elapsedSeconds}

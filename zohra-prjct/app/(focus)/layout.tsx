@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { ProductTour } from "@/components/onboarding/product-tour";
 import { StudyTrackerProvider } from "@/components/study-progress/study-tracker-provider";
 
 /**
@@ -24,6 +25,7 @@ export default async function FocusLayout({
     <div className="min-h-dvh w-full bg-background text-foreground">
       {/* Headless here: keeps a running study session alive (heartbeats) while chatting. */}
       <StudyTrackerProvider showPlayer={false}>{children}</StudyTrackerProvider>
+      <ProductTour />
     </div>
   );
 }

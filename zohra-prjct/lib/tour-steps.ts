@@ -52,6 +52,8 @@ export const TOUR_STEPS: TourStep[] = [
   { id: "today", chapter: "home", route: "/dashboard", title: "Your day, at a glance", body: "Today’s tasks and anything overdue live here. Tick one off to move your progress.", targets: ['[data-tour="dash-today"]'] },
   { id: "dash-ai", chapter: "home", route: "/dashboard", title: "Zohra AI is one tap away", body: "Pick up your last chat or start a new one from here.", targets: ['[data-tour="dash-ai"]'] },
 
+  { id: "study-button", chapter: "home", route: "/dashboard", title: "Time your study", body: "Start a focus timer from any page. It becomes a live clock while you study.", targets: ['[data-tour="study-button"]'] },
+
   // Library
   { id: "go-upload", chapter: "library", route: "/dashboard", title: "Start with your notes", body: "Add PDFs, slides or notes so Zohra can work with them.", targets: [nav("upload")], action: { type: "click", hint: "Tap Upload" } },
   { id: "upload-drop", chapter: "library", route: "/upload", title: "Drop files here", body: "Zohra reads them, so you can search them and ask the AI about them.", targets: ['[data-tour="upload-drop"]'] },
