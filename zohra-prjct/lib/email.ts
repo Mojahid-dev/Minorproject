@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import nodemailer, { type Transporter } from "nodemailer";
 
 /**
  * Sends email through Gmail SMTP (free, about 500 messages a day).
@@ -9,7 +9,7 @@ import nodemailer from "nodemailer";
  * In development, if the Gmail variables are missing, the email is printed to the
  * terminal instead, so you can copy the verification link and keep working.
  */
-let transporter: nodemailer.Transporter | null = null;
+let transporter: Transporter | null = null;
 
 function getTransporter() {
   const user = process.env.GMAIL_USER;
