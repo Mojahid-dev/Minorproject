@@ -415,15 +415,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </section>
             )}
             <button
-              type="button"
-              onClick={() => window.dispatchEvent(new Event("zohra:open-tour"))}
-              title={collapsed ? "Take the tour" : undefined}
-              className="flex h-10 w-full items-center rounded-xl px-3 text-sm text-neutral-500 transition hover:bg-white/10 hover:text-white"
-            >
-              <CircleHelp size={18} />
-              {!collapsed && <span className="ml-3">Take the tour</span>}
-            </button>
-            <button
               onClick={handleSignOut}
               title={collapsed ? "Sign out" : undefined}
               className="flex h-10 w-full items-center rounded-xl px-3 text-sm text-neutral-500 transition hover:bg-white/10 hover:text-white"
@@ -480,6 +471,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Plus size={17} />
                 Add resources
               </Link>
+              <button
+                type="button"
+                data-tour="take-tour"
+                onClick={() => window.dispatchEvent(new Event("zohra:open-tour"))}
+                className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl border border-violet-300/20 bg-violet-300/[0.08] px-3 text-xs font-semibold text-violet-100 transition hover:border-violet-200/40 hover:bg-violet-300/[0.14] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60"
+                aria-label="Take the tour"
+                title="Take the tour"
+              >
+                <CircleHelp size={16} aria-hidden="true" />
+                <span className="hidden md:inline">Take the tour</span>
+              </button>
               <StudyHeaderButton />
               <button
                 type="button"
@@ -676,17 +678,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {isLightTheme
                     ? "Switch to dark mode"
                     : "Switch to light mode"}
-                </button>
-                <button
-                  role="menuitem"
-                  onClick={() => {
-                    setMobileMoreOpen(false);
-                    window.dispatchEvent(new Event("zohra:open-tour"));
-                  }}
-                  className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm text-neutral-200 transition hover:bg-white/[0.07]"
-                >
-                  <CircleHelp size={18} />
-                  Take the tour
                 </button>
                 <div className="my-1 border-t border-white/[0.07]" />
                 <button
