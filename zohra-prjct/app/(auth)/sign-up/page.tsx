@@ -6,11 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { authClient } from "@/lib/auth-client";
+import { CheckEmail } from "@/components/auth/check-email";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeftIcon, ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { FcGoogle } from "react-icons/fc";
@@ -19,10 +19,10 @@ import z from "zod";
 type signUpFormData = z.infer<typeof signUpSchema>;
 
 export default function SignUpPage() {
-  const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+  const [sentTo, setSentTo] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -55,11 +55,12 @@ export default function SignUpPage() {
       return;
     }
 
+    // Email verification is required, so there is no session yet: ask them to check their inbox.
+    setSentTo(data.email);
     toast.add({
       type: "success",
-      description: "Account created. Redirecting to your dashboard...",
+      description: "Account created. Check your email to verify it.",
     });
-    router.replace("/dashboard");
   };
 
   const signInWithGoogle = async () => {
@@ -88,6 +89,10 @@ export default function SignUpPage() {
       </header>
       <section className="mx-auto flex min-h-[calc(100vh-5.5rem)] w-full max-w-sm flex-col justify-center py-10">
         <div className="rounded-2xl border border-white/10 bg-zinc-900/70 p-6 shadow-2xl sm:p-8">
+          {sentTo ? (
+            <CheckEmail email={sentTo} onChangeEmail={() => setSentTo(null)} />
+          ) : (
+          <>
           <div className="mb-7">
             <h1 className="text-2xl font-semibold tracking-tight text-white">Create your account</h1>
             <p className="mt-2 text-sm text-zinc-400">Start using Zohra in a few simple steps.</p>
@@ -175,6 +180,8 @@ export default function SignUpPage() {
             </button>
           </form>
           <p className="mt-6 text-center text-sm text-zinc-500">Already have an account? <Link href="/login" className="font-medium text-yellow-400 transition hover:text-yellow-300">Sign in</Link></p>
+          </>
+          )}
         </div>
       </section>
     </main>

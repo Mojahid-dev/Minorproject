@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { authClient } from "@/lib/auth-client";
+import { ResendVerification } from "@/components/auth/resend-verification";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeftIcon, ArrowRight } from "lucide-react";
 import Image from "next/image";
@@ -23,6 +24,8 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+  // Set when the account exists but the email is not verified yet.
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -36,6 +39,7 @@ export default function LoginPage() {
   });
   const onSubmit = async (data: loginFormData) => {
     setErrorMessage(null);
+    setUnverifiedEmail(null);
     setIsSubmitting(true);
 
     const result = await authClient.signIn.email({
@@ -50,7 +54,9 @@ export default function LoginPage() {
           });
           router.push("/");
         },
-        onError: () => {
+        onError: (ctx) => {
+          // Unverified accounts get their own message below, not a generic failure toast.
+          if ((ctx.error as { code?: string }).code === "EMAIL_NOT_VERIFIED" || ctx.error?.status === 403) return;
           toast.add({
             type: "error",
             description: "Login failed. Please try again.",
@@ -60,6 +66,10 @@ export default function LoginPage() {
     });
     setIsSubmitting(false);
     if (result.error) {
+      if (result.error.code === "EMAIL_NOT_VERIFIED" || result.error.status === 403) {
+        setUnverifiedEmail(data.email);
+        return;
+      }
       setErrorMessage(result.error.message ?? "Sign in failed.");
       return;
     }
@@ -135,6 +145,18 @@ export default function LoginPage() {
             </div>
             {errorMessage ? (
               <p className="mt-4 rounded-xl border border-red-400/20 bg-red-400/10 px-3 py-2.5 text-sm text-red-300">{errorMessage}</p>
+            ) : null}
+            {unverifiedEmail ? (
+              <div role="alert" className="mt-4 rounded-xl border border-yellow-400/25 bg-yellow-400/10 p-3.5">
+                <p className="text-sm font-medium text-yellow-200">Verify your email to sign in</p>
+                <p className="mt-1 text-xs leading-5 text-zinc-300">
+                  We just sent a new link to <span className="break-all font-medium">{unverifiedEmail}</span>. Open it, then come back
+                  here. Check spam if you can&apos;t find it.
+                </p>
+                <div className="mt-3">
+                  <ResendVerification email={unverifiedEmail} initialCooldown={30} />
+                </div>
+              </div>
             ) : null}
             <button
               type="submit"
