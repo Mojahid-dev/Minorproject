@@ -23,7 +23,7 @@ The Vercel build does not apply migrations automatically. After deployment, open
 
 ## Scheduled reminders
 
-Task due and exam reminders are checked by `/api/cron/notifications`. `vercel.json` schedules an invocation every 30 minutes so each user's local reminder time and repeat interval can be honored. The endpoint is idempotent and notification records prevent duplicate sends within each user's selected interval. This Vercel Cron frequency requires Pro or Enterprise; Hobby permits schedules at most once per day, so use an external scheduler to call the endpoint every 30 minutes with `Authorization: Bearer $CRON_SECRET` on Hobby. Delivery can be delayed by up to one scheduler interval, plus device or push-service delays.
+Task due and exam reminders are checked by `/api/cron/notifications`. `vercel.json` defines a Vercel Schedule every 30 minutes so each user's local reminder time and repeat interval can be honored. Schedules support this frequency on Hobby, Pro, and Enterprise. Hobby runs can be delayed by up to 15 minutes, so delivery can be delayed by up to 45 minutes, plus device or push-service delays. Vercel sends `GET` requests and supplies `Authorization: Bearer $CRON_SECRET`; the endpoint remains idempotent and notification records prevent duplicate sends within each user's selected interval. After deployment, check the project's Schedules page and its run history if reminders do not arrive.
 
 Users choose a local start hour and a repeat interval. Task alerts are sent for due-today or overdue tasks and stop when none remain. Exam milestone alerts remain once per milestone.
 
