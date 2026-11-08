@@ -228,10 +228,9 @@ export default function DashboardPage() {
       </header>
 
       {showOnboarding && <OnboardingChecklist steps={steps} />}
-      <TodayProgressCard />
 
-      {/* Mobile: a single column, today's plan first. Desktop: 2/3 + 1/3. */}
-      <div className="grid grid-cols-1 gap-5 sm:gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
+      {/* Keep the cards stacked until the app shell leaves enough room for two columns. */}
+      <div className="grid grid-cols-1 gap-5 sm:gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]">
         <div className="min-w-0 space-y-5 sm:space-y-6">
           <div data-tour="dash-today">
             <TodayPanel
@@ -254,6 +253,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="min-w-0 space-y-5 sm:space-y-6">
+          <TodayProgressCard />
           <div data-tour="dash-ai">
             <AskZohraCard last={conversations[0]} />
           </div>
