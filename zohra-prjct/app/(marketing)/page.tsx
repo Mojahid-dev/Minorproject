@@ -2,6 +2,7 @@ import HeroSection from "@/app/(marketing)/_components/hero";
 import CoreFeatures from "@/app/(marketing)/_components/core-features";
 import ExperienceAtlas from "@/app/(marketing)/_components/experience-atlas";
 import FaqSection from "@/app/(marketing)/_components/faq-section";
+import FeedbackSection from "@/app/(marketing)/_components/feedback-section";
 import FinalCta from "@/app/(marketing)/_components/final-cta";
 import Footer from "@/app/(marketing)/_components/footer";
 import Navbar from "@/app/(marketing)/_components/navbar";
@@ -35,6 +36,7 @@ export default async function LandingPage() {
       <CoreFeatures />
       <ExperienceAtlas />
       <WhyAtlas />
+      <FeedbackSection />
       <PricingSection />
       <FaqSection />
       <FinalCta />
