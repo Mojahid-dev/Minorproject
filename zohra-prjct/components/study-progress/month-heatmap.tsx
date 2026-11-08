@@ -16,10 +16,10 @@ type CalendarCell =
 // (Light-theme-safe: no white text utilities, which the shell remaps.)
 const LEVELS = [
   "bg-muted/70 text-muted-foreground",
-  "bg-violet-100 text-violet-900 dark:bg-violet-500/20 dark:text-violet-100",
-  "bg-violet-200 text-violet-950 dark:bg-violet-500/40 dark:text-violet-50",
-  "bg-violet-400 text-violet-50 dark:bg-violet-500/70 dark:text-violet-50",
-  "bg-violet-600 text-violet-50 dark:bg-violet-500 dark:text-violet-50",
+  "bg-emerald-100 text-emerald-900 dark:bg-emerald-500/20 dark:text-emerald-100",
+  "bg-emerald-300 text-emerald-950 dark:bg-emerald-500/40 dark:text-emerald-50",
+  "bg-emerald-500 text-emerald-950 dark:bg-emerald-500/75 dark:text-emerald-50",
+  "bg-emerald-700 text-emerald-50 dark:bg-emerald-400 dark:text-emerald-950",
 ];
 
 function level(seconds: number, goalSeconds: number) {
@@ -51,6 +51,7 @@ export function MonthHeatmap({
 
   // Picking another month starts with a clean selection (today, when it is in view).
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelected(data && data.today.startsWith(month) ? data.today : null);
   }, [month, data?.today]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -135,14 +136,13 @@ export function MonthHeatmap({
                         LEVELS[level(cell.seconds, goal)],
                         future && "opacity-35",
                         !future && "active:scale-95",
-                        isToday && "ring-2 ring-violet-600 ring-offset-2 ring-offset-card dark:ring-violet-300",
-                        isSelected && !isToday && "ring-2 ring-foreground ring-offset-2 ring-offset-card",
+                        isSelected && "z-10 scale-110 shadow-lg shadow-black/25 motion-safe:transition-transform",
                         focusRing,
                       )}
                     >
-                      {day}
+                      <span className={cn(isToday && "rounded-full bg-black/10 px-1.5 py-0.5 font-bold dark:bg-white/20")}>{day}</span>
                       {cell.completedTasks > 0 && (
-                        <span aria-hidden="true" className="absolute bottom-1 size-1 rounded-full bg-emerald-500" />
+                        <span aria-hidden="true" className="absolute bottom-1 size-1 rounded-full bg-amber-400 ring-1 ring-black/20" />
                       )}
                     </button>
                   );
@@ -158,7 +158,8 @@ export function MonthHeatmap({
               <span>Goal reached</span>
             </div>
             <span className="flex items-center gap-1.5">
-              <i aria-hidden="true" className="size-1.5 rounded-full bg-emerald-500" /> Task completed
+              <b aria-hidden="true" className="mr-1 rounded-full bg-foreground/10 px-1.5 py-0.5 text-[10px] font-bold">9</b>Today
+              <i aria-hidden="true" className="ml-2 size-1.5 rounded-full bg-amber-400" /> Task completed
             </span>
           </div>
 
