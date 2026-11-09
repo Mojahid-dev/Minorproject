@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     prisma.studySession.findMany({
       where: {
         userId,
-        status: "COMPLETED",
+        status: { in: ["COMPLETED", "ABANDONED"] },
         endedAt: { gte: queryStart, lt: queryEnd },
       },
       orderBy: { endedAt: "asc" },

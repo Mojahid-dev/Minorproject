@@ -205,11 +205,35 @@ enum StudySessionStatus {
   RUNNING
   PAUSED
   COMPLETED
+  ABANDONED
 }
 
 enum StudySessionMode {
   STOPWATCH
+  COUNTDOWN
   POMODORO
+}
+
+enum PomodoroPhase {
+  FOCUS
+  SHORT_BREAK
+  LONG_BREAK
+}
+
+enum StudySessionEventType {
+  PAUSE
+  RESUME
+  TAB_HIDDEN
+  TAB_VISIBLE
+  END
+  PHASE_CHANGED
+}
+
+enum StudySessionEndReason {
+  DONE_EARLY
+  INTERRUPTED
+  GAVE_UP
+  TIMER_COMPLETED
 }
 
 model StudySession {
@@ -227,6 +251,27 @@ model StudySession {
   accumulatedSeconds Int                @default(0)
   durationSeconds    Int?
   notes              String?            @db.VarChar(1000)
+  goal               String?            @db.VarChar(240)
+  plannedSeconds     Int                @default(0)
+  endsAt             DateTime?
+  phaseStartedAt     DateTime?
+  pausedAt           DateTime?
+  pausedSeconds      Int                @default(0)
+  awaySeconds        Int                @default(0)
+  focusSeconds       Int                @default(0)
+  phaseAccumulatedSeconds Int           @default(0)
+  focusRating        Int?
+  goalCompleted      Boolean?
+  endReason          StudySessionEndReason?
+  strictMode         Boolean            @default(false)
+  focusMode          Boolean            @default(false)
+  pomodoroPhase      PomodoroPhase?
+  currentCycle       Int                @default(1)
+  focusDurationSeconds Int              @default(1500)
+  shortBreakSeconds  Int                @default(300)
+  longBreakSeconds   Int                @default(900)
+  events             StudySessionEvent[]
+  parkingLotNotes    ParkingLotNote[]
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -238,6 +283,30 @@ model StudySession {
   @@index([userId, status, endedAt])
   @@index([subjectId, startedAt])
   @@map("study_session")
+}
+
+model StudySessionEvent {
+  id        String                 @id @default(cuid())
+  sessionId String
+  type      StudySessionEventType
+  tabId     String?                @db.VarChar(80)
+  at        DateTime               @default(now())
+  session   StudySession           @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, at])
+  @@index([sessionId, tabId, type, at])
+  @@map("study_session_event")
+}
+
+model ParkingLotNote {
+  id        String       @id @default(cuid())
+  sessionId String
+  text      String       @db.VarChar(500)
+  createdAt DateTime     @default(now())
+  session   StudySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("parking_lot_note")
 }
 
 model StudyGoal {
