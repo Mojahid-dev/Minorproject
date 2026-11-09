@@ -47,8 +47,8 @@ export async function GET(request: Request) {
 
   const [sessions, tasks, goal, streakSessions, streakTasks] = await Promise.all([
     prisma.studySession.findMany({
-      where: { userId, status: "COMPLETED", endedAt: { gte: from, lt: to } },
-      select: { endedAt: true, durationSeconds: true, accumulatedSeconds: true },
+      where: { userId, status: { in: ["COMPLETED", "ABANDONED"] }, endedAt: { gte: from, lt: to } },
+      select: { endedAt: true, durationSeconds: true, accumulatedSeconds: true, focusSeconds: true },
     }),
     prisma.task.findMany({ where: { userId, completedAt: { gte: from, lt: to } }, select: { completedAt: true } }),
     prisma.studyGoal.findUnique({ where: { userId } }),
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
     if (!item.endedAt) continue;
     const bucket = days.get(localDayKey(item.endedAt, timeZone));
     if (!bucket) continue;
-    bucket.seconds += Math.max(0, item.durationSeconds ?? item.accumulatedSeconds);
+    bucket.seconds += Math.max(0, item.durationSeconds ?? (item.focusSeconds > 0 ? item.focusSeconds : item.accumulatedSeconds));
     bucket.sessions += 1;
   }
   for (const task of tasks) {

@@ -356,17 +356,17 @@ export default function SettingsPage() {
             <div>
               <h2 className="font-semibold text-white">Focus mode</h2>
               <p className="text-sm text-neutral-500">
-                Save your preference for a quieter workspace.
+                Choose whether new study sessions open in the immersive Focus Mode.
               </p>
             </div>
           </div>
           <label className="mt-5 flex cursor-pointer items-center justify-between gap-3 border-t border-zinc-800 pt-5">
             <span className="min-w-0">
               <span className="block text-sm font-medium text-white">
-                Enable focus mode
+                Start study sessions in Focus Mode by default
               </span>
               <span className="mt-1 block text-sm text-neutral-500">
-                Reduce non-essential workspace interruptions as they become available.
+                New sessions open in the distraction-free full-screen timer. You can still switch modes anytime.
               </span>
             </span>
             <input

@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { CheckCircle2, Pause, Play, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { CheckCircle2, Maximize2, Pause, Play, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { focusRing, panel, primaryButton, secondaryButton } from "@/components/dashboard/shared";
@@ -12,7 +14,7 @@ const field =
   "h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground " +
   focusRing;
 
-function AnalogStudyClock({ seconds, running }: { seconds: number; running: boolean }) {
+function AnalogStudyClock({ seconds, running, label = "elapsed" }: { seconds: number; running: boolean; label?: string }) {
   const safe = Math.max(0, Math.floor(seconds));
   const second = safe % 60;
   const minute = Math.floor(safe / 60) % 60;
@@ -116,7 +118,7 @@ function AnalogStudyClock({ seconds, running }: { seconds: number; running: bool
           </svg>
           <div className="absolute inset-x-0 bottom-[29%] flex flex-col items-center pointer-events-none">
             <span className="rounded-full bg-background/90 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground shadow-sm">
-              elapsed
+              {label}
             </span>
             <span className="mt-1 font-mono text-xl font-semibold tracking-tight text-foreground tabular-nums sm:text-2xl">
               {clock(safe)}
@@ -143,14 +145,31 @@ export function FocusTimer({
   initialTaskId?: string;
 }) {
   const tracker = useStudyTracker();
+  const router = useRouter();
   const active = tracker.active;
   const [subjectId, setSubjectId] = useState("");
   const [taskId, setTaskId] = useState(initialTaskId ?? "");
   const [topic, setTopic] = useState("");
   const [notes, setNotes] = useState("");
+  const [goal, setGoal] = useState("");
+  const [mode, setMode] = useState<"COUNTDOWN" | "STOPWATCH" | "POMODORO">("COUNTDOWN");
+  const [minutes, setMinutes] = useState(50);
+  const [focusMode, setFocusMode] = useState(false);
+  const [strictMode, setStrictMode] = useState(false);
+  const [reflectionRating, setReflectionRating] = useState(4);
+  const [reflectionGoal, setReflectionGoal] = useState(true);
+  const [savingReflection, setSavingReflection] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const live = todaySeconds + (active ? tracker.elapsedSeconds : 0);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/preferences", { cache: "no-store" }).then((response) => response.ok ? response.json() : null).then((payload) => {
+      if (!cancelled && typeof payload?.preferences?.focusMode === "boolean") setFocusMode(payload.preferences.focusMode);
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
+
+  const live = todaySeconds + (active ? tracker.focusedSeconds : 0);
   const goalProgress = Math.min(100, Math.round((live / Math.max(1, goalSeconds)) * 100));
   const subjectName = active?.subject?.name ?? tracker.subjects.find((s) => s.id === subjectId)?.name;
   const sessionName = active?.topic || active?.task?.title || subjectName || "Independent study";
@@ -158,19 +177,31 @@ export function FocusTimer({
   async function start() {
     setBusy(true);
     const ok = await tracker.start({
-      mode: "STOPWATCH",
+      mode,
+      plannedSeconds: minutes * 60,
+      focusDurationSeconds: 25 * 60,
+      shortBreakSeconds: 5 * 60,
+      longBreakSeconds: 15 * 60,
       subjectId: subjectId || undefined,
       taskId: taskId || undefined,
       topic: topic.trim() || undefined,
+      goal: goal.trim() || undefined,
+      focusMode,
+      strictMode,
     });
     setBusy(false);
     if (ok) {
       setNotes("");
       toast.success("Focus session started. You've got this.");
+      if (focusMode) router.push("/focus");
     }
   }
 
   async function finish() {
+    if (active?.strictMode) {
+      router.push("/focus");
+      return;
+    }
     setBusy(true);
     const ok = await tracker.finish(notes);
     setBusy(false);
@@ -206,9 +237,17 @@ export function FocusTimer({
         )}
       </div>
 
+      {tracker.completedSession && tracker.completedSession.status === "COMPLETED" && tracker.completedSession.focusRating == null && (
+        <div className="mx-4 mt-4 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4 sm:mx-6">
+          <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-foreground">Session saved. Quick reflection?</p><p className="mt-1 text-xs text-muted-foreground">Two taps help Zohra understand your study patterns.</p></div><button type="button" onClick={tracker.clearCompleted} className="text-xs text-muted-foreground hover:text-foreground">Dismiss</button></div>
+          <p className="mt-4 text-xs font-semibold text-foreground">How focused did you feel?</p>
+          <div className="mt-2 flex gap-2">{[1,2,3,4,5].map((value) => <button key={value} type="button" onClick={() => setReflectionRating(value)} className={cn("grid size-9 place-items-center rounded-lg border text-xs font-semibold", reflectionRating === value ? "border-violet-500 bg-violet-600 text-white" : "border-border bg-background text-foreground")}>{value}</button>)}</div>
+          <div className="mt-3 flex flex-wrap items-center gap-3"><span className="text-xs text-muted-foreground">Goal completed?</span><button type="button" onClick={() => setReflectionGoal(true)} className={cn("rounded-lg px-3 py-1.5 text-xs", reflectionGoal ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground")}>Yes</button><button type="button" onClick={() => setReflectionGoal(false)} className={cn("rounded-lg px-3 py-1.5 text-xs", !reflectionGoal ? "bg-violet-500/15 text-violet-600" : "bg-muted text-muted-foreground")}>Not yet</button><button type="button" disabled={savingReflection} onClick={async () => { setSavingReflection(true); const ok = await tracker.rate(reflectionRating, reflectionGoal); setSavingReflection(false); if (ok) toast.success("Reflection saved."); }} className="ml-auto rounded-lg bg-foreground px-4 py-2 text-xs font-semibold text-background disabled:opacity-50">{savingReflection ? "Saving…" : "Save"}</button></div>
+        </div>
+      )}
       <div className="grid gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.9fr)] lg:items-center lg:gap-8">
         <div className="min-w-0">
-          <AnalogStudyClock seconds={active ? tracker.elapsedSeconds : 0} running={active?.status === "RUNNING"} />
+          <AnalogStudyClock seconds={active ? (tracker.remainingSeconds ?? tracker.elapsedSeconds) : 0} running={active?.status === "RUNNING"} label={active?.mode === "STOPWATCH" ? "elapsed" : "remaining"} />
           {active ? (
             <div className="mt-5 text-center">
               <p className="text-sm font-semibold text-foreground">{sessionName}</p>
@@ -254,6 +293,21 @@ export function FocusTimer({
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                 <label className="block text-xs font-semibold text-foreground">
+                  Timer mode
+                  <select value={mode} onChange={(e) => setMode(e.target.value as typeof mode)} className={cn(field, "mt-1.5 font-normal")}>
+                    <option value="COUNTDOWN">Countdown</option>
+                    <option value="STOPWATCH">Stopwatch</option>
+                    <option value="POMODORO">Pomodoro · 25/5</option>
+                  </select>
+                </label>
+                {mode === "COUNTDOWN" && <label className="block text-xs font-semibold text-foreground">
+                  Duration
+                  <select value={minutes} onChange={(e) => setMinutes(Number(e.target.value))} className={cn(field, "mt-1.5 font-normal")}>
+                    {[15, 25, 30, 45, 50, 60, 90, 120].map((value) => <option key={value} value={value}>{value} minutes</option>)}
+                  </select>
+                </label>}
+
+                <label className="block text-xs font-semibold text-foreground">
                   Link a task <span className="font-normal text-muted-foreground">(optional)</span>
                   <select value={taskId} onChange={(e) => setTaskId(e.target.value)} className={cn(field, "mt-1.5 font-normal")}>
                     <option value="">No linked task</option>
@@ -271,6 +325,21 @@ export function FocusTimer({
                   />
                 </label>
               </div>
+              <label className="block text-xs font-semibold text-foreground">
+                Today's intention <span className="font-normal text-muted-foreground">(optional)</span>
+                <input value={goal} onChange={(e) => setGoal(e.target.value)} maxLength={240} placeholder="e.g. Finish chapter 4 questions" className={cn(field, "mt-1.5 font-normal")} />
+              </label>
+              <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-3">
+                <label className="flex cursor-pointer items-center justify-between gap-4">
+                  <span className="min-w-0"><span className="block text-xs font-semibold text-foreground">Enter Focus Mode</span><span className="mt-0.5 block text-[11px] text-muted-foreground">Open a distraction-free full-screen session.</span></span>
+                  <input type="checkbox" checked={focusMode} onChange={(e) => setFocusMode(e.target.checked)} className="peer sr-only" />
+                  <span aria-hidden="true" className={cn("relative h-6 w-11 shrink-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-violet-500 peer-focus-visible:ring-offset-2", focusMode ? "bg-violet-600" : "bg-muted-foreground/30")}><span className={cn("absolute top-1 size-4 rounded-full bg-white shadow-sm transition-transform", focusMode ? "translate-x-6" : "translate-x-1")} /></span>
+                </label>
+                <div className="flex items-center justify-between border-t border-border/60 pt-3">
+                  <span><span className="block text-xs font-semibold text-foreground">Strict mode</span><span className="block text-[11px] text-muted-foreground">Choose a reason when ending early.</span></span>
+                  <input type="checkbox" checked={strictMode} onChange={(e) => setStrictMode(e.target.checked)} className="size-4 accent-violet-600" />
+                </div>
+              </div>
 
               <button type="button" onClick={() => void start()} disabled={busy || tracker.loading} className={cn(primaryButton, "h-12 w-full text-base disabled:opacity-60")}>
                 <Play size={18} fill="currentColor" aria-hidden="true" /> {busy ? "Starting…" : "Start study session"}
@@ -284,7 +353,9 @@ export function FocusTimer({
               <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
                 <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground">Current session</p>
                 <p className="mt-1 truncate text-base font-semibold text-foreground">{sessionName}</p>
-                <p className="mt-1 text-xs text-muted-foreground">Elapsed: {duration(tracker.elapsedSeconds)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{active.mode === "STOPWATCH" ? "Elapsed" : "Remaining"}: {duration(active.mode === "STOPWATCH" ? tracker.elapsedSeconds : (tracker.remainingSeconds ?? 0))}</p>
+                {active.goal && <p className="mt-2 text-xs text-muted-foreground">Goal: {active.goal}</p>}
+                <Link href="/focus" className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-violet-600 hover:text-violet-500"><Maximize2 size={14}/> Enter Focus Mode</Link>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {active.status === "RUNNING" ? (

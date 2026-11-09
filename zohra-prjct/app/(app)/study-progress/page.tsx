@@ -11,6 +11,7 @@ import { InsightsView, type Analytics } from "@/components/study-progress/insigh
 import { MonthHeatmap } from "@/components/study-progress/month-heatmap";
 import { currentMonthKey, useStudyCalendar } from "@/components/study-progress/use-study-calendar";
 import { duration } from "@/components/study-progress/format";
+import { FocusAnalyticsCards } from "@/components/focus-mode/focus-analytics-cards";
 
 type Goal = { dailyTargetMinutes: number; weeklyTargetMinutes: number };
 type Tab = "focus" | "insights";
@@ -155,7 +156,7 @@ export default function StudyProgressPage() {
     return () => window.removeEventListener("zohra:study-updated", update);
   }, [loadAnalytics, refreshTracker]);
 
-  const running = tracker.active ? tracker.elapsedSeconds : 0;
+  const running = tracker.active ? tracker.focusedSeconds : 0;
   const todaySeconds = analytics?.todaySeconds ?? 0;
   const weekSeconds = (analytics?.weekSeconds ?? 0) + running;
   const goalChanged =
@@ -293,7 +294,7 @@ export default function StudyProgressPage() {
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-foreground">{item.subject?.name || "Independent study"}</p>
                           <p className="truncate text-xs text-muted-foreground">
-                            {item.topic || item.task?.title || (item.endedAt ? new Date(item.endedAt).toLocaleDateString() : "Completed")}
+                            {item.status === "ABANDONED" ? "Ended early · " : ""}{item.topic || item.task?.title || (item.endedAt ? new Date(item.endedAt).toLocaleDateString() : "Completed")}
                           </p>
                         </div>
                         <span className="shrink-0 rounded-lg bg-muted px-2.5 py-1 text-xs font-semibold tabular-nums text-foreground">
@@ -320,7 +321,10 @@ export default function StudyProgressPage() {
                 onRetry={calendar.retry}
               />
             </div>
-            <InsightsView analytics={analytics} days={days} onDays={setDays} loading={analyticsLoading} />
+            <div className="min-w-0">
+              <InsightsView analytics={analytics} days={days} onDays={setDays} loading={analyticsLoading} />
+              <FocusAnalyticsCards />
+            </div>
           </div>
         )}
       </div>
