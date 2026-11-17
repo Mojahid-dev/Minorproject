@@ -121,6 +121,7 @@ function ZohraMark({ compact = false }: { compact?: boolean }) {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const [showIntro, setShowIntro] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
@@ -232,6 +233,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <StudyTrackerProvider>
+    {showIntro && (
+      <div
+        className="fixed inset-0 z-[100] grid place-items-center bg-black"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Zohra introduction"
+      >
+        <video
+          className="h-full w-full object-contain"
+          src="/zohra-intro.mp4"
+          autoPlay
+          muted
+          playsInline
+          preload="auto"
+          onEnded={() => setShowIntro(false)}
+          onError={() => setShowIntro(false)}
+        />
+        <button
+          type="button"
+          onClick={() => setShowIntro(false)}
+          className="absolute bottom-6 right-6 rounded-full border border-white/25 bg-black/60 px-4 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        >
+          Skip intro
+        </button>
+      </div>
+    )}
     <main className="workspace-shell min-h-dvh w-full min-w-0 overflow-x-clip bg-zinc-950 text-neutral-100 lg:h-dvh lg:overflow-hidden">
       <div className="flex min-h-dvh w-full min-w-0 flex-col border-zinc-800 bg-zinc-950 lg:h-full lg:flex-row lg:overflow-hidden lg:border lg:shadow-[0_25px_80px_rgba(0,0,0,0.4)]">
         <aside
