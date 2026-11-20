@@ -121,7 +121,8 @@ function ZohraMark({ compact = false }: { compact?: boolean }) {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const [showIntro, setShowIntro] = useState(true);
+  const [showIntro, setShowIntro] = useState(false);
+  const [introCheckedFor, setIntroCheckedFor] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
@@ -132,6 +133,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { resolvedTheme, setTheme } = useTheme();
   const isLightTheme = resolvedTheme === "light";
   const { data: session } = useSession();
+  const userId = session?.user?.id;
   const profileName = session?.user?.name || "Zohra";
   const profileImage = session?.user?.image || "";
   const profileInitials =
@@ -149,6 +151,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   ).length;
   const remainingToday = todaysTasks.length - completedToday;
   const activeTaskCount = tasks.filter((task) => !task.completedAt).length;
+
+  useEffect(() => {
+    if (!userId) return;
+    let active = true;
+    fetch("/api/intro", { cache: "no-store" })
+      .then(async (response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (!active) return;
+        setIntroCheckedFor(userId);
+        setShowIntro(payload?.shouldShow === true);
+      })
+      .catch(() => {
+        if (active) setIntroCheckedFor(userId);
+      });
+    return () => { active = false; };
+  }, [userId]);
+
+  const dismissIntro = useCallback(() => {
+    setShowIntro(false);
+    void fetch("/api/intro", { method: "POST" }).catch(() => undefined);
+  }, []);
 
   const refreshSidebarData = useCallback(async () => {
     const [taskResult, resourceResult] = await Promise.allSettled([
@@ -233,7 +256,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <StudyTrackerProvider>
-    {showIntro && (
+    {showIntro && introCheckedFor === userId && (
       <div
         className="fixed inset-0 z-[100] grid place-items-center bg-black"
         role="dialog"
@@ -247,12 +270,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           muted
           playsInline
           preload="auto"
-          onEnded={() => setShowIntro(false)}
-          onError={() => setShowIntro(false)}
+          onEnded={dismissIntro}
+          onError={dismissIntro}
         />
         <button
           type="button"
-          onClick={() => setShowIntro(false)}
+          onClick={dismissIntro}
           className="absolute bottom-6 right-6 rounded-full border border-white/25 bg-black/60 px-4 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           Skip intro

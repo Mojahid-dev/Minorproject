@@ -19,6 +19,7 @@ model User {
   emailVerified Boolean   @default(false)
   image         String?
   onboardingVersion Int   @default(0)
+  introSeen     Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
