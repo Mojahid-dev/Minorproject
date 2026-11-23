@@ -6,9 +6,11 @@ import { usePathname } from "next/navigation";
 import { Maximize2, Pause, Play, Square, X, Minus, Move } from "lucide-react";
 import { toast } from "sonner";
 import { formatClock } from "@/lib/focus/timer";
+import { setTaskCompleted, shouldAskAboutTask } from "../../../zohra-task-focus/zohra-prjct/components/study-progress/task-completion";
 
 type SubjectOption = { id: string; name: string };
 type TaskOption = { id: string; title: string };
+type SessionTask = TaskOption & { completedAt?: string | null };
 export type StudySession = {
   id: string;
   mode: "STOPWATCH" | "COUNTDOWN" | "POMODORO";
@@ -36,7 +38,7 @@ export type StudySession = {
   subjectId: string | null;
   taskId: string | null;
   subject: SubjectOption | null;
-  task: TaskOption | null;
+  task: SessionTask | null;
   notes?: string | null;
   strictMode?: boolean;
   focusMode?: boolean;
@@ -45,6 +47,7 @@ export type StudySession = {
   parkingLotNotes?: { id: string; text: string; createdAt: string }[];
   focusRating?: number | null;
   goalCompleted?: boolean | null;
+  endReason?: "DONE_EARLY" | "INTERRUPTED" | "GAVE_UP" | "TIMER_COMPLETED" | null;
 };
 
 type StartInput = {
@@ -155,6 +158,22 @@ export function StudyTrackerProvider({ children, showPlayer = true }: { children
           setSessions((current) => [next, ...current.filter((item) => item.id !== next.id)].slice(0, 30));
           setActive(null);
           window.dispatchEvent(new Event("zohra:study-updated"));
+          // Ended from the mini player or another page? The Study and Focus screens ask in place; elsewhere, ask with a toast.
+          const path = window.location.pathname;
+          if (shouldAskAboutTask(next) && !path.startsWith("/study-progress") && path !== "/focus") {
+            const taskId = next.task.id;
+            toast(`Finished “${next.task.title}”?`, {
+              duration: 15_000,
+              action: {
+                label: "Mark done",
+                onClick: async () => {
+                  if (await setTaskCompleted(taskId, true)) {
+                    toast.success("Task completed", { action: { label: "Undo", onClick: () => void setTaskCompleted(taskId, false) } });
+                  } else toast.error("Couldn't update the task.");
+                },
+              },
+            });
+          }
         } else {
           setActive(next);
         }

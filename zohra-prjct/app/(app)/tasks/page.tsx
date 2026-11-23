@@ -121,7 +121,7 @@ function TasksContent() {
           const message = (payload as { error?: string } | null)?.error;
           throw new Error(message || "Unable to update task.");
         }
-        setTasks((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+        setTasks((current) => current.map((item) => (item.id === updated.id ? { ...updated, studiedSeconds: item.studiedSeconds } : item)));
         emitChanged();
         return true;
       } catch (caught) {

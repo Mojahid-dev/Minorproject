@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 
 const includeSession = {
   subject: { select: { id: true, name: true } },
-  task: { select: { id: true, title: true } },
+  task: { select: { id: true, title: true, completedAt: true } },
   parkingLotNotes: { orderBy: { createdAt: "asc" as const } },
 };
 

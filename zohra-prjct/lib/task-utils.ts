@@ -6,6 +6,8 @@ export type TaskRecord = {
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Total completed focus time linked to this task. Only sent by GET /api/tasks. */
+  studiedSeconds?: number;
 };
 
 export function isDateOnly(value: unknown): value is string {

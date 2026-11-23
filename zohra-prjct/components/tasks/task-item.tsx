@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import {
   Calendar,
@@ -9,6 +10,8 @@ import {
   CircleAlert,
   MoreHorizontal,
   Pencil,
+  Play,
+  Timer,
   Trash2,
 } from "lucide-react";
 import { localDateString, type TaskRecord } from "@/lib/task-utils";
@@ -23,6 +26,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { focusRing, primaryButton, secondaryButton } from "@/components/dashboard/shared";
+import { useStudyTracker } from "@/components/study-progress/study-tracker-provider";
+import { duration } from "@/components/study-progress/format";
 
 export type TaskPatch = {
   title?: string;
@@ -129,6 +134,9 @@ function EditForm({
 
 export function TaskItem({ task, today, showDue = true, onPatch, onDelete }: Props) {
   const [editing, setEditing] = useState(false);
+  const { active } = useStudyTracker();
+  const focusing = active?.taskId === task.id;
+  const studied = task.studiedSeconds ?? 0;
   const done = Boolean(task.completedAt);
   const late = !done && Boolean(task.dueDate && task.dueDate < today);
 
@@ -174,18 +182,28 @@ export function TaskItem({ task, today, showDue = true, onPatch, onDelete }: Pro
             {task.notes}
           </p>
         )}
-        {showDue && (task.dueDate || done) && (
-          <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs">
-            {late && task.dueDate ? (
+        {((showDue && (task.dueDate || done)) || studied > 0 || focusing) && (
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            {showDue && late && task.dueDate ? (
               <span className="inline-flex items-center gap-1 font-medium text-destructive">
                 <CircleAlert size={12} aria-hidden="true" /> {overdueLabel(task.dueDate, today)}
               </span>
-            ) : task.dueDate ? (
+            ) : showDue && task.dueDate ? (
               <span className="inline-flex items-center gap-1 text-muted-foreground">
                 <Calendar size={12} aria-hidden="true" /> {formatDay(task.dueDate, today)}
               </span>
             ) : null}
-            {done && task.completedAt && (
+            {focusing && (
+              <span className="inline-flex items-center gap-1.5 font-medium text-violet-700 dark:text-violet-300">
+                <span aria-hidden="true" className="size-1.5 animate-pulse rounded-full bg-violet-500" /> Focusing now
+              </span>
+            )}
+            {studied > 0 && (
+              <span className="inline-flex items-center gap-1 text-muted-foreground">
+                <Timer size={12} aria-hidden="true" /> Studied {duration(studied)}
+              </span>
+            )}
+            {showDue && done && task.completedAt && (
               <span className="text-emerald-800 dark:text-emerald-300">
                 Completed {formatDay(localDateString(new Date(task.completedAt)), today).toLowerCase()}
               </span>
@@ -194,6 +212,19 @@ export function TaskItem({ task, today, showDue = true, onPatch, onDelete }: Pro
         )}
       </div>
 
+      {!done && !focusing && (
+        <Link
+          href={`/study-progress?taskId=${task.id}`}
+          aria-label={`Start focus on ${task.title}`}
+          className={cn(
+            "mt-1 inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-3 text-sm font-medium text-violet-700 motion-safe:transition-colors hover:bg-violet-500/10 dark:text-violet-300 sm:min-h-9",
+            focusRing,
+          )}
+        >
+          <Play size={14} fill="currentColor" aria-hidden="true" />
+          <span className="max-sm:sr-only">Focus</span>
+        </Link>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label={`Actions for ${task.title}`}
