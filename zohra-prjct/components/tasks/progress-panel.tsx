@@ -17,26 +17,48 @@ type Props = {
 };
 
 /** One place for the numbers that used to be repeated in tiles, a hero and a side card. */
-export function ProgressPanel({ loading, total, done, overdue, doneThisWeek, onShowOverdue }: Props) {
+export function ProgressPanel({
+  loading,
+  total,
+  done,
+  overdue,
+  doneThisWeek,
+  onShowOverdue,
+}: Props) {
   const left = total - done;
   const percent = total ? Math.round((done / total) * 100) : 0;
   const headline =
-    total === 0 ? "Nothing due today" : left === 0 ? "All done for today" : `${left} to go`;
+    total === 0
+      ? "Nothing due today"
+      : left === 0
+        ? "All done for today"
+        : `${left} to go`;
 
   return (
-    <section aria-labelledby="progress-heading" className={cn(panel, "p-4 sm:p-5")}>
+    <section
+      aria-labelledby="progress-heading"
+      className={cn(panel, "p-4 sm:p-5")}
+    >
       <PanelHeader id="progress-heading" title="Today's progress" />
 
       {loading ? (
-        <div className="mt-3 space-y-3" aria-busy="true" aria-label="Loading progress">
+        <div
+          className="mt-3 space-y-3"
+          aria-busy="true"
+          aria-label="Loading progress"
+        >
           <Skeleton className="h-9 w-40" />
           <Skeleton className="h-2" />
         </div>
       ) : (
         <>
-          <p className="mt-3 text-3xl font-bold tracking-tight text-foreground">{headline}</p>
+          <p className="mt-3 text-3xl font-bold tracking-tight text-foreground">
+            {headline}
+          </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {total ? `${done} of ${plural(total, "task")} complete` : "Add a task to plan your day."}
+            {total
+              ? `${done} of ${plural(total, "task")} complete`
+              : "Add a task to plan your day."}
           </p>
           <div
             role="progressbar"
@@ -57,7 +79,9 @@ export function ProgressPanel({ loading, total, done, overdue, doneThisWeek, onS
               <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <CheckCheck size={13} aria-hidden="true" /> Done this week
               </dt>
-              <dd className="mt-0.5 text-xl font-semibold tabular-nums text-foreground">{doneThisWeek}</dd>
+              <dd className="mt-0.5 text-xl font-semibold tabular-nums text-foreground">
+                {doneThisWeek}
+              </dd>
             </div>
             <div
               className={cn(

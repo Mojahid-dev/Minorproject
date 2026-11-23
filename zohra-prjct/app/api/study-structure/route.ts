@@ -16,14 +16,14 @@ export async function GET() {
 
   const years = await prisma.studyYear.findMany({
     where: { userId: session.user.id },
-    orderBy: { label: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
     include: {
       semesters: {
-        orderBy: { name: "asc" },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
         include: {
           subjects: {
-            orderBy: { name: "asc" },
-            include: { chapters: { orderBy: { name: "asc" } } },
+            orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+            include: { chapters: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } },
           },
         },
       },
@@ -73,8 +73,9 @@ export async function POST(request: Request) {
           { error: "That academic year already exists." },
           { status: 409 },
         );
+      const last = await prisma.studyYear.findFirst({ where: { userId: owner }, orderBy: { sortOrder: "desc" }, select: { sortOrder: true } });
       created = await prisma.studyYear.create({
-        data: { userId: owner, label: name, aliases },
+        data: { userId: owner, label: name, aliases, sortOrder: (last?.sortOrder ?? -1) + 1 },
       });
     } else if (kind === "semester") {
       const parentId = parseStructureText(body.parentId, 100);
@@ -103,8 +104,9 @@ export async function POST(request: Request) {
           { error: "That semester already exists in this academic year." },
           { status: 409 },
         );
+      const last = await prisma.semester.findFirst({ where: { studyYearId: parent.id, userId: owner }, orderBy: { sortOrder: "desc" }, select: { sortOrder: true } });
       created = await prisma.semester.create({
-        data: { userId: owner, studyYearId: parent.id, name, aliases },
+        data: { userId: owner, studyYearId: parent.id, name, aliases, sortOrder: (last?.sortOrder ?? -1) + 1 },
       });
     } else if (kind === "subject") {
       const parentId = parseStructureText(body.parentId, 100);
@@ -133,8 +135,9 @@ export async function POST(request: Request) {
           { error: "That subject already exists in this semester." },
           { status: 409 },
         );
+      const last = await prisma.subject.findFirst({ where: { semesterId: parent.id, userId: owner }, orderBy: { sortOrder: "desc" }, select: { sortOrder: true } });
       created = await prisma.subject.create({
-        data: { userId: owner, semesterId: parent.id, name, aliases },
+        data: { userId: owner, semesterId: parent.id, name, aliases, sortOrder: (last?.sortOrder ?? -1) + 1 },
       });
     } else {
       const parentId = parseStructureText(body.parentId, 100);
@@ -163,8 +166,9 @@ export async function POST(request: Request) {
           { error: "That chapter already exists in this subject." },
           { status: 409 },
         );
+      const last = await prisma.chapter.findFirst({ where: { subjectId: parent.id, userId: owner }, orderBy: { sortOrder: "desc" }, select: { sortOrder: true } });
       created = await prisma.chapter.create({
-        data: { userId: owner, subjectId: parent.id, name, aliases },
+        data: { userId: owner, subjectId: parent.id, name, aliases, sortOrder: (last?.sortOrder ?? -1) + 1 },
       });
     }
   } catch (error) {

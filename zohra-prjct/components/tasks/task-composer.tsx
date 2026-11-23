@@ -10,7 +10,11 @@ type Props = {
   today: string | null;
   /** Date preselected for the current view ("" for none). */
   defaultDue: string;
-  onAdd: (task: { title: string; notes: string | null; dueDate: string | null }) => Promise<void>;
+  onAdd: (task: {
+    title: string;
+    notes: string | null;
+    dueDate: string | null;
+  }) => Promise<void>;
 };
 
 export function TaskComposer({ today, defaultDue, onAdd }: Props) {
@@ -33,13 +37,19 @@ export function TaskComposer({ today, defaultDue, onAdd }: Props) {
     setBusy(true);
     setError("");
     try {
-      await onAdd({ title: value, notes: notes.trim() || null, dueDate: due || null });
+      await onAdd({
+        title: value,
+        notes: notes.trim() || null,
+        dueDate: due || null,
+      });
       setTitle("");
       setNotes("");
       setNotesOpen(false);
       inputRef.current?.focus(); // keep going: add the next one right away
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to add task.");
+      setError(
+        caught instanceof Error ? caught.message : "Unable to add task.",
+      );
     } finally {
       setBusy(false);
     }
@@ -80,15 +90,26 @@ export function TaskComposer({ today, defaultDue, onAdd }: Props) {
           )}
         >
           <Plus size={18} aria-hidden="true" />
-          <span className="hidden sm:inline">{busy ? "Adding…" : "Add task"}</span>
+          <span className="hidden sm:inline">
+            {busy ? "Adding…" : "Add task"}
+          </span>
           <span className="sr-only sm:hidden">Add task</span>
         </button>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Due date">
-        <span className="mr-1 text-xs font-medium text-muted-foreground">Due</span>
+      <div
+        className="mt-3 flex flex-wrap items-center gap-1.5"
+        role="group"
+        aria-label="Due date"
+      >
+        <span className="mr-1 text-xs font-medium text-muted-foreground">
+          Due
+        </span>
         {chips.map((chip) => {
-          const active = chip.label === "No date" ? !due : due === chip.value && Boolean(chip.value);
+          const active =
+            chip.label === "No date"
+              ? !due
+              : due === chip.value && Boolean(chip.value);
           return (
             <button
               key={chip.label}
@@ -117,7 +138,9 @@ export function TaskComposer({ today, defaultDue, onAdd }: Props) {
           onChange={(event) => setOverride(event.target.value)}
           className={cn(
             "min-h-9 rounded-full border bg-background px-3 text-sm text-foreground",
-            isCustom ? "border-violet-500/50" : "border-border text-muted-foreground",
+            isCustom
+              ? "border-violet-500/50"
+              : "border-border text-muted-foreground",
             focusRing,
           )}
         />
@@ -130,7 +153,8 @@ export function TaskComposer({ today, defaultDue, onAdd }: Props) {
             focusRing,
           )}
         >
-          <NotebookPen size={15} aria-hidden="true" /> {notesOpen ? "Hide notes" : "Add notes"}
+          <NotebookPen size={15} aria-hidden="true" />{" "}
+          {notesOpen ? "Hide notes" : "Add notes"}
         </button>
       </div>
 
