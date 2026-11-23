@@ -1,5 +1,5 @@
 import { notifyTasksChanged } from "@/lib/task-utils";
-import type { StudySession } from "../../../../zohra-prjct/components/study-progress/study-tracker-provider";
+import type { StudySession } from "./study-tracker-provider";
 
 /** A session can only say "this task might be done" when it ended on purpose, lasted a real while, and the task is still open. */
 export function shouldAskAboutTask(session: StudySession | null | undefined): session is StudySession & { task: NonNullable<StudySession["task"]> } {

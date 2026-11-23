@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Maximize2, Pause, Play, Square, X, Minus, Move } from "lucide-react";
 import { toast } from "sonner";
 import { formatClock } from "@/lib/focus/timer";
-import { setTaskCompleted, shouldAskAboutTask } from "../../../zohra-task-focus/zohra-prjct/components/study-progress/task-completion";
+import { setTaskCompleted, shouldAskAboutTask } from "./task-completion";
 
 type SubjectOption = { id: string; name: string };
 type TaskOption = { id: string; title: string };
