@@ -1,25 +1,18 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { elapsedSeconds, activeFocusSeconds } from "@/lib/focus/timer";
-import type { TimerSnapshot } from "@/lib/focus/timer";
+import type { Prisma } from "@/lib/generated/prisma/client";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
 const STALE_RUNNING_MS = 4 * 60 * 60 * 1000;
 const STALE_PAUSED_MS = 2 * 60 * 60 * 1000;
-type FocusSession = TimerSnapshot & {
-  id: string;
-  currentCycle: number;
-  shortBreakSeconds: number;
-  longBreakSeconds: number;
-  lastHeartbeatAt: Date | null;
-  subject?: { id: string; name: string } | null;
-};
 const includeSession = {
   subject: { select: { id: true, name: true } },
   task: { select: { id: true, title: true, completedAt: true } },
   parkingLotNotes: { orderBy: { createdAt: "asc" as const } },
 };
+type FocusSession = Prisma.StudySessionGetPayload<{ include: typeof includeSession }>;
 
 async function userId() {
   const session = await auth.api.getSession({ headers: await headers() });
