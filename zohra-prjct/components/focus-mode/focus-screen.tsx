@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { useStudyTracker } from "@/components/study-progress/study-tracker-provider";
 import { formatClock } from "@/lib/focus/timer";
 import { FocusStudyMaterial } from "@/components/focus-mode/focus-study-material";
+import { TaskDoneCard } from "@/components/study-progress/task-done-card";
 
 const endReasons = [
   {
@@ -158,6 +159,7 @@ export function FocusScreen() {
           <p className="mt-2 text-xs text-neutral-500">
             Recorded focused study time
           </p>
+          <div className="mt-6 empty:hidden"><TaskDoneCard session={session} tone="dark" /></div>
           {session.goal && (
             <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4 text-left">
               <p className="text-xs text-neutral-500">YOUR INTENTION</p>

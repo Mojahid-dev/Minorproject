@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { ArrowRight, Check, CircleAlert, PartyPopper, Plus } from "lucide-react";
+import { ArrowRight, Check, CircleAlert, PartyPopper, Play, Plus } from "lucide-react";
 import type { TaskRecord } from "@/lib/task-utils";
 import { overdueLabel, plural, type TaskGroups } from "@/lib/dashboard-utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -66,6 +66,15 @@ function TaskItem({
           <CircleAlert size={13} aria-hidden="true" />
           {overdueLabel(task.dueDate, today)}
         </span>
+      )}
+      {!done && (
+        <Link
+          href={`/study-progress?taskId=${task.id}`}
+          aria-label={`Start focus on ${task.title}`}
+          className={cn("grid size-11 shrink-0 place-items-center rounded-xl text-violet-700 motion-safe:transition-colors hover:bg-violet-500/10 dark:text-violet-300", focusRing)}
+        >
+          <Play size={15} fill="currentColor" aria-hidden="true" />
+        </Link>
       )}
     </li>
   );

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { focusRing, panel, primaryButton, secondaryButton } from "@/components/dashboard/shared";
 import { useStudyTracker } from "./study-tracker-provider";
 import { clock, duration } from "./format";
+import { TaskDoneCard } from "./task-done-card";
 
 const field =
   "h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground " +
@@ -161,6 +162,11 @@ export function FocusTimer({
   const [savingReflection, setSavingReflection] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // The page reads ?taskId= after mount, so follow the prop instead of only using it as the first value.
+  useEffect(() => {
+    if (initialTaskId) setTaskId(initialTaskId); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [initialTaskId]);
+
   useEffect(() => {
     let cancelled = false;
     fetch("/api/preferences", { cache: "no-store" }).then((response) => response.ok ? response.json() : null).then((payload) => {
@@ -237,6 +243,7 @@ export function FocusTimer({
         )}
       </div>
 
+      {tracker.completedSession && <div className="mx-4 mt-4 sm:mx-6"><TaskDoneCard session={tracker.completedSession} /></div>}
       {tracker.completedSession && tracker.completedSession.status === "COMPLETED" && tracker.completedSession.focusRating == null && (
         <div className="mx-4 mt-4 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4 sm:mx-6">
           <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-foreground">Session saved. Quick reflection?</p><p className="mt-1 text-xs text-muted-foreground">Two taps help Zohra understand your study patterns.</p></div><button type="button" onClick={tracker.clearCompleted} className="text-xs text-muted-foreground hover:text-foreground">Dismiss</button></div>

@@ -8,7 +8,7 @@ const STALE_RUNNING_MS = 4 * 60 * 60 * 1000;
 const STALE_PAUSED_MS = 2 * 60 * 60 * 1000;
 const includeSession = {
   subject: { select: { id: true, name: true } },
-  task: { select: { id: true, title: true } },
+  task: { select: { id: true, title: true, completedAt: true } },
   parkingLotNotes: { orderBy: { createdAt: "asc" as const } },
 };
 
