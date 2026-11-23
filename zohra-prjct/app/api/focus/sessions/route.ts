@@ -1,11 +1,20 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { elapsedSeconds, activeFocusSeconds } from "@/lib/focus/timer";
+import type { TimerSnapshot } from "@/lib/focus/timer";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
 const STALE_RUNNING_MS = 4 * 60 * 60 * 1000;
 const STALE_PAUSED_MS = 2 * 60 * 60 * 1000;
+type FocusSession = TimerSnapshot & {
+  id: string;
+  currentCycle: number;
+  shortBreakSeconds: number;
+  longBreakSeconds: number;
+  lastHeartbeatAt: Date | null;
+  subject?: { id: string; name: string } | null;
+};
 const includeSession = {
   subject: { select: { id: true, name: true } },
   task: { select: { id: true, title: true, completedAt: true } },
@@ -17,7 +26,7 @@ async function userId() {
   return session?.user?.id ?? null;
 }
 
-function serialize(session: any, now: Date) {
+function serialize(session: FocusSession, now: Date) {
   const elapsed = elapsedSeconds(session, now);
   const focused = activeFocusSeconds(session, now);
   const referenceTime = session.status === "PAUSED" && session.pausedAt ? session.pausedAt : now;
@@ -27,7 +36,7 @@ function serialize(session: any, now: Date) {
   return { ...session, elapsedSeconds: elapsed, focusedSeconds: focused, remainingSeconds: remaining };
 }
 
-async function advancePomodoro(session: any, now: Date) {
+async function advancePomodoro(session: FocusSession, now: Date) {
   if (session.mode !== "POMODORO" || session.status !== "RUNNING" || !session.endsAt || session.endsAt > now) return session;
   const phaseEnd = session.endsAt;
   const currentSegmentSeconds = session.segmentStartedAt

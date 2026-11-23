@@ -7,7 +7,7 @@ import { CheckCircle2, Maximize2, Pause, Play, Plus, RotateCcw } from "lucide-re
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { focusRing, panel, primaryButton, secondaryButton } from "@/components/dashboard/shared";
-import { useStudyTracker } from "../../../zohra-task-focus (1)/zohra-prjct/components/study-progress/study-tracker-provider";
+import { useStudyTracker } from "./study-tracker-provider";
 import { clock, duration } from "./format";
 import { TaskDoneCard } from "./task-done-card";
 import { TaskPicker } from "./task-picker";
@@ -426,7 +426,7 @@ export function FocusTimer({
           <div className="rounded-2xl border border-border/70 bg-background p-4">
             <div className="flex items-end justify-between gap-3">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Today's study goal</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Today&apos;s study goal</p>
                 <p className="mt-1 text-sm font-semibold text-foreground">
                   {duration(live)} <span className="font-normal text-muted-foreground">/ {duration(goalSeconds)}</span>
                 </p>

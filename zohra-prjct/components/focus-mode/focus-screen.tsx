@@ -41,6 +41,8 @@ const endReasons = [
 export function FocusScreen() {
   const tracker = useStudyTracker();
   const active = tracker.active;
+  const completedSession = tracker.completedSession;
+  const refresh = tracker.refresh;
   const [parkingText, setParkingText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [showParking, setShowParking] = useState(false);
@@ -73,8 +75,8 @@ export function FocusScreen() {
   }
 
   useEffect(() => {
-    if (!active && !tracker.completedSession) void tracker.refresh();
-  }, [active, tracker.completedSession, tracker.refresh]);
+    if (!active && !completedSession) void refresh();
+  }, [active, completedSession, refresh]);
 
   const remaining = tracker.remainingSeconds;
   const clock =

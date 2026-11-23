@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -57,7 +57,7 @@ export function ProductTour() {
   const pathname = usePathname();
   const router = useRouter();
   const [index, setIndex] = useState(-1);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(() => () => undefined, () => true, () => false);
   const [target, setTarget] = useState<HTMLElement | null>(null);
   const [rect, setRect] = useState<Rect | null>(null);
   const [giveUp, setGiveUp] = useState(false);
@@ -65,15 +65,16 @@ export function ProductTour() {
   const [cardH, setCardH] = useState(200);
   const cardRef = useRef<HTMLDivElement>(null);
   const pathRef = useRef(pathname);
-  pathRef.current = pathname;
   const step = index >= 0 ? TOUR_STEPS[index] : null;
+
+  useEffect(() => { pathRef.current = pathname; }, [pathname]);
 
   // ---- start / resume ------------------------------------------------------
   useEffect(() => {
-    setMounted(true);
     const saved = readState();
     if (saved.s === "active" && typeof saved.i === "number" && saved.i < TOUR_STEPS.length) {
-      setIndex(saved.i);
+      const timer = window.setTimeout(() => setIndex(saved.i!), 0);
+      return () => window.clearTimeout(timer);
     } else if (saved.s !== "done") {
       let alive = true;
       fetch("/api/onboarding", { cache: "no-store" })
@@ -129,15 +130,19 @@ export function ProductTour() {
 
   // ---- find + follow the target ----------------------------------------------
   useEffect(() => {
-    setTarget(null);
-    setRect(null);
-    setGiveUp(false);
     if (!step || step.kind || !step.targets) return;
     let raf = 0;
+    let initialized = false;
     let scrolled = false;
     const started = performance.now();
     let current: HTMLElement | null = null;
     const tick = () => {
+      if (!initialized) {
+        initialized = true;
+        setTarget(null);
+        setRect(null);
+        setGiveUp(false);
+      }
       setVp((v) => (v.w === window.innerWidth && v.h === window.innerHeight ? v : { w: window.innerWidth, h: window.innerHeight }));
       if (!current || !current.isConnected) {
         current = routeMatches(pathRef.current, step.route) ? findTarget(step) : null;
@@ -218,7 +223,7 @@ export function ProductTour() {
   useLayoutEffect(() => {
     const h = cardRef.current?.offsetHeight;
     if (h && Math.abs(h - cardH) > 1) setCardH(h);
-  });
+  }, [cardH, step]);
 
   const chapterIndex = step ? TOUR_CHAPTERS.findIndex((c) => c.id === step.chapter) : 0;
   const stepsInChapter = useMemo(() => (step ? TOUR_STEPS.filter((s) => s.chapter === step.chapter && !s.kind) : []), [step]);

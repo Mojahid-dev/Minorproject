@@ -105,7 +105,7 @@ export function StudyTrackerProvider({ children, showPlayer = true }: { children
   const [subjects, setSubjects] = useState<SubjectOption[]>([]);
   const [tasks, setTasks] = useState<TaskOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(0);
   const [serverOffset, setServerOffset] = useState(0);
   const pathname = usePathname();
   const onStudyPage = pathname.startsWith("/study-progress");
@@ -133,7 +133,10 @@ export function StudyTrackerProvider({ children, showPlayer = true }: { children
     }
   }, []);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void refresh(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
@@ -219,7 +222,7 @@ export function StudyTrackerProvider({ children, showPlayer = true }: { children
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [active?.id, active?.status, refresh]);
+  }, [active, refresh]);
 
   useEffect(() => {
     if (!active || active.status !== "RUNNING") return;
@@ -234,7 +237,7 @@ export function StudyTrackerProvider({ children, showPlayer = true }: { children
     void acquire();
     document.addEventListener("visibilitychange", acquire);
     return () => { cancelled = true; document.removeEventListener("visibilitychange", acquire); void lock?.release().catch(() => undefined); };
-  }, [active?.id, active?.status]);
+  }, [active]);
 
   const elapsedSeconds = elapsedFor(active, now + serverOffset);
   const remainingSeconds = active?.endsAt && active.mode !== "STOPWATCH"
@@ -252,21 +255,21 @@ export function StudyTrackerProvider({ children, showPlayer = true }: { children
     if (active.mode === "POMODORO") {
       if (typeof Notification !== "undefined" && Notification.permission === "granted") new Notification("Zohra Focus", { body: "Your Pomodoro phase has ended. Your next phase is starting." });
       // GET advances the server-authoritative phase; refreshing here avoids local phase drift.
-      void refresh();
+      window.setTimeout(() => { void refresh(); }, 0);
     } else {
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {
         new Notification("Zohra Focus", { body: `${active.subject?.name || "Your study session"} is complete.` });
       }
-      void sendAction("end", { reason: "TIMER_COMPLETED" });
+      window.setTimeout(() => { void sendAction("end", { reason: "TIMER_COMPLETED" }); }, 0);
     }
-  }, [active?.id, active?.mode, active?.status, active?.endsAt, active?.pomodoroPhase, remainingSeconds, refresh, sendAction]);
+  }, [active, remainingSeconds, refresh, sendAction]);
 
   useEffect(() => {
     if (!active) { document.title = "Zohra"; return; }
     const label = active.subject?.name || "Study";
     const time = remainingSeconds === null ? formatClock(elapsedSeconds) : formatClock(remainingSeconds);
     document.title = `${time} · ${label} | Zohra`;
-  }, [active?.id, active?.subject?.name, elapsedSeconds, remainingSeconds]);
+  }, [active, elapsedSeconds, remainingSeconds]);
 
   const value = useMemo<TrackerContextValue>(() => ({
     active, sessions, completedSession, subjects, tasks, elapsedSeconds, remainingSeconds, focusedSeconds, loading, refresh,

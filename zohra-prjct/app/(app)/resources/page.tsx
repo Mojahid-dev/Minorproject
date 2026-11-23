@@ -88,12 +88,14 @@ function ResourcesContent() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
+    let frame = 0;
     try {
       const saved = window.localStorage.getItem("zohra:resources-view");
-      if (saved === "list" || saved === "grid") setView(saved);
+      if (saved === "list" || saved === "grid") frame = window.requestAnimationFrame(() => setView(saved));
     } catch {
       /* storage can be blocked; the default is fine */
     }
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   function changeView(next: ViewMode) {

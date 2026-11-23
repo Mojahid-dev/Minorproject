@@ -104,7 +104,9 @@ export function FirstTimeTour() {
   useEffect(() => {
     if (!open) return;
     const matchingStep = steps.findIndex((item) => item.path === pathname);
-    if (matchingStep >= 0 && matchingStep !== step) setStep(matchingStep);
+    if (matchingStep < 0 || matchingStep === step) return;
+    const timer = window.setTimeout(() => setStep(matchingStep), 0);
+    return () => window.clearTimeout(timer);
   }, [pathname, open, step]);
 
   useEffect(() => {

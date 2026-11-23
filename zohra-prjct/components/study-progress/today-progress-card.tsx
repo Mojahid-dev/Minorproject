@@ -33,7 +33,7 @@ export function TodayProgressCard() {
   return (
     <section className="rounded-2xl border border-white/[.08] bg-[#151619] p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3">
-        <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-neutral-500">Study &amp; Progress</p><h2 className="mt-1 text-base font-semibold text-white">Today's progress</h2></div>
+        <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-neutral-500">Study &amp; Progress</p><h2 className="mt-1 text-base font-semibold text-white">Today&apos;s progress</h2></div>
         <Link href="/study-progress" className="grid size-9 place-items-center rounded-xl border border-white/10 text-neutral-400 hover:bg-white/10 hover:text-white" aria-label="Open Study and Progress"><ArrowRight size={16}/></Link>
       </div>
       <div className="mt-4 flex items-end justify-between gap-3"><div><p className="text-2xl font-semibold text-white">{format(current)}</p><p className="mt-1 text-xs text-neutral-500">Focused study time today</p></div><div className="text-right"><p className="text-sm font-semibold text-neutral-200">{percent}%</p><p className="text-[10px] text-neutral-500">of daily goal</p></div></div>
