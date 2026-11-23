@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Maximize2, Pause, Play, RotateCcw } from "lucide-react";
+import { CheckCircle2, Maximize2, Pause, Play, Plus, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { focusRing, panel, primaryButton, secondaryButton } from "@/components/dashboard/shared";
-import { useStudyTracker } from "./study-tracker-provider";
+import { useStudyTracker } from "../../../zohra-task-focus (1)/zohra-prjct/components/study-progress/study-tracker-provider";
 import { clock, duration } from "./format";
 import { TaskDoneCard } from "./task-done-card";
+import { TaskPicker } from "./task-picker";
 
 const field =
   "h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground " +
@@ -33,10 +34,10 @@ function AnalogStudyClock({ seconds, running, label = "elapsed" }: { seconds: nu
         const inner = major ? 91 : 96;
         const outer = 105;
         return {
-          x1: 120 + Math.sin(angle) * inner,
-          y1: 120 - Math.cos(angle) * inner,
-          x2: 120 + Math.sin(angle) * outer,
-          y2: 120 - Math.cos(angle) * outer,
+          x1: Number((120 + Math.sin(angle) * inner).toFixed(3)),
+          y1: Number((120 - Math.cos(angle) * inner).toFixed(3)),
+          x2: Number((120 + Math.sin(angle) * outer).toFixed(3)),
+          y2: Number((120 - Math.cos(angle) * outer).toFixed(3)),
           major,
         };
       }),
@@ -178,6 +179,7 @@ export function FocusTimer({
   const live = todaySeconds + (active ? tracker.focusedSeconds : 0);
   const goalProgress = Math.min(100, Math.round((live / Math.max(1, goalSeconds)) * 100));
   const subjectName = active?.subject?.name ?? tracker.subjects.find((s) => s.id === subjectId)?.name;
+  const chosenTask = tracker.tasks.find((task) => task.id === taskId);
   const sessionName = active?.topic || active?.task?.title || subjectName || "Independent study";
 
   async function start() {
@@ -275,8 +277,10 @@ export function FocusTimer({
         <div className="min-w-0 space-y-4">
           {!active ? (
             <>
+              <TaskPicker value={taskId} onChange={setTaskId} />
+
               <div>
-                <p id="subject-label" className="mb-2 text-xs font-semibold text-foreground">What are you studying?</p>
+                <p id="subject-label" className="mb-2 text-xs font-semibold text-foreground">Subject <span className="font-normal text-muted-foreground">(for your insights)</span></p>
                 <div role="group" aria-labelledby="subject-label" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
                   {[{ id: "", name: "Independent" }, ...tracker.subjects].map((subject) => (
                     <button
@@ -298,45 +302,59 @@ export function FocusTimer({
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                <label className="block text-xs font-semibold text-foreground">
-                  Timer mode
-                  <select value={mode} onChange={(e) => setMode(e.target.value as typeof mode)} className={cn(field, "mt-1.5 font-normal")}>
-                    <option value="COUNTDOWN">Countdown</option>
-                    <option value="STOPWATCH">Stopwatch</option>
-                    <option value="POMODORO">Pomodoro · 25/5</option>
-                  </select>
-                </label>
-                {mode === "COUNTDOWN" && <label className="block text-xs font-semibold text-foreground">
-                  Duration
-                  <select value={minutes} onChange={(e) => setMinutes(Number(e.target.value))} className={cn(field, "mt-1.5 font-normal")}>
-                    {[15, 25, 30, 45, 50, 60, 90, 120].map((value) => <option key={value} value={value}>{value} minutes</option>)}
-                  </select>
-                </label>}
 
-                <label className="block text-xs font-semibold text-foreground">
-                  Link a task <span className="font-normal text-muted-foreground">(optional)</span>
-                  <select value={taskId} onChange={(e) => setTaskId(e.target.value)} className={cn(field, "mt-1.5 font-normal")}>
-                    <option value="">No linked task</option>
-                    {tracker.tasks.map((task) => <option key={task.id} value={task.id}>{task.title}</option>)}
-                  </select>
-                </label>
-                <label className="block text-xs font-semibold text-foreground">
-                  Topic <span className="font-normal text-muted-foreground">(optional)</span>
-                  <input
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    maxLength={140}
-                    placeholder="e.g. Database normalization"
-                    className={cn(field, "mt-1.5 font-normal")}
-                  />
-                </label>
+              <div className="space-y-3">
+                <div role="radiogroup" aria-label="Timer mode" className="grid grid-cols-3 gap-1 rounded-xl border border-border bg-muted/40 p-1">
+                  {([["COUNTDOWN", "Countdown"], ["POMODORO", "Pomodoro"], ["STOPWATCH", "Stopwatch"]] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="radio"
+                      aria-checked={mode === value}
+                      onClick={() => setMode(value)}
+                      className={cn("min-h-10 rounded-lg text-sm font-semibold motion-safe:transition-colors", mode === value ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground", focusRing)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {mode === "COUNTDOWN" ? (
+                  <div role="radiogroup" aria-label="Session length" className="flex flex-wrap gap-2">
+                    {[15, 25, 45, 60, 90].map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        role="radio"
+                        aria-checked={minutes === value}
+                        onClick={() => setMinutes(value)}
+                        className={cn("min-h-10 rounded-full border px-4 text-sm font-medium", minutes === value ? "border-violet-600 bg-violet-600 text-violet-50" : "border-border bg-background hover:bg-muted", focusRing)}
+                      >
+                        {value} min
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    {mode === "POMODORO" ? "25 minutes of focus, then a 5 minute break. Every fourth break is longer." : "Counts up until you finish. No time limit."}
+                  </p>
+                )}
               </div>
-              <label className="block text-xs font-semibold text-foreground">
-                Today's intention <span className="font-normal text-muted-foreground">(optional)</span>
-                <input value={goal} onChange={(e) => setGoal(e.target.value)} maxLength={240} placeholder="e.g. Finish chapter 4 questions" className={cn(field, "mt-1.5 font-normal")} />
-              </label>
-              <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-3">
+
+              <details className="group rounded-xl border border-border/70">
+                <summary className={cn("flex min-h-11 cursor-pointer list-none items-center justify-between rounded-xl px-3 text-sm font-medium text-foreground", focusRing)}>
+                  More options
+                  <Plus size={16} aria-hidden="true" className="text-muted-foreground motion-safe:transition-transform group-open:rotate-45" />
+                </summary>
+                <div className="space-y-3 border-t border-border/70 p-3">
+                  <label className="block text-xs font-semibold text-foreground">
+                    Topic <span className="font-normal text-muted-foreground">(optional)</span>
+                    <input value={topic} onChange={(e) => setTopic(e.target.value)} maxLength={140} placeholder="e.g. Database normalization" className={cn(field, "mt-1.5 font-normal")} />
+                  </label>
+                  <label className="block text-xs font-semibold text-foreground">
+                    Intention <span className="font-normal text-muted-foreground">(optional)</span>
+                    <input value={goal} onChange={(e) => setGoal(e.target.value)} maxLength={240} placeholder="e.g. Finish chapter 4 questions" className={cn(field, "mt-1.5 font-normal")} />
+                  </label>
+              <div className="space-y-3 rounded-xl bg-muted/30 p-3">
                 <label className="flex cursor-pointer items-center justify-between gap-4">
                   <span className="min-w-0"><span className="block text-xs font-semibold text-foreground">Enter Focus Mode</span><span className="mt-0.5 block text-[11px] text-muted-foreground">Open a distraction-free full-screen session.</span></span>
                   <input type="checkbox" checked={focusMode} onChange={(e) => setFocusMode(e.target.checked)} className="peer sr-only" />
@@ -348,11 +366,15 @@ export function FocusTimer({
                 </div>
               </div>
 
+                </div>
+              </details>
+
               <button type="button" onClick={() => void start()} disabled={busy || tracker.loading} className={cn(primaryButton, "h-12 w-full text-base disabled:opacity-60")}>
-                <Play size={18} fill="currentColor" aria-hidden="true" /> {busy ? "Starting…" : "Start study session"}
+                <Play size={18} fill="currentColor" aria-hidden="true" className="shrink-0" />
+                <span className="min-w-0 truncate">{busy ? "Starting…" : chosenTask ? `Focus on ${chosenTask.title}` : "Start study session"}</span>
               </button>
               <p className="text-center text-xs leading-5 text-muted-foreground">
-                Manual tracking — Zohra only counts sessions you start.
+                Manual tracking: Zohra only counts sessions you start.
               </p>
             </>
           ) : (
