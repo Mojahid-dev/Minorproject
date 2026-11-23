@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-export type CalendarDay = { date: string; seconds: number; sessions: number; completedTasks: number };
+export type CalendarDay = {
+  date: string;
+  seconds: number;
+  sessions: number;
+  completedTasks: number;
+};
 export type CalendarData = {
   month: string;
   today: string;
@@ -29,16 +34,21 @@ export function useStudyCalendar(month: string) {
       setLoading(true);
       setError("");
       try {
-        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+        const timeZone =
+          Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
         const params = new URLSearchParams({ month, timeZone });
         if (withStreak) params.set("streak", "1");
-        const response = await fetch(`/api/study-calendar?${params}`, { cache: "no-store" });
+        const response = await fetch(`/api/study-calendar?${params}`, {
+          cache: "no-store",
+        });
         if (!response.ok) throw new Error("Unable to load your calendar.");
         const payload = (await response.json()) as CalendarData;
         setData(payload);
         if (payload.streak) setStreak(payload.streak);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Unable to load your calendar.");
+        setError(
+          e instanceof Error ? e.message : "Unable to load your calendar.",
+        );
       } finally {
         setLoading(false);
       }

@@ -59,7 +59,10 @@ export function MonthHeatmap({
     if (!data) return [];
     const lead = (new Date(`${data.days[0].date}T12:00:00`).getDay() + 6) % 7;
     return [
-      ...Array.from({ length: lead }, (_, i) => ({ blank: true as const, key: `b${i}` })),
+      ...Array.from({ length: lead }, (_, i) => ({
+        blank: true as const,
+        key: `b${i}`,
+      })),
       ...data.days.map((day) => ({ ...day, key: day.date })),
     ];
   }, [data]);
@@ -68,14 +71,22 @@ export function MonthHeatmap({
   const goal = data?.goalSeconds ?? 7200;
 
   return (
-    <section aria-labelledby="month-heading" className={cn(panel, "p-4 sm:p-5")}>
+    <section
+      aria-labelledby="month-heading"
+      className={cn(panel, "p-4 sm:p-5")}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 id="month-heading" className="text-base font-semibold tracking-tight text-foreground">
+          <h2
+            id="month-heading"
+            className="text-base font-semibold tracking-tight text-foreground"
+          >
             {monthLabel(month)}
           </h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            {data ? `${duration(data.totalSeconds)} studied this month` : "Loading…"}
+            {data
+              ? `${duration(data.totalSeconds)} studied this month`
+              : "Loading…"}
           </p>
         </div>
         <div className="flex items-center gap-1">
@@ -83,7 +94,10 @@ export function MonthHeatmap({
             type="button"
             onClick={() => onMonth(shiftMonth(month, -1))}
             aria-label="Previous month"
-            className={cn("grid size-11 place-items-center rounded-xl border border-border text-foreground hover:bg-muted", focusRing)}
+            className={cn(
+              "grid size-11 place-items-center rounded-xl border border-border text-foreground hover:bg-muted",
+              focusRing,
+            )}
           >
             <ChevronLeft size={18} aria-hidden="true" />
           </button>
@@ -92,7 +106,10 @@ export function MonthHeatmap({
             onClick={() => onMonth(shiftMonth(month, 1))}
             disabled={month >= thisMonth}
             aria-label="Next month"
-            className={cn("grid size-11 place-items-center rounded-xl border border-border text-foreground hover:bg-muted disabled:opacity-40 disabled:hover:bg-transparent", focusRing)}
+            className={cn(
+              "grid size-11 place-items-center rounded-xl border border-border text-foreground hover:bg-muted disabled:opacity-40 disabled:hover:bg-transparent",
+              focusRing,
+            )}
           >
             <ChevronRight size={18} aria-hidden="true" />
           </button>
@@ -100,24 +117,45 @@ export function MonthHeatmap({
       </div>
 
       {error ? (
-        <div role="alert" className="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-300">
+        <div
+          role="alert"
+          className="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-300"
+        >
           {error}{" "}
-          <button type="button" onClick={onRetry} className="font-semibold underline underline-offset-2">
+          <button
+            type="button"
+            onClick={onRetry}
+            className="font-semibold underline underline-offset-2"
+          >
             Try again
           </button>
         </div>
       ) : (
         <>
-          <div className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-2" role="grid" aria-label={`${monthLabel(month)} study calendar`}>
+          <div
+            className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-2"
+            role="grid"
+            aria-label={`${monthLabel(month)} study calendar`}
+          >
             {WEEKDAYS.map((d, i) => (
-              <div key={i} role="columnheader" className="pb-1 text-center text-[11px] font-semibold text-muted-foreground">
+              <div
+                key={i}
+                role="columnheader"
+                className="pb-1 text-center text-[11px] font-semibold text-muted-foreground"
+              >
                 {d}
               </div>
             ))}
             {loading && !data
-              ? Array.from({ length: 35 }, (_, i) => <div key={i} className="aspect-square animate-pulse rounded-lg bg-muted/60" />)
+              ? Array.from({ length: 35 }, (_, i) => (
+                  <div
+                    key={i}
+                    className="aspect-square animate-pulse rounded-lg bg-muted/60"
+                  />
+                ))
               : cells.map((cell) => {
-                  if ("blank" in cell) return <div key={cell.key} aria-hidden="true" />;
+                  if ("blank" in cell)
+                    return <div key={cell.key} aria-hidden="true" />;
                   const day = Number(cell.date.slice(8));
                   const isToday = cell.date === data?.today;
                   const future = Boolean(data && cell.date > data.today);
@@ -136,13 +174,24 @@ export function MonthHeatmap({
                         LEVELS[level(cell.seconds, goal)],
                         future && "opacity-35",
                         !future && "active:scale-95",
-                        isSelected && "z-10 scale-110 shadow-lg shadow-black/25 motion-safe:transition-transform",
+                        isSelected &&
+                          "z-10 scale-110 shadow-lg shadow-black/25 motion-safe:transition-transform",
                         focusRing,
                       )}
                     >
-                      <span className={cn(isToday && "rounded-full bg-black/10 px-1.5 py-0.5 font-bold dark:bg-white/20")}>{day}</span>
+                      <span
+                        className={cn(
+                          isToday &&
+                            "rounded-full bg-black/10 px-1.5 py-0.5 font-bold dark:bg-white/20",
+                        )}
+                      >
+                        {day}
+                      </span>
                       {cell.completedTasks > 0 && (
-                        <span aria-hidden="true" className="absolute bottom-1 size-1 rounded-full bg-amber-400 ring-1 ring-black/20" />
+                        <span
+                          aria-hidden="true"
+                          className="absolute bottom-1 size-1 rounded-full bg-amber-400 ring-1 ring-black/20"
+                        />
                       )}
                     </button>
                   );
@@ -153,13 +202,34 @@ export function MonthHeatmap({
             <div className="flex items-center gap-1.5" aria-hidden="true">
               <span>Less</span>
               {LEVELS.map((cls, i) => (
-                <i key={i} className={cn("size-3.5 rounded", cls.split(" ").filter((c) => c.startsWith("bg-") || c.startsWith("dark:bg-")).join(" "))} />
+                <i
+                  key={i}
+                  className={cn(
+                    "size-3.5 rounded",
+                    cls
+                      .split(" ")
+                      .filter(
+                        (c) => c.startsWith("bg-") || c.startsWith("dark:bg-"),
+                      )
+                      .join(" "),
+                  )}
+                />
               ))}
               <span>Goal reached</span>
             </div>
             <span className="flex items-center gap-1.5">
-              <b aria-hidden="true" className="mr-1 rounded-full bg-foreground/10 px-1.5 py-0.5 text-[10px] font-bold">9</b>Today
-              <i aria-hidden="true" className="ml-2 size-1.5 rounded-full bg-amber-400" /> Task completed
+              <b
+                aria-hidden="true"
+                className="mr-1 rounded-full bg-foreground/10 px-1.5 py-0.5 text-[10px] font-bold"
+              >
+                9
+              </b>
+              Today
+              <i
+                aria-hidden="true"
+                className="ml-2 size-1.5 rounded-full bg-amber-400"
+              />{" "}
+              Task completed
             </span>
           </div>
 
@@ -167,19 +237,29 @@ export function MonthHeatmap({
             {picked ? (
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground">{dateLabel(picked.date)}</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {dateLabel(picked.date)}
+                  </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {picked.sessions} session{picked.sessions === 1 ? "" : "s"} · {picked.completedTasks} task
+                    {picked.sessions} session{picked.sessions === 1 ? "" : "s"}{" "}
+                    · {picked.completedTasks} task
                     {picked.completedTasks === 1 ? "" : "s"} done
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xl font-semibold tabular-nums text-foreground">{duration(picked.seconds)}</p>
-                  <p className="text-xs text-muted-foreground">{Math.min(100, Math.round((picked.seconds / goal) * 100))}% of goal</p>
+                  <p className="text-xl font-semibold tabular-nums text-foreground">
+                    {duration(picked.seconds)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {Math.min(100, Math.round((picked.seconds / goal) * 100))}%
+                    of goal
+                  </p>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Tap a day to see what you did.</p>
+              <p className="text-sm text-muted-foreground">
+                Tap a day to see what you did.
+              </p>
             )}
           </div>
         </>

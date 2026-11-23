@@ -10,9 +10,10 @@ import {
   Pencil,
   Plus,
   Trash2,
+  GripVertical,
   X,
 } from "lucide-react";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type Chapter = { id: string; name: string; aliases: string[] };
 type Subject = {
@@ -54,6 +55,8 @@ export default function CourseStructurePage() {
   const [editing, setEditing] = useState<EditTarget | null>(null);
   const [deleting, setDeleting] = useState<EditTarget | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const draggedItem = useRef<EditTarget & { parentId: string | null } | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
   const semesters = useMemo(
     () =>
       years.flatMap((year) =>
@@ -215,6 +218,54 @@ export default function CourseStructurePage() {
     } finally {
       setIsDeleting(false);
     }
+  }
+
+  async function persistOrder(kind: Kind, parentId: string | null, orderedIds: string[]) {
+    try {
+      const response = await fetch("/api/study-structure/reorder", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind, parentId, orderedIds }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not save folder order.");
+      setNotice("Folder order updated.");
+      await load(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not save folder order.");
+      await load(false);
+    } finally {
+      setDraggingId(null);
+      draggedItem.current = null;
+    }
+  }
+
+  function beginDrag(item: EditTarget, parentId: string | null) {
+    draggedItem.current = { ...item, parentId };
+    setDraggingId(item.id);
+  }
+
+  function dropOnRow(kind: Kind, parentId: string | null, targetId: string, siblingIds: string[]) {
+    const source = draggedItem.current;
+    if (!source || source.kind !== kind || source.parentId !== parentId || source.id === targetId) return;
+    const from = siblingIds.indexOf(source.id);
+    const to = siblingIds.indexOf(targetId);
+    if (from < 0 || to < 0) return;
+    const next = [...siblingIds];
+    next.splice(to, 0, next.splice(from, 1)[0]);
+    void persistOrder(kind, parentId, next);
+  }
+
+  function finishDrag() {
+    setDraggingId(null);
+    draggedItem.current = null;
+  }
+
+  function dropToDelete() {
+    if (draggedItem.current) {
+      const { parentId: _parentId, ...item } = draggedItem.current;
+      setDeleting(item);
+    }
+    setDraggingId(null);
   }
 
   const parentRequired = kind !== "year";
@@ -423,6 +474,13 @@ export default function CourseStructurePage() {
               {years.length} year{years.length === 1 ? "" : "s"}
             </span>
           </div>
+          <div
+            onDragOver={(event) => { if (draggedItem.current) event.preventDefault(); }}
+            onDrop={(event) => { event.preventDefault(); dropToDelete(); }}
+            className={`mt-3 flex min-h-11 items-center justify-center gap-2 rounded-xl border border-dashed text-xs transition ${draggingId ? "border-rose-300/60 bg-rose-300/10 text-rose-200" : "border-white/10 text-neutral-600"}`}
+          >
+            <Trash2 size={14} /> Drag a folder here to delete it
+          </div>
           {loading ? (
             <div className="py-12 text-center text-sm text-neutral-500">
               Loading your course folders…
@@ -453,6 +511,10 @@ export default function CourseStructurePage() {
                   onSave={saveEdit}
                   onDelete={setDeleting}
                   saving={saving}
+                  dragging={draggingId === year.id}
+                  onDragStart={() => beginDrag({ kind: "year", id: year.id, name: year.label, aliases: year.aliases.join(", ") }, null)}
+                  onDrop={() => dropOnRow("year", null, year.id, years.map((item) => item.id))}
+                  onDragEnd={finishDrag}
                 >
                   <div className="mt-2 space-y-2 border-l border-white/[0.08] pl-3">
                     {year.semesters.map((semester) => (
@@ -467,6 +529,10 @@ export default function CourseStructurePage() {
                         onSave={saveEdit}
                         onDelete={setDeleting}
                         saving={saving}
+                        dragging={draggingId === semester.id}
+                        onDragStart={() => beginDrag({ kind: "semester", id: semester.id, name: semester.name, aliases: semester.aliases.join(", ") }, year.id)}
+                        onDrop={() => dropOnRow("semester", year.id, semester.id, year.semesters.map((item) => item.id))}
+                        onDragEnd={finishDrag}
                       >
                         <div className="mt-2 space-y-2 border-l border-white/[0.08] pl-3">
                           {semester.subjects.map((subject) => (
@@ -481,6 +547,10 @@ export default function CourseStructurePage() {
                               onSave={saveEdit}
                               onDelete={setDeleting}
                               saving={saving}
+                              dragging={draggingId === subject.id}
+                              onDragStart={() => beginDrag({ kind: "subject", id: subject.id, name: subject.name, aliases: subject.aliases.join(", ") }, semester.id)}
+                              onDrop={() => dropOnRow("subject", semester.id, subject.id, semester.subjects.map((item) => item.id))}
+                              onDragEnd={finishDrag}
                             >
                               <div className="mt-2 space-y-1 border-l border-white/[0.08] pl-3">
                                 {subject.chapters.map((chapter) => (
@@ -495,6 +565,10 @@ export default function CourseStructurePage() {
                                     onSave={saveEdit}
                                     onDelete={setDeleting}
                                     saving={saving}
+                                    dragging={draggingId === chapter.id}
+                                    onDragStart={() => beginDrag({ kind: "chapter", id: chapter.id, name: chapter.name, aliases: chapter.aliases.join(", ") }, subject.id)}
+                                    onDrop={() => dropOnRow("chapter", subject.id, chapter.id, subject.chapters.map((item) => item.id))}
+                                    onDragEnd={finishDrag}
                                   />
                                 ))}
                                 {subject.chapters.length === 0 && (
@@ -599,6 +673,10 @@ function StructureRow({
   onDelete,
   saving,
   children,
+  dragging = false,
+  onDragStart,
+  onDrop,
+  onDragEnd,
 }: {
   kind: Kind;
   id: string;
@@ -610,10 +688,21 @@ function StructureRow({
   onDelete: (target: EditTarget) => void;
   saving: boolean;
   children?: React.ReactNode;
+  dragging?: boolean;
+  onDragStart?: () => void;
+  onDrop?: () => void;
+  onDragEnd?: () => void;
 }) {
   const isEditing = editing?.id === id;
   return (
-    <article className="min-w-0 rounded-xl border border-white/[0.06] bg-white/[0.025] p-2.5 sm:p-3">
+    <article
+      draggable={!isEditing}
+      onDragStart={(event) => { event.stopPropagation(); if (isEditing) { event.preventDefault(); return; } onDragStart?.(); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", id); }}
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => { event.preventDefault(); event.stopPropagation(); onDrop?.(); }}
+      onDragEnd={onDragEnd}
+      className={`min-w-0 rounded-xl border p-2.5 transition sm:p-3 ${dragging ? "border-violet-300/60 bg-violet-300/10 opacity-60" : "border-white/[0.06] bg-white/[0.025]"}`}
+    >
       {isEditing ? (
         <div className="space-y-2">
           <input
@@ -654,6 +743,9 @@ function StructureRow({
       ) : (
         <>
           <div className="flex items-center gap-2">
+            <span aria-label="Drag to reorder or delete" title="Drag to reorder or delete" className="grid size-8 shrink-0 cursor-grab touch-none place-items-center rounded-lg text-neutral-600 active:cursor-grabbing">
+              <GripVertical size={16} />
+            </span>
             <span className="min-w-0 flex-1 truncate text-sm font-medium">
               {name}
             </span>

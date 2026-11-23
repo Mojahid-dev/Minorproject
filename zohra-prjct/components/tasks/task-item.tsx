@@ -25,7 +25,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { focusRing, primaryButton, secondaryButton } from "@/components/dashboard/shared";
+import {
+  focusRing,
+  primaryButton,
+  secondaryButton,
+} from "@/components/dashboard/shared";
 import { useStudyTracker } from "@/components/study-progress/study-tracker-provider";
 import { duration } from "@/components/study-progress/format";
 
@@ -111,7 +115,8 @@ function EditForm({
         </label>
       </div>
       <label className="block text-sm font-medium">
-        Notes <span className="font-normal text-muted-foreground">(optional)</span>
+        Notes{" "}
+        <span className="font-normal text-muted-foreground">(optional)</span>
         <textarea
           rows={2}
           maxLength={5000}
@@ -124,7 +129,11 @@ function EditForm({
         <button type="button" onClick={onClose} className={secondaryButton}>
           Cancel
         </button>
-        <button type="submit" disabled={busy || !title.trim()} className={cn(primaryButton, "disabled:opacity-60")}>
+        <button
+          type="submit"
+          disabled={busy || !title.trim()}
+          className={cn(primaryButton, "disabled:opacity-60")}
+        >
           {busy ? "Saving…" : "Save"}
         </button>
       </div>
@@ -132,7 +141,13 @@ function EditForm({
   );
 }
 
-export function TaskItem({ task, today, showDue = true, onPatch, onDelete }: Props) {
+export function TaskItem({
+  task,
+  today,
+  showDue = true,
+  onPatch,
+  onDelete,
+}: Props) {
   const [editing, setEditing] = useState(false);
   const { active } = useStudyTracker();
   const focusing = active?.taskId === task.id;
@@ -143,7 +158,11 @@ export function TaskItem({ task, today, showDue = true, onPatch, onDelete }: Pro
   if (editing)
     return (
       <li>
-        <EditForm task={task} onPatch={onPatch} onClose={() => setEditing(false)} />
+        <EditForm
+          task={task}
+          onPatch={onPatch}
+          onClose={() => setEditing(false)}
+        />
       </li>
     );
 
@@ -156,12 +175,17 @@ export function TaskItem({ task, today, showDue = true, onPatch, onDelete }: Pro
         aria-checked={done}
         aria-label={task.title}
         onClick={() => void onPatch(task, { completed: !done })}
-        className={cn("grid size-11 shrink-0 place-items-center rounded-xl", focusRing)}
+        className={cn(
+          "grid size-11 shrink-0 place-items-center rounded-xl",
+          focusRing,
+        )}
       >
         <span
           className={cn(
             "grid size-5 place-items-center rounded-full border-2 motion-safe:transition-colors",
-            done ? "border-emerald-600 bg-emerald-600 text-emerald-50" : "border-muted-foreground/60",
+            done
+              ? "border-emerald-600 bg-emerald-600 text-emerald-50"
+              : "border-muted-foreground/60",
           )}
         >
           {done && <Check size={13} strokeWidth={3} aria-hidden="true" />}
@@ -186,26 +210,37 @@ export function TaskItem({ task, today, showDue = true, onPatch, onDelete }: Pro
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             {showDue && late && task.dueDate ? (
               <span className="inline-flex items-center gap-1 font-medium text-destructive">
-                <CircleAlert size={12} aria-hidden="true" /> {overdueLabel(task.dueDate, today)}
+                <CircleAlert size={12} aria-hidden="true" />{" "}
+                {overdueLabel(task.dueDate, today)}
               </span>
             ) : showDue && task.dueDate ? (
               <span className="inline-flex items-center gap-1 text-muted-foreground">
-                <Calendar size={12} aria-hidden="true" /> {formatDay(task.dueDate, today)}
+                <Calendar size={12} aria-hidden="true" />{" "}
+                {formatDay(task.dueDate, today)}
               </span>
             ) : null}
             {focusing && (
               <span className="inline-flex items-center gap-1.5 font-medium text-violet-700 dark:text-violet-300">
-                <span aria-hidden="true" className="size-1.5 animate-pulse rounded-full bg-violet-500" /> Focusing now
+                <span
+                  aria-hidden="true"
+                  className="size-1.5 animate-pulse rounded-full bg-violet-500"
+                />{" "}
+                Focusing now
               </span>
             )}
             {studied > 0 && (
               <span className="inline-flex items-center gap-1 text-muted-foreground">
-                <Timer size={12} aria-hidden="true" /> Studied {duration(studied)}
+                <Timer size={12} aria-hidden="true" /> Studied{" "}
+                {duration(studied)}
               </span>
             )}
             {showDue && done && task.completedAt && (
               <span className="text-emerald-800 dark:text-emerald-300">
-                Completed {formatDay(localDateString(new Date(task.completedAt)), today).toLowerCase()}
+                Completed{" "}
+                {formatDay(
+                  localDateString(new Date(task.completedAt)),
+                  today,
+                ).toLowerCase()}
               </span>
             )}
           </p>
@@ -240,22 +275,31 @@ export function TaskItem({ task, today, showDue = true, onPatch, onDelete }: Pro
             <Pencil /> Edit
           </DropdownMenuItem>
           {task.dueDate !== today && (
-            <DropdownMenuItem onClick={() => void onPatch(task, { dueDate: today })}>
+            <DropdownMenuItem
+              onClick={() => void onPatch(task, { dueDate: today })}
+            >
               <CalendarClock /> Due today
             </DropdownMenuItem>
           )}
           {task.dueDate !== addDays(today, 1) && (
-            <DropdownMenuItem onClick={() => void onPatch(task, { dueDate: addDays(today, 1) })}>
+            <DropdownMenuItem
+              onClick={() => void onPatch(task, { dueDate: addDays(today, 1) })}
+            >
               <Calendar /> Due tomorrow
             </DropdownMenuItem>
           )}
           {task.dueDate && (
-            <DropdownMenuItem onClick={() => void onPatch(task, { dueDate: null })}>
+            <DropdownMenuItem
+              onClick={() => void onPatch(task, { dueDate: null })}
+            >
               <CalendarX2 /> Clear due date
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={() => onDelete(task)}>
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => onDelete(task)}
+          >
             <Trash2 /> Delete
           </DropdownMenuItem>
         </DropdownMenuContent>

@@ -17,14 +17,19 @@ export function clock(seconds: number) {
 }
 
 export function dateLabel(key: string) {
-  return new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" }).format(
-    new Date(`${key}T12:00:00`),
-  );
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(`${key}T12:00:00`));
 }
 
 export function monthLabel(month: string) {
   const [year, m] = month.split("-").map(Number);
-  return new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(new Date(year, m - 1, 1, 12));
+  return new Intl.DateTimeFormat(undefined, {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(year, m - 1, 1, 12));
 }
 
 export function shiftMonth(month: string, by: number) {

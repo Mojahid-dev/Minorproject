@@ -23,8 +23,19 @@ export function ProgressRing({
       className="relative mx-auto grid place-items-center"
       style={{ width: size, height: size, maxWidth: "100%" }}
     >
-      <svg viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 size-full -rotate-90" aria-hidden="true">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={stroke} className="stroke-muted" />
+      <svg
+        viewBox={`0 0 ${size} ${size}`}
+        className="absolute inset-0 size-full -rotate-90"
+        aria-hidden="true"
+      >
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          strokeWidth={stroke}
+          className="stroke-muted"
+        />
         <circle
           cx={size / 2}
           cy={size / 2}

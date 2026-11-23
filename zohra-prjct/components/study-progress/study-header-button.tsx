@@ -35,7 +35,10 @@ export function StudyHeaderButton() {
         aria-label={`Study session ${running ? "running" : "paused"}, ${clock(timerValue)}. Return to Focus Mode`}
         className="flex h-9 shrink-0 items-center gap-2 rounded-xl bg-violet-200 px-3 text-sm font-semibold tabular-nums text-violet-950 shadow-sm transition hover:bg-violet-100 motion-reduce:transition-none"
       >
-        <span aria-hidden="true" className={`size-2 rounded-full ${running ? "bg-emerald-600 motion-safe:animate-pulse" : "bg-amber-600"}`} />
+        <span
+          aria-hidden="true"
+          className={`size-2 rounded-full ${running ? "bg-emerald-600 motion-safe:animate-pulse" : "bg-amber-600"}`}
+        />
         {clock(timerValue)}
       </Link>
     );
