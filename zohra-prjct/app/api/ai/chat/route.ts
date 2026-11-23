@@ -24,6 +24,7 @@ import {
 } from "@google/genai";
 import { createTasksDeclaration, runCreateTasks } from "@/lib/ai-task-tools";
 import { isDateOnly } from "@/lib/task-utils";
+import { tryCreateTasksWithGroq } from "@/lib/ai-task-groq";
 
 const BASE_SYSTEM_INSTRUCTION =
   "You are Zohra AI, a friendly, accurate AI assistant that helps students learn, solve problems, understand concepts, and prepare for exams. Explain clearly, encourage critical thinking, and admit uncertainty. Adapt to the user's level and preferred language; use simple English by default and Hindi or Hinglish when requested. Keep answers concise unless detail is needed. Use headings for long answers, bullets for lists, numbered steps for procedures, and code blocks for code. Respect privacy and never invent facts.";
@@ -257,6 +258,62 @@ export async function POST(request: Request) {
         : undefined,
     };
 
+    // Fast path: task requests try Groq first (one quick call, no second round trip).
+    // It returns null whenever it can't help (not a task request, no key, rate limit,
+    // timeout, unusable output), and then Gemini below handles the message as before.
+    if (today) {
+      const userText = messages.at(-1)!.content;
+      const groqOutcome = await tryCreateTasksWithGroq({
+        userId,
+        today,
+        userText,
+        history,
+        documentPrompt,
+        signal: request.signal,
+      });
+
+      if (groqOutcome) {
+        const events: StreamEvent[] = [
+          { type: "tasks", tasks: groqOutcome.created },
+          { type: "delta", text: groqOutcome.reply },
+        ];
+
+        if (conversationId) {
+          try {
+            await saveExchange(userId, conversationId, userText, groqOutcome.reply);
+          } catch (error) {
+            console.error(
+              "Saving the AI reply failed:",
+              error instanceof Error ? error.message : error,
+            );
+            events.push({
+              type: "error",
+              error:
+                error instanceof ChatError
+                  ? error.message
+                  : "Your tasks were added, but the reply could not be saved to this conversation.",
+            });
+          }
+        }
+
+        if (!events.some((event) => event.type === "error")) {
+          events.push({ type: "done", sources });
+        }
+
+        return new Response(
+          `${events.map((event) => JSON.stringify(event)).join("\n")}\n`,
+          {
+            headers: {
+              "Content-Type": "application/x-ndjson; charset=utf-8",
+              "Cache-Control": "no-store, no-transform",
+              "X-Accel-Buffering": "no",
+              "X-AI-Engine": `groq:${groqOutcome.model}`,
+            },
+          },
+        );
+      }
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
@@ -488,6 +545,7 @@ export async function POST(request: Request) {
         "Content-Type": "application/x-ndjson; charset=utf-8",
         "Cache-Control": "no-store, no-transform",
         "X-Accel-Buffering": "no",
+        "X-AI-Engine": "gemini",
       },
     });
   } catch (error) {

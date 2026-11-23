@@ -19,7 +19,7 @@ const DAY = 24 * HOUR;
 
 /** Tune these numbers to match your Gemini quota. */
 export const RATE_LIMITS = {
-  // Every call goes to Gemini.
+  // Every call goes to the chat route (Gemini, or Groq first for task requests).
   aiChat: [
     { limit: 10, windowSeconds: MINUTE },
     { limit: 200, windowSeconds: DAY },
