@@ -129,7 +129,7 @@ export function MonthHeatmap({
                       role="gridcell"
                       disabled={future}
                       onClick={() => setSelected(cell.date)}
-                      aria-pressed={isSelected}
+                      aria-selected={isSelected}
                       aria-label={`${dateLabel(cell.date)}: ${duration(cell.seconds)} studied${cell.completedTasks ? `, ${cell.completedTasks} tasks done` : ""}`}
                       className={cn(
                         "relative flex aspect-square flex-col items-center justify-center rounded-lg text-xs font-semibold tabular-nums motion-safe:transition-transform",

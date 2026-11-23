@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { elapsedSeconds, activeFocusSeconds } from "@/lib/focus/timer";
+import type { Prisma } from "@/lib/generated/prisma/client";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -11,13 +12,14 @@ const includeSession = {
   task: { select: { id: true, title: true, completedAt: true } },
   parkingLotNotes: { orderBy: { createdAt: "asc" as const } },
 };
+type FocusSession = Prisma.StudySessionGetPayload<{ include: typeof includeSession }>;
 
 async function userId() {
   const session = await auth.api.getSession({ headers: await headers() });
   return session?.user?.id ?? null;
 }
 
-function serialize(session: any, now: Date) {
+function serialize(session: FocusSession, now: Date) {
   const elapsed = elapsedSeconds(session, now);
   const focused = activeFocusSeconds(session, now);
   const referenceTime = session.status === "PAUSED" && session.pausedAt ? session.pausedAt : now;
@@ -27,7 +29,7 @@ function serialize(session: any, now: Date) {
   return { ...session, elapsedSeconds: elapsed, focusedSeconds: focused, remainingSeconds: remaining };
 }
 
-async function advancePomodoro(session: any, now: Date) {
+async function advancePomodoro(session: FocusSession, now: Date) {
   if (session.mode !== "POMODORO" || session.status !== "RUNNING" || !session.endsAt || session.endsAt > now) return session;
   const phaseEnd = session.endsAt;
   const currentSegmentSeconds = session.segmentStartedAt

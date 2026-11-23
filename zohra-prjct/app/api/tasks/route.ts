@@ -17,7 +17,21 @@ export async function GET() {
     where: { userId },
     orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
   });
-  return NextResponse.json({ tasks: tasks.map(serializeTask) });
+  // Total focus time per task, so the list can show effort next to each task.
+  const sessions = tasks.length
+    ? await prisma.studySession.findMany({
+        where: { userId, status: "COMPLETED", taskId: { in: tasks.map((task) => task.id) } },
+        select: { taskId: true, durationSeconds: true, accumulatedSeconds: true },
+      })
+    : [];
+  const studied = new Map<string, number>();
+  for (const item of sessions) {
+    if (!item.taskId) continue;
+    studied.set(item.taskId, (studied.get(item.taskId) ?? 0) + Math.max(0, item.durationSeconds ?? item.accumulatedSeconds));
+  }
+  return NextResponse.json({
+    tasks: tasks.map((task) => ({ ...serializeTask(task), studiedSeconds: studied.get(task.id) ?? 0 })),
+  });
 }
 
 export async function POST(request: Request) {

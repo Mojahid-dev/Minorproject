@@ -23,7 +23,7 @@ export async function signOutAndClearCookies() {
     document.cookie = `${name}=; Max-Age=0; path=/;`;
     try {
       document.cookie = `${name}=; Max-Age=0; path=/; domain=${host};`;
-    } catch (e) {
+    } catch {
       // ignore invalid domain errors in some environments
     }
   });
