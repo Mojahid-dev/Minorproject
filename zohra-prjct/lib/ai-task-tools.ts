@@ -5,7 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { dateOnlyToDate, isDateOnly, serializeTask } from "@/lib/task-utils";
 
-const MAX_TASKS_PER_CALL = 10;
+export const MAX_TASKS_PER_CALL = 10;
 
 const createTasksSchema = z.object({
   tasks: z
