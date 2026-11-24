@@ -246,7 +246,7 @@ export function FocusTimer({
         )}
       </div>
 
-      {tracker.completedSession && <div className="mx-4 mt-4 sm:mx-6"><TaskDoneCard session={tracker.completedSession} /></div>}
+      {tracker.completedSession && <div className="mx-4 mt-4 sm:mx-6"><TaskDoneCard key={tracker.completedSession.id} session={tracker.completedSession} /></div>}
       {tracker.completedSession && tracker.completedSession.status === "COMPLETED" && tracker.completedSession.focusRating == null && (
         <div className="mx-4 mt-4 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4 sm:mx-6">
           <div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-foreground">Session saved. Quick reflection?</p><p className="mt-1 text-xs text-muted-foreground">Two taps help Zohra understand your study patterns.</p></div><button type="button" onClick={tracker.clearCompleted} className="text-xs text-muted-foreground hover:text-foreground">Dismiss</button></div>

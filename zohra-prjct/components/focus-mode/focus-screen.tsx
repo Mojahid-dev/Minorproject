@@ -41,8 +41,6 @@ const endReasons = [
 export function FocusScreen() {
   const tracker = useStudyTracker();
   const active = tracker.active;
-  const completedSession = tracker.completedSession;
-  const refresh = tracker.refresh;
   const [parkingText, setParkingText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [showParking, setShowParking] = useState(false);
@@ -75,8 +73,8 @@ export function FocusScreen() {
   }
 
   useEffect(() => {
-    if (!active && !completedSession) void refresh();
-  }, [active, completedSession, refresh]);
+    if (!active && !tracker.completedSession) void tracker.refresh();
+  }, [active, tracker.completedSession, tracker.refresh]);
 
   const remaining = tracker.remainingSeconds;
   const clock =
@@ -161,7 +159,7 @@ export function FocusScreen() {
           <p className="mt-2 text-xs text-neutral-500">
             Recorded focused study time
           </p>
-          <div className="mt-6 empty:hidden"><TaskDoneCard session={session} tone="dark" /></div>
+          <div className="mt-6 empty:hidden"><TaskDoneCard key={session.id} session={session} tone="dark" /></div>
           {session.goal && (
             <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4 text-left">
               <p className="text-xs text-neutral-500">YOUR INTENTION</p>
