@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BarChart3, Flame, Minus, Plus, Save, Timer } from "lucide-react";
+import { BarChart3, Flame, Minus, ParkingSquare, Plus, Save, Timer } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { focusRing, panel, secondaryButton } from "@/components/dashboard/shared";
@@ -9,12 +9,13 @@ import { useStudyTracker } from "@/components/study-progress/study-tracker-provi
 import { FocusTimer } from "@/components/study-progress/focus-timer";
 import { InsightsView, type Analytics } from "@/components/study-progress/insights-view";
 import { MonthHeatmap } from "@/components/study-progress/month-heatmap";
+import { ParkingLotView } from "@/components/study-progress/parking-lot-view";
 import { currentMonthKey, useStudyCalendar } from "@/components/study-progress/use-study-calendar";
 import { duration } from "@/components/study-progress/format";
 import { FocusAnalyticsCards } from "@/components/focus-mode/focus-analytics-cards";
 
 type Goal = { dailyTargetMinutes: number; weeklyTargetMinutes: number };
-type Tab = "focus" | "insights";
+type Tab = "focus" | "insights" | "parking";
 
 function Meter({ label, value, goal, tone }: { label: string; value: number; goal: number; tone: string }) {
   const pct = Math.min(100, Math.round((value / Math.max(1, goal)) * 100));
@@ -115,6 +116,7 @@ export default function StudyProgressPage() {
     const view = params.get("view");
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (view === "analytics" || view === "insights") setTab("insights");
+    if (view === "parking") setTab("parking");
     setInitialTaskId(params.get("taskId") ?? undefined);
   }, []);
 
@@ -186,6 +188,7 @@ export default function StudyProgressPage() {
   const tabs: { id: Tab; label: string; icon: typeof Timer }[] = [
     { id: "focus", label: "Focus", icon: Timer },
     { id: "insights", label: "Insights", icon: BarChart3 },
+    { id: "parking", label: "Parking lot", icon: ParkingSquare },
   ];
 
   return (
@@ -195,7 +198,7 @@ export default function StudyProgressPage() {
           <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Study</h1>
           <p className="mt-1 text-sm text-muted-foreground">Time your focus, then watch it add up.</p>
         </div>
-        <div role="tablist" aria-label="Study sections" className="grid grid-cols-2 gap-1 rounded-xl border border-border bg-card p-1 sm:w-64">
+        <div role="tablist" aria-label="Study sections" className="grid grid-cols-3 gap-1 rounded-xl border border-border bg-card p-1 sm:w-[24rem]">
           {tabs.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -211,7 +214,7 @@ export default function StudyProgressPage() {
                 focusRing,
               )}
             >
-              <Icon size={16} aria-hidden="true" /> {label}
+              <Icon size={16} aria-hidden="true" /> <span className={cn(tab !== id && "max-sm:sr-only")}>{label}</span>
             </button>
           ))}
         </div>
@@ -309,6 +312,8 @@ export default function StudyProgressPage() {
               </section>
             </div>
           </div>
+        ) : tab === "parking" ? (
+          <ParkingLotView />
         ) : (
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:gap-5 lg:grid-cols-[minmax(0,460px)_minmax(0,1fr)] lg:items-start">
             <div className="lg:sticky lg:top-4">
