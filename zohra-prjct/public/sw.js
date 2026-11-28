@@ -13,14 +13,20 @@ self.addEventListener("push", (event) => {
   }
   const title = data.title || "Zohra";
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body: data.body || "",
-      icon: "/web-app-manifest-192x192.png",
-      badge: "/web-app-manifest-192x192.png",
-      tag: data.tag || undefined,
-      renotify: Boolean(data.tag),
-      data: { url: typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/dashboard" },
-    }),
+    Promise.all([
+      self.registration.showNotification(title, {
+        body: data.body || "",
+        icon: "/web-app-manifest-192x192.png",
+        badge: "/web-app-manifest-192x192.png",
+        tag: data.tag || undefined,
+        renotify: Boolean(data.tag),
+        data: { url: typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/dashboard" },
+      }),
+      // Tell open tabs so the header bell refreshes straight away.
+      self.clients
+        .matchAll({ type: "window", includeUncontrolled: true })
+        .then((windows) => windows.forEach((client) => client.postMessage({ type: "zohra:notification" }))),
+    ]),
   );
 });
 
