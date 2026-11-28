@@ -23,9 +23,9 @@ The Vercel build does not apply migrations automatically. After deployment, open
 
 ## Scheduled reminders
 
-Task due and exam reminders are checked by `/api/cron/notifications`. `vercel.json` defines a Vercel Schedule every 30 minutes so each user's local reminder time and repeat interval can be honored. Schedules support this frequency on Hobby, Pro, and Enterprise. Hobby runs can be delayed by up to 15 minutes, so delivery can be delayed by up to 45 minutes, plus device or push-service delays. Vercel sends `GET` requests and supplies `Authorization: Bearer $CRON_SECRET`; the endpoint remains idempotent and notification records prevent duplicate sends within each user's selected interval. After deployment, check the project's Schedules page and its run history if reminders do not arrive.
+Task due and exam reminders are checked by `/api/cron/notifications`. `vercel.json` schedules it once each day at 20:00 UTC, which falls around 08:00–10:00 local time. Vercel Hobby permits only daily Cron jobs. Vercel sends `GET` requests and supplies `Authorization: Bearer $CRON_SECRET`; notification records prevent duplicate sends for the same local day. After deployment, check the project's Cron Jobs page and its run history if reminders do not arrive. To run this more than once per day, use Pro or an external scheduler that calls this endpoint with the same bearer token.
 
-Users choose a local start hour and a repeat interval. Task alerts are sent for due-today or overdue tasks and stop when none remain. Exam milestone alerts remain once per milestone.
+Task alerts are sent once each morning for due-today or overdue tasks and stop when none remain. Exam milestone alerts remain once per milestone. The Hobby plan does not support user-selected reminder hours or repeat intervals through Vercel Cron.
 
 The AI finished-a-long-file notification is sent immediately after a file with at least 30 pages or a processing time of at least 20 seconds finishes. Task and exam reminders require a registered device, permission granted by the browser, and their respective switches enabled in Settings.
 

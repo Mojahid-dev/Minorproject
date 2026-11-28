@@ -8,14 +8,14 @@ import { usePushNotifications, type PushStatus } from "@/hooks/use-push-notifica
 import { cn } from "@/lib/utils";
 
 type Switches = { pushTaskDue: boolean; pushExamSoon: boolean; pushAiFileReady: boolean };
-type Preferences = Switches & { pushReminderHour: number; pushReminderIntervalMinutes: number };
+type Preferences = Switches;
 type SwitchKey = keyof Switches;
 
 const TYPES: { key: SwitchKey; label: string; description: string; icon: typeof BellRing }[] = [
   {
     key: "pushTaskDue",
     label: "Task due",
-    description: "Reminders for unfinished tasks due today or overdue. Repeats stop when there is no unfinished work.",
+    description: "One morning reminder for unfinished tasks due today or overdue. Alerts stop when there is no unfinished work.",
     icon: ListChecks,
   },
   {
@@ -30,19 +30,6 @@ const TYPES: { key: SwitchKey; label: string; description: string; icon: typeof 
     description: "When Zohra finishes reading a big upload (30+ pages), so you can leave the page.",
     icon: FileCheck2,
   },
-];
-
-const HOURS = Array.from({ length: 24 }, (_, index) => index);
-const hourLabel = (hour: number) => `${hour % 12 || 12}:00 ${hour < 12 ? "AM" : "PM"}`;
-const REMINDER_INTERVALS = [
-  { value: 30, label: "Every 30 minutes" },
-  { value: 60, label: "Every hour" },
-  { value: 120, label: "Every 2 hours" },
-  { value: 240, label: "Every 4 hours" },
-  { value: 360, label: "Every 6 hours" },
-  { value: 480, label: "Every 8 hours" },
-  { value: 720, label: "Every 12 hours" },
-  { value: 1440, label: "Every 24 hours" },
 ];
 
 const DEVICE_MESSAGES: Partial<Record<PushStatus, string>> = {
@@ -105,8 +92,8 @@ export function PushNotificationSettings() {
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || "Unable to load notification settings.");
         if (active) {
-          const { pushTaskDue, pushExamSoon, pushAiFileReady, pushReminderHour, pushReminderIntervalMinutes } = payload.preferences;
-          setPreferences({ pushTaskDue, pushExamSoon, pushAiFileReady, pushReminderHour, pushReminderIntervalMinutes });
+          const { pushTaskDue, pushExamSoon, pushAiFileReady } = payload.preferences;
+          setPreferences({ pushTaskDue, pushExamSoon, pushAiFileReady });
           setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
         }
       })
@@ -225,38 +212,11 @@ export function PushNotificationSettings() {
         })}
       </ul>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800 pt-4">
-        <div className="min-w-0">
-          <label htmlFor={`${baseId}-hour`} className="text-sm font-medium text-white">Start reminders at</label>
-          <p className="mt-0.5 text-sm text-neutral-500">
-            Task alerts repeat from this local time until no tasks are due or overdue. Delivery can be delayed by the scheduler or device{timeZone ? ` (${timeZone})` : ""}.
-          </p>
-        </div>
-        <select
-          id={`${baseId}-hour`}
-          value={preferences?.pushReminderHour ?? 8}
-          disabled={!preferences || saving}
-          onChange={(event) => void update({ pushReminderHour: Number(event.target.value) })}
-          className="h-10 rounded-xl border border-white/10 bg-black/25 px-3 text-sm text-white outline-none focus:border-lime-200/60 focus:ring-4 focus:ring-lime-200/10 disabled:opacity-60"
-        >
-          {HOURS.map((hour) => (
-            <option key={hour} value={hour}>{hourLabel(hour)}</option>
-          ))}
-        </select>
-        <div className="flex items-center gap-3">
-          <label htmlFor={`${baseId}-interval`} className="text-sm font-medium text-white">Task reminder repeat</label>
-          <select
-            id={`${baseId}-interval`}
-            value={preferences?.pushReminderIntervalMinutes ?? 1440}
-            disabled={!preferences || saving}
-            onChange={(event) => void update({ pushReminderIntervalMinutes: Number(event.target.value) })}
-            className="h-10 rounded-xl border border-white/10 bg-black/25 px-3 text-sm text-white outline-none focus:border-lime-200/60 focus:ring-4 focus:ring-lime-200/10 disabled:opacity-60"
-          >
-            {REMINDER_INTERVALS.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </div>
+      <div className="border-t border-zinc-800 pt-4">
+        <p className="text-sm font-medium text-white">Daily reminder timing</p>
+        <p className="mt-0.5 text-sm text-neutral-500">
+          Task and exam reminders run once each morning, usually between 8 and 10 local time. Vercel may delay delivery{timeZone ? ` (${timeZone})` : ""}.
+        </p>
       </div>
 
       {message && <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-300">{message}</p>}

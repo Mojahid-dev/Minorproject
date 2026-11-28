@@ -123,68 +123,59 @@ type UserRun = { userId: string; timeZone: string };
 async function runForUser({ userId, timeZone }: UserRun, preferences: {
   pushTaskDue: boolean;
   pushExamSoon: boolean;
-  pushReminderHour: number;
-  pushReminderIntervalMinutes: number;
 }, now: Date) {
   const local = localParts(now, timeZone);
   let taskDue = 0;
   let examSoon = 0;
 
   if (preferences.pushTaskDue) {
-    const localDay = Math.floor(Date.parse(`${local.date}T00:00:00.000Z`) / 86_400_000);
-    const currentMinute = localDay * 1440 + local.hour * 60 + local.minute;
-    const interval = preferences.pushReminderIntervalMinutes;
-    const slot = Math.floor((currentMinute - preferences.pushReminderHour * 60) / interval);
-    const slotDay = Math.floor((preferences.pushReminderHour * 60 + slot * interval) / 1440);
-    // The interval is anchored to the user's local start time. Ignore a
-    // previous day's final slot before today's first reminder is due.
-    if (slotDay === localDay) {
-      const key = String(slot);
-      const alreadySent = await prisma.notificationLog.findUnique({
-        where: { userId_type_key: { userId, type: NOTIFICATION_TYPES.taskDue.logType, key } },
-        select: { id: true },
-      });
-      if (!alreadySent) {
-        const today = dateOnlyToDate(local.date) as Date;
-        const [dueToday, overdue] = await Promise.all([
-          prisma.task.findMany({
-            where: { userId, completedAt: null, dueDate: today },
-            orderBy: { createdAt: "asc" },
-            select: { title: true },
-            take: 20,
-          }),
-          prisma.task.count({ where: { userId, completedAt: null, dueDate: { lt: today } } }),
-        ]);
-        if (dueToday.length > 0 || overdue > 0) {
-          const titles = dueToday.map((task) => task.title);
-          const extra = overdue > 0 ? ` ${overdue} more ${overdue === 1 ? "is" : "are"} overdue.` : "";
-          const sent = await sendOnce(
-            userId,
-            NOTIFICATION_TYPES.taskDue.logType,
-            key,
-            {
-              title: dueToday.length === 0
-                ? `${overdue} overdue ${overdue === 1 ? "task" : "tasks"}`
-                : titles.length === 1
-                  ? `Due today: ${titles[0]}`
-                  : `${titles.length} tasks due today`,
-              body: dueToday.length === 0
-                ? "Tap to review your overdue work."
-                : titles.length === 1
-                  ? `Tap to open your tasks.${extra}`
-                  : `${listTitles(titles)}.${extra}`,
-              url: `/tasks?date=${local.date}`,
-              tag: `task-due-${local.date}`,
-            },
-            12 * 60 * 60,
-          );
-          if (sent) taskDue = 1;
-        }
+    // Hobby Cron runs once per day. The configured 20:00 UTC run lands between
+    // 08:00 and 10:00 for IANA time zones, so one local-date key prevents repeats.
+    const key = local.date;
+    const alreadySent = await prisma.notificationLog.findUnique({
+      where: { userId_type_key: { userId, type: NOTIFICATION_TYPES.taskDue.logType, key } },
+      select: { id: true },
+    });
+    if (!alreadySent) {
+      const today = dateOnlyToDate(local.date) as Date;
+      const [dueToday, overdue] = await Promise.all([
+        prisma.task.findMany({
+          where: { userId, completedAt: null, dueDate: today },
+          orderBy: { createdAt: "asc" },
+          select: { title: true },
+          take: 20,
+        }),
+        prisma.task.count({ where: { userId, completedAt: null, dueDate: { lt: today } } }),
+      ]);
+      if (dueToday.length > 0 || overdue > 0) {
+        const titles = dueToday.map((task) => task.title);
+        const extra = overdue > 0 ? ` ${overdue} more ${overdue === 1 ? "is" : "are"} overdue.` : "";
+        const sent = await sendOnce(
+          userId,
+          NOTIFICATION_TYPES.taskDue.logType,
+          key,
+          {
+            title: dueToday.length === 0
+              ? `${overdue} overdue ${overdue === 1 ? "task" : "tasks"}`
+              : titles.length === 1
+                ? `Due today: ${titles[0]}`
+                : `${titles.length} tasks due today`,
+            body: dueToday.length === 0
+              ? "Tap to review your overdue work."
+              : titles.length === 1
+                ? `Tap to open your tasks.${extra}`
+                : `${listTitles(titles)}.${extra}`,
+            url: `/tasks?date=${local.date}`,
+            tag: `task-due-${local.date}`,
+          },
+          12 * 60 * 60,
+        );
+        if (sent) taskDue = 1;
       }
     }
   }
 
-  if (preferences.pushExamSoon && local.hour >= preferences.pushReminderHour) {
+  if (preferences.pushExamSoon) {
     const milestones = EXAM_REMINDER_DAYS.map((days) => ({ days, date: addDays(local.date, days) }));
     const candidates = await prisma.task.findMany({
       where: {
@@ -221,9 +212,8 @@ async function runForUser({ userId, timeZone }: UserRun, preferences: {
 }
 
 /**
- * Called by the scheduler (see /api/cron/notifications). Safe to run as often
- * as you like: each reminder is claimed once, and each student is judged by
- * the clock in their own time zone.
+ * Called by the scheduler (see /api/cron/notifications). Daily reminders are
+ * claimed once per local date, so retries cannot duplicate a notification.
  */
 export async function runScheduledNotifications(now = new Date()) {
   // Keep the inbox small: anything older than the retention window is dropped.
@@ -248,8 +238,6 @@ export async function runScheduledNotifications(now = new Date()) {
       timeZone: true,
       pushTaskDue: true,
       pushExamSoon: true,
-      pushReminderHour: true,
-      pushReminderIntervalMinutes: true,
     },
   });
   const zones = new Map<string, string>();
@@ -269,8 +257,6 @@ export async function runScheduledNotifications(now = new Date()) {
           byUser.get(userId) ?? {
             pushTaskDue: true,
             pushExamSoon: true,
-            pushReminderHour: 8,
-            pushReminderIntervalMinutes: 1440,
           },
           now,
         ),
