@@ -7,7 +7,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
-  Bell,
   CalendarDays,
   ChevronDown,
   CircleHelp,
@@ -34,6 +33,7 @@ import { useTheme } from "next-themes";
 import { StudyTrackerProvider } from "@/components/study-progress/study-tracker-provider";
 import { StudyHeaderButton } from "@/components/study-progress/study-header-button";
 import { ProductTour } from "@/components/onboarding/product-tour";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 const tourSlug = (href: string) =>
   href === "/zohra-ai" ? "ai" : href.replace("/", "");
@@ -476,7 +476,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </aside>
 
         <section className="mobile-app-content min-w-0 flex-1 overflow-x-clip bg-zinc-950 lg:min-h-0 lg:overflow-y-auto">
-          <header className="mobile-app-header sticky top-0 z-10 flex h-16 items-center border-b border-zinc-800 bg-zinc-950/95 px-3 backdrop-blur-xl sm:h-[76px] sm:px-6 lg:px-8">
+          <header className="mobile-app-header sticky top-0 z-40 flex h-16 items-center border-b border-zinc-800 bg-zinc-950/95 px-3 backdrop-blur-xl sm:h-[76px] sm:px-6 lg:px-8">
             <Link
               href="/dashboard"
               className="mr-3 flex min-w-0 shrink items-center lg:hidden"
@@ -505,14 +505,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <MessageCircle size={20} />
               </button>
-              <button
-                aria-label="Notifications coming soon"
-                title="Notifications are coming soon"
-                disabled
-                className="hidden size-10 cursor-not-allowed place-items-center rounded-xl text-neutral-600 sm:grid"
-              >
-                <Bell size={20} />
-              </button>
+              <NotificationBell />
               <Link
                 href="/upload"
                 aria-label="Add resources"
