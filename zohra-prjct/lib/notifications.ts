@@ -12,6 +12,8 @@ export const NOTIFICATION_TYPES = {
 /** Days before an exam when a reminder goes out. The day itself is covered by "task due". */
 const EXAM_REMINDER_DAYS = [7, 3, 1];
 const MAX_EXAM_PUSHES_PER_RUN = 3;
+/** How long read and unread items stay in the in-app inbox. */
+export const INBOX_RETENTION_DAYS = 60;
 /** A file counts as long when it has this many pages, or took this long to read. */
 export const LONG_FILE_PAGES = 30;
 export const LONG_FILE_MS = 20_000;
@@ -75,12 +77,37 @@ async function release(userId: string, type: string, key: string) {
   await prisma.notificationLog.deleteMany({ where: { userId, type, key } });
 }
 
-/** Claims, sends, and gives the claim back if no device could be reached so the next run retries. */
+/** Stores the notification in the in-app inbox. Idempotent: a retry never creates a second row. */
+async function storeInApp(userId: string, type: string, key: string, payload: PushPayload) {
+  try {
+    await prisma.notification.create({
+      data: {
+        userId,
+        type,
+        key,
+        title: payload.title.slice(0, 120),
+        body: payload.body.slice(0, 240),
+        url: payload.url?.startsWith("/") ? payload.url.slice(0, 300) : "/dashboard",
+      },
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code !== "P2002") throw error;
+  }
+}
+
+/**
+ * Claims, then delivers in two ways: the in-app inbox (always) and browser
+ * push (when the student has a device). The claim is given back only when a
+ * real device could not be reached, so the next run retries the push; the
+ * inbox row is idempotent, so a retry never duplicates it.
+ */
 async function sendOnce(userId: string, type: string, key: string, payload: PushPayload, ttlSeconds?: number) {
   if (!(await claim(userId, type, key))) return false;
   try {
+    await storeInApp(userId, type, key, payload);
+    if (!pushConfigured()) return true;
     const result = await sendPushToUser(userId, payload, { ttlSeconds });
-    if (result.sent === 0) {
+    if (result.sent === 0 && result.failed > 0) {
       await release(userId, type, key);
       return false;
     }
@@ -199,33 +226,39 @@ async function runForUser({ userId, timeZone }: UserRun, preferences: {
  * the clock in their own time zone.
  */
 export async function runScheduledNotifications(now = new Date()) {
-  if (!pushConfigured()) return { configured: false as const, users: 0, taskDue: 0, examSoon: 0, errors: 0 };
+  // Keep the inbox small: anything older than the retention window is dropped.
+  await prisma.notification
+    .deleteMany({ where: { createdAt: { lt: new Date(now.getTime() - INBOX_RETENTION_DAYS * 86_400_000) } } })
+    .catch((error) => console.error("Inbox cleanup failed:", error));
 
-  // One entry per user. Their most recently used device decides the time zone.
+  // Everyone with a push device, plus everyone whose app shell reported a time zone.
+  // The shell's zone wins (it is the one in use right now); a device's zone is the fallback.
   const subscriptions = await prisma.pushSubscription.findMany({
     orderBy: { updatedAt: "desc" },
     select: { userId: true, timeZone: true },
   });
-  const zones = new Map<string, string>();
+  const deviceZones = new Map<string, string>();
   for (const subscription of subscriptions) {
-    if (!zones.has(subscription.userId)) {
-      zones.set(subscription.userId, isValidTimeZone(subscription.timeZone) ? subscription.timeZone : "UTC");
-    }
+    if (!deviceZones.has(subscription.userId)) deviceZones.set(subscription.userId, subscription.timeZone);
   }
-  const userIds = [...zones.keys()];
   const stored = await prisma.userPreference.findMany({
-    where: { userId: { in: userIds } },
+    where: { OR: [{ userId: { in: [...deviceZones.keys()] } }, { timeZone: { not: null } }] },
     select: {
       userId: true,
+      timeZone: true,
       pushTaskDue: true,
       pushExamSoon: true,
       pushReminderHour: true,
       pushReminderIntervalMinutes: true,
     },
   });
+  const zones = new Map<string, string>();
+  for (const [userId, zone] of deviceZones) zones.set(userId, isValidTimeZone(zone) ? zone : "UTC");
+  for (const row of stored) if (isValidTimeZone(row.timeZone)) zones.set(row.userId, row.timeZone);
+  const userIds = [...zones.keys()];
   const byUser = new Map(stored.map((row) => [row.userId, row]));
 
-  const totals = { configured: true as const, users: userIds.length, taskDue: 0, examSoon: 0, errors: 0 };
+  const totals = { configured: pushConfigured(), users: userIds.length, taskDue: 0, examSoon: 0, errors: 0 };
   // Small batches keep one run fast without opening too many database connections.
   for (let start = 0; start < userIds.length; start += 10) {
     const batch = userIds.slice(start, start + 10);
@@ -271,7 +304,6 @@ export async function notifyFileProcessed(input: {
   organizationStatus: string;
 }) {
   try {
-    if (!pushConfigured()) return;
     const isLong = (input.pageCount ?? 0) >= LONG_FILE_PAGES || input.elapsedMs >= LONG_FILE_MS;
     if (!isLong) return;
 
@@ -280,8 +312,6 @@ export async function notifyFileProcessed(input: {
       select: { pushAiFileReady: true },
     });
     if (preferences && !preferences.pushAiFileReady) return;
-    const hasDevice = await prisma.pushSubscription.count({ where: { userId: input.userId } });
-    if (!hasDevice) return;
 
     // A big batch upload must not turn into a burst of buzzing.
     const recent = await prisma.notificationLog.count({
